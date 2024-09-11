@@ -11,7 +11,42 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+    "aiosqlite",
+    "asgi-correlation-id",
+    "bluepyefe",
+    "efel",
+    "fastapi",
+    "langchain",
+    "langchain-cohere",
+    "langchain-openai",
+    "langgraph",
+    "langgraph-checkpoint-postgres",
+    "langgraph-checkpoint-sqlite",
+    "neurom",
+    "psycopg2-binary",
+    "pydantic-settings",
+    "python-dotenv",
+    "python-keycloak",
+    "python-multipart",
+    "sqlalchemy",
+    "uvicorn",
     ]
+
+[project.optional-dependencies]
+dev = [
+    "bandit[toml]",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-httpx",
+    "responses",
+    "ruff",
+    "types-requests",
+    ]
+
+[project.scripts]
+neuroagent-api = "neuroagent.scripts.neuroagent_api:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "neuroagent.__version__"}
@@ -19,3 +54,48 @@ version = {attr = "neuroagent.__version__"}
 [tool.setuptools.packages.find]
 where = ["src"]
 namespaces = false
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+
+[tool.black]
+line-length = 88
+preview = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+
+[tool.mypy]
+mypy_path = "src"
+python_version = "3.10"
+ignore_missing_imports = true
+no_implicit_optional = true
+check_untyped_defs = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+plugins = [
+  "pydantic.mypy", "sqlalchemy.ext.mypy.plugin"
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+
+addopts = "--cov=src/ --cov=tests/ -v --cov-report=term-missing --durations=20 --no-cov-on-fail"

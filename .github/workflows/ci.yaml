@@ -30,7 +30,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ matrix.tox-env }}-${{ runner.os }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
       - name: Set up environment
         run: |
           pip install --upgrade pip wheel setuptools
