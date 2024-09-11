@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "neuroagent"
+authors = [
+    {name = "Blue Brain Project, EPFL"},
+]
+description = "Search agent for neuroscience."
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["version"]
+dependencies = [
+    ]
+
+[tool.setuptools.dynamic]
+version = {attr = "neuroagent.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
