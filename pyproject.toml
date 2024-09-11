@@ -11,6 +11,12 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "pytest_asyncio",
+    "pytest_httpx",
+    "ruff",
     ]
 
 [tool.setuptools.dynamic]
