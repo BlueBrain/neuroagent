@@ -27,7 +27,6 @@ dependencies = [
     "pydantic-settings",
     "python-dotenv",
     "python-keycloak",
-    "python-multipart",
     "sqlalchemy",
     "uvicorn",
     ]
@@ -96,6 +95,14 @@ plugins = [
 minversion = "6.0"
 testpaths = [
     "tests",
+]
+filterwarnings = [
+    "error",
+    "ignore:Use get_feature_values:DeprecationWarning",
+    "ignore:Mean of empty slice:RuntimeWarning",
+    "ignore:Degrees of freedom:RuntimeWarning",
+    "ignore:Exception ignored in:pytest.PytestUnraisableExceptionWarning",
+    "ignore:This API is in beta:langchain_core._api.beta_decorator.LangChainBetaWarning",
 ]
 
 addopts = "--cov=src/ --cov=tests/ -v --cov-report=term-missing --durations=20 --no-cov-on-fail"

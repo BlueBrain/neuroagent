@@ -1,0 +1,8 @@
+
+
+- [Boris Bergsma](https://github.com/BoBer78) @ Blue Brain Project, EPFL
+- [Emilie Delattre](https://github.com/EmilieDel) @ Blue Brain Project, EPFL
+- [Nicolas Frank](https://github.com/WonderPG) @ Blue Brain Project, EPFL
+- [Jan Krepl](https://github.com/jankrepl) @ Blue Brain Project, EPFL
+- [Kerem Kurban](https://github.com/KeremKurban) @ Blue Brain Project, EPFL
+- [Csaba Zsolnai]() @ Blue Brain Project, EPFL
