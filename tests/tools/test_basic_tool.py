@@ -2,16 +2,16 @@ from typing import Literal, Type
 
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.pydantic_v1 import BaseModel
 from langchain_core.tools import ToolException
 from langgraph.prebuilt import create_react_agent
 from neuroagent.tools.base_tool import BasicTool
+from pydantic import BaseModel
 
 
 class input_for_test(BaseModel):
     test_str: str
     test_int: int
-    test_litteral: Literal["Allowed_1", "Allowed_2"] = None
+    test_litteral: Literal["Allowed_1", "Allowed_2"] | None = None
 
 
 class basic_tool_for_test(BasicTool):
@@ -87,7 +87,7 @@ def test_basic_tool_error_handling():
     )
     assert (
         response["messages"][4].content
-        == '[{"Validation error": "Wrong value: Forbidden_value for input'
+        == '[{"Validation error": "Wrong value: provided Forbidden_value for input'
         ' test_litteral. Try again and change this problematic input."}]'
     )
     assert (
@@ -98,7 +98,8 @@ def test_basic_tool_error_handling():
     )
     assert (
         response["messages"][6].content
-        == '[{"Validation error": "test_str. str type expected"}, {"Validation error":'
-        ' "test_int. value is not a valid integer"}]'
+        == '[{"Validation error": "test_str. Input should be a valid string"}, '
+        '{"Validation error": "test_int. Input should be a valid integer, '
+        'unable to parse string as an integer"}]'
     )
     assert response["messages"][7].content == "fake answer"

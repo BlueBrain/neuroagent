@@ -6,7 +6,7 @@ from typing import Any, AsyncIterator
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.prebuilt import create_react_agent
-from pydantic.v1 import root_validator
+from pydantic import model_validator
 
 from neuroagent.agents import AgentOutput, AgentStep, BaseAgent
 
@@ -18,23 +18,19 @@ class SimpleChatAgent(BaseAgent):
 
     memory: BaseCheckpointSaver
 
-    class Config:
-        """Config."""
-
-        arbitrary_types_allowed = True
-
-    @root_validator(pre=True)
-    def create_agent(cls, values: dict[str, Any]) -> dict[str, Any]:
+    @model_validator(mode="before")
+    @classmethod
+    def create_agent(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Instantiate the clients upon class creation."""
-        values["agent"] = create_react_agent(
-            model=values["llm"],
-            tools=values["tools"],
-            checkpointer=values["memory"],
+        data["agent"] = create_react_agent(
+            model=data["llm"],
+            tools=data["tools"],
+            checkpointer=data["memory"],
             state_modifier="""You are a helpful assistant helping scientists with neuro-scientific questions.
                 You must always specify in your answers from which brain regions the information is extracted.
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
         )
-        return values
+        return data
 
     def run(self, session_id: str, query: str) -> Any:
         """Run the agent against a query."""

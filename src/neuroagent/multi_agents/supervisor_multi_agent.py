@@ -16,8 +16,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
-from pydantic import ConfigDict
-from pydantic.v1 import root_validator
+from pydantic import ConfigDict, model_validator
 
 from neuroagent.agents import AgentOutput, AgentStep
 from neuroagent.multi_agents.base_multi_agent import BaseMultiAgent
@@ -39,8 +38,9 @@ class SupervisorMultiAgent(BaseMultiAgent):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @root_validator(pre=True)
-    def create_main_agent(cls, values: dict[str, Any]) -> dict[str, Any]:
+    @model_validator(mode="before")
+    @classmethod
+    def create_main_agent(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Instantiate the clients upon class creation."""
         logger.info("Creating main agent, supervisor and all the agents with tools.")
         system_prompt = (
@@ -50,7 +50,7 @@ class SupervisorMultiAgent(BaseMultiAgent):
             " task and respond with their results and status. When finished,"
             " respond with FINISH."
         )
-        agents_list = [elem[0] for elem in values["agents"]]
+        agents_list = [elem[0] for elem in data["agents"]]
         logger.info(f"List of agents name: {agents_list}")
 
         options = ["FINISH"] + agents_list
@@ -84,14 +84,14 @@ class SupervisorMultiAgent(BaseMultiAgent):
                 ),
             ]
         ).partial(options=str(options), members=", ".join(agents_list))
-        values["main_agent"] = (
+        data["main_agent"] = (
             prompt
-            | values["llm"].bind_functions(
+            | data["llm"].bind_functions(
                 functions=[function_def], function_call="route"
             )
             | JsonOutputFunctionsParser()
         )
-        values["summarizer"] = (
+        data["summarizer"] = (
             PromptTemplate.from_template(
                 """You are an helpful assistant. Here is the question of the user: {question}.
             And here are the results of the different tools used to answer: {responses}.
@@ -101,10 +101,10 @@ class SupervisorMultiAgent(BaseMultiAgent):
             Please formulate a complete response to give to the user ONLY based on the results.
             """
             )
-            | values["llm"]
+            | data["llm"]
         )
 
-        return values
+        return data
 
     @staticmethod
     async def agent_node(

@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator
 
 from langchain.chat_models.base import BaseChatModel
-from langchain.llms.base import BaseLLM
 from langchain_core.messages import (
     AIMessage,
     ChatMessage,
@@ -21,9 +20,7 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel as BaseModelV2
-from pydantic import ConfigDict
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 BASE_PROMPT = ChatPromptTemplate(
     input_variables=["agent_scratchpad", "input"],
@@ -63,14 +60,14 @@ BASE_PROMPT = ChatPromptTemplate(
 )
 
 
-class AgentStep(BaseModelV2):
+class AgentStep(BaseModel):
     """Class for agent decision steps."""
 
     tool_name: str
     arguments: dict[str, Any] | str
 
 
-class AgentOutput(BaseModelV2):
+class AgentOutput(BaseModel):
     """Class for agent response."""
 
     response: str
@@ -81,7 +78,7 @@ class AgentOutput(BaseModelV2):
 class BaseAgent(BaseModel, ABC):
     """Base class for services."""
 
-    llm: BaseLLM | BaseChatModel
+    llm: BaseChatModel
     tools: list[BaseTool]
     agent: Any
 

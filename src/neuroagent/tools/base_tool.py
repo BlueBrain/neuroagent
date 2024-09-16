@@ -4,9 +4,8 @@ import json
 import logging
 from typing import Any
 
-from langchain_core.pydantic_v1 import ValidationError
 from langchain_core.tools import BaseTool, ToolException
-from pydantic.v1 import BaseModel, root_validator
+from pydantic import BaseModel, ValidationError, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -14,23 +13,21 @@ logger = logging.getLogger(__name__)
 def process_validation_error(error: ValidationError) -> str:
     """Handle validation errors when tool inputs are wrong."""
     error_list = []
-
-    # not happy with this solution but it is to extract the name of the input class
-    name = str(error.model).split(".")[-1].strip(">")
+    name = error.title
     # We have to iterate, in case there are multiple errors.
     try:
         for err in error.errors():
-            if "ctx" in err:
+            if err["type"] == "literal_error":
                 error_list.append(
                     {
                         "Validation error": (
-                            f'Wrong value: {err["ctx"]["given"]} for input'
+                            f'Wrong value: provided {err["input"]} for input'
                             f' {err["loc"][0]}. Try again and change this problematic'
                             " input."
                         )
                     }
                 )
-            elif "loc" in err and err["msg"] == "field required":
+            elif err["type"] == "missing":
                 error_list.append(
                     {
                         "Validation error": (
@@ -70,12 +67,13 @@ class BasicTool(BaseTool):
     name: str = "base"
     description: str = "Base tool from which regular tools should inherit."
 
-    @root_validator(pre=True)
-    def handle_errors(cls, values: dict[str, Any]) -> dict[str, Any]:
+    @model_validator(mode="before")
+    @classmethod
+    def handle_errors(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Instantiate the clients upon class creation."""
-        values["handle_validation_error"] = process_validation_error
-        values["handle_tool_error"] = process_tool_error
-        return values
+        data["handle_validation_error"] = process_validation_error
+        data["handle_tool_error"] = process_tool_error
+        return data
 
 
 class BaseToolOutput(BaseModel):
@@ -83,4 +81,4 @@ class BaseToolOutput(BaseModel):
 
     def __repr__(self) -> str:
         """Representation method."""
-        return self.json()
+        return self.model_dump_json()

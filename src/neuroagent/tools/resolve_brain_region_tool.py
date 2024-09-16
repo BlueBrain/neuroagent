@@ -3,8 +3,8 @@
 import logging
 from typing import Any, Optional, Type
 
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import ToolException
+from pydantic import BaseModel, Field
 
 from neuroagent.resolving import resolve_query
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool

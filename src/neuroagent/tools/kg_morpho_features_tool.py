@@ -3,8 +3,8 @@
 import logging
 from typing import Any, Literal, Type
 
-from langchain_core.pydantic_v1 import BaseModel, Field, root_validator
 from langchain_core.tools import ToolException
+from pydantic import BaseModel, Field, model_validator
 
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
 from neuroagent.utils import get_descendants_id
@@ -121,13 +121,14 @@ class FeatureInput(BaseModel):
     )
     feat_range: FeatRangeInput | None = None
 
-    @root_validator(pre=True)
-    def check_if_list(cls, values: Any) -> dict[str, str | list[float | int] | None]:
+    @model_validator(mode="before")
+    @classmethod
+    def check_if_list(cls, data: Any) -> dict[str, str | list[float | int] | None]:
         """Validate that the values passed to the constructor are a dictionary."""
-        if isinstance(values, list) and len(values) == 1:
-            data_dict = values[0]
+        if isinstance(data, list) and len(data) == 1:
+            data_dict = data[0]
         else:
-            data_dict = values
+            data_dict = data
         return data_dict
 
 

@@ -5,8 +5,7 @@ from typing import Any, AsyncIterator
 
 from langchain_core.messages import AIMessage
 from langgraph.prebuilt import create_react_agent
-from pydantic import ConfigDict
-from pydantic.v1 import root_validator
+from pydantic import model_validator
 
 from neuroagent.agents import AgentOutput, AgentStep, BaseAgent
 
@@ -16,20 +15,19 @@ logger = logging.getLogger(__name__)
 class SimpleAgent(BaseAgent):
     """Simple Agent class."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @root_validator(pre=True)
-    def create_agent(cls, values: dict[str, Any]) -> dict[str, Any]:
+    @model_validator(mode="before")
+    @classmethod
+    def create_agent(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Instantiate the clients upon class creation."""
         # Initialise the agent with the tools
-        values["agent"] = create_react_agent(
-            model=values["llm"],
-            tools=values["tools"],
+        data["agent"] = create_react_agent(
+            model=data["llm"],
+            tools=data["tools"],
             state_modifier="""You are a helpful assistant helping scientists with neuro-scientific questions.
                 You must always specify in your answers from which brain regions the information is extracted.
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
         )
-        return values
+        return data
 
     def run(self, query: str) -> Any:
         """Run the agent against a query.

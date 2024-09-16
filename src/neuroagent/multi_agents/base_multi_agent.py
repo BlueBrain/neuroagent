@@ -4,9 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator
 
 from langchain.chat_models.base import BaseChatModel
-from langchain.llms.base import BaseLLM
-from pydantic import ConfigDict
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from neuroagent.agents import AgentOutput
 from neuroagent.tools.base_tool import BasicTool
@@ -15,7 +13,7 @@ from neuroagent.tools.base_tool import BasicTool
 class BaseMultiAgent(BaseModel, ABC):
     """Base class for multi agents."""
 
-    llm: BaseLLM | BaseChatModel
+    llm: BaseChatModel
     main_agent: Any
     agents: list[tuple[str, list[BasicTool]]]
 

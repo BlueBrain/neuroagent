@@ -23,6 +23,7 @@ dependencies = [
     "langgraph-checkpoint-postgres",
     "langgraph-checkpoint-sqlite",
     "neurom",
+    "psycopg-binary",
     "psycopg2-binary",
     "pydantic-settings",
     "python-dotenv",
