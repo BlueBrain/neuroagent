@@ -14,6 +14,7 @@ from neuroagent.agents import (
 from neuroagent.app.dependencies import (
     get_agent,
     get_chat_agent,
+    get_connection_string,
     get_user_id,
 )
 from neuroagent.app.routers.database.schemas import Threads
@@ -56,9 +57,16 @@ async def run_streamed_chat_agent(
     request: AgentRequest,
     _: Annotated[Threads, Depends(get_object)],
     agent: Annotated[BaseAgent, Depends(get_chat_agent)],
+    connection_string: Annotated[str | None, Depends(get_connection_string)],
     thread_id: str,
 ) -> StreamingResponse:
     """Run agent in streaming mode."""
     logger.info("Running agent query.")
     logger.info(f"User's query: {request.inputs}")
-    return StreamingResponse(agent.astream(query=request.inputs, thread_id=thread_id))  # type: ignore
+    return StreamingResponse(
+        agent.astream(
+            query=request.inputs,
+            thread_id=thread_id,
+            connection_string=connection_string,
+        )
+    )  # type: ignore
