@@ -20,7 +20,6 @@ class AgentOutput(BaseModel):
 
     response: str
     steps: list[AgentStep]
-    plan: str | None = None
 
 
 class BaseAgent(BaseModel, ABC):
