@@ -21,13 +21,11 @@ def test_run_agent(app_client):
     agent_mock.arun.return_value = agent_output
     app.dependency_overrides[get_agent] = lambda: agent_mock
 
-    response = app_client.post(
-        "/qa/run", json={"inputs": "This is my query", "parameters": {}}
-    )
+    response = app_client.post("/qa/run", json={"query": "This is my query"})
     assert response.status_code == 200
     assert response.json() == agent_output.model_dump()
 
-    # Missing inputs
+    # Missing query
     response = app_client.post("/qa/run", json={})
     assert response.status_code == 422
 
@@ -55,15 +53,13 @@ def test_run_chat_agent(app_client, tmp_path, patch_required_env):
         create_output = app_client.post("/threads/").json()
         response = app_client.post(
             f"/qa/chat/{create_output['thread_id']}",
-            json={"inputs": "This is my query", "parameters": {}},
+            json={"query": "This is my query"},
         )
     assert response.status_code == 200
     assert response.json() == agent_output.model_dump()
 
-    # Missing thread_id inputs
-    response = app_client.post(
-        "/qa/chat", json={"inputs": "This is my query", "parameters": {}}
-    )
+    # Missing thread_id query
+    response = app_client.post("/qa/chat", json={"query": "This is my query"})
     assert response.status_code == 404
 
 
@@ -123,7 +119,7 @@ def test_chat_streamed(app_client, tmp_path, patch_required_env):
         create_output = app_client.post("/threads/").json()
         response = app_client.post(
             f"/qa/chat_streamed/{create_output['thread_id']}",
-            json={"inputs": "This is my query", "parameters": {}},
+            json={"query": "This is my query"},
         )
     assert response.status_code == 200
     assert response.content == expected_tokens

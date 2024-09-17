@@ -10,7 +10,7 @@ def test_required(monkeypatch, patch_required_env):
 
     assert settings.tools.literature.url == "https://fake_url"
     assert settings.knowledge_graph.base_url == "https://fake_url/api/nexus/v1"
-    assert settings.generative.openai.token.get_secret_value() == "dummy"
+    assert settings.openai.token.get_secret_value() == "dummy"
     assert settings.knowledge_graph.use_token
     assert settings.knowledge_graph.token.get_secret_value() == "token"
 

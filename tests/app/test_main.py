@@ -12,7 +12,7 @@ def test_settings_endpoint(app_client, dont_look_at_env_file):
 
     replace_secretstr = settings.model_dump()
     replace_secretstr["keycloak"]["password"] = "**********"
-    replace_secretstr["generative"]["openai"]["token"] = "**********"
+    replace_secretstr["openai"]["token"] = "**********"
     assert response.json() == replace_secretstr
 
 
