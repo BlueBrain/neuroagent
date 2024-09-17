@@ -69,4 +69,4 @@ async def run_streamed_chat_agent(
             thread_id=thread_id,
             connection_string=connection_string,
         )
-    )  # type: ignore
+    )

@@ -46,7 +46,7 @@ class SimpleChatAgent(BaseAgent):
 
     async def astream(
         self, thread_id: str, query: str, connection_string: str | None = None
-    ) -> AsyncIterator[str]:  # type: ignore
+    ) -> AsyncIterator[str]:
         """Run the agent against a query in streaming way.
 
         Parameters
@@ -58,8 +58,8 @@ class SimpleChatAgent(BaseAgent):
         connection_string
             connection string for the checkpoint database.
 
-        Returns
-        -------
+        Yields
+        ------
             Iterator streaming the processed output of the LLM
         """
         async with (
