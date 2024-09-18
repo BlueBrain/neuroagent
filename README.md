@@ -1,5 +1,6 @@
 # Neuroagent
 
+LLM agent made to communicate with different neuroscience related tools. It allows to communicate in a ChatGPT like fashion to get information about brain regions, morphologies, electric traces and the scientific literature.
 
 
 1. [Funding and Acknowledgement](#funding-and-acknowledgement)
