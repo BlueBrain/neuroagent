@@ -58,7 +58,7 @@ class SimpleAgent(BaseAgent):
         result = await self.agent.ainvoke({"messages": [("human", query)]})
         return self._process_output(result)
 
-    async def astream(self, query: str) -> AsyncIterator[str]:  # type: ignore
+    async def astream(self, query: str) -> AsyncIterator[str]:
         """Run the agent against a query in streaming way.
 
         Parameters

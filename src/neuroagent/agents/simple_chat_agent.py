@@ -1,6 +1,7 @@
 """Simple agent."""
 
 import logging
+from contextlib import AsyncExitStack
 from typing import Any, AsyncIterator
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -43,7 +44,9 @@ class SimpleChatAgent(BaseAgent):
         result = await self.agent.ainvoke({"messages": [input_message]}, config=config)
         return self._process_output(result)
 
-    async def astream(self, thread_id: str, query: str) -> AsyncIterator[str]:  # type: ignore
+    async def astream(
+        self, thread_id: str, query: str, connection_string: str | None = None
+    ) -> AsyncIterator[str]:
         """Run the agent against a query in streaming way.
 
         Parameters
@@ -51,41 +54,49 @@ class SimpleChatAgent(BaseAgent):
         thread_id
             ID of the thread of the chat.
         query
-            Query of the user
+            Query of the user.
+        connection_string
+            connection string for the checkpoint database.
 
-        Returns
-        -------
+        Yields
+        ------
             Iterator streaming the processed output of the LLM
         """
-        config = {"configurable": {"thread_id": thread_id}}
-        streamed_response = self.agent.astream_events(
-            {"messages": query}, version="v2", config=config
-        )
+        async with (
+            self.agent.checkpointer.__class__.from_conn_string(connection_string)
+            if connection_string
+            else AsyncExitStack() as memory
+        ):
+            if isinstance(memory, BaseCheckpointSaver):
+                self.agent.checkpointer = memory
+            config = {"configurable": {"thread_id": thread_id}}
+            streamed_response = self.agent.astream_events(
+                {"messages": query}, version="v2", config=config
+            )
+            async for event in streamed_response:
+                kind = event["event"]
 
-        async for event in streamed_response:
-            kind = event["event"]
+                # newline everytime model starts streaming.
+                if kind == "on_chat_model_start":
+                    yield "\n\n"
+                # check for the model stream.
+                if kind == "on_chat_model_stream":
+                    # check if we are calling the tools.
+                    data_chunk = event["data"]["chunk"]
+                    if "tool_calls" in data_chunk.additional_kwargs:
+                        tool = data_chunk.additional_kwargs["tool_calls"]
+                        if tool[0]["function"]["name"]:
+                            yield (
+                                f'\nCalling tool : {tool[0]["function"]["name"]} with'
+                                " arguments : "
+                            )
+                        if tool[0]["function"]["arguments"]:
+                            yield tool[0]["function"]["arguments"]
 
-            # newline everytime model starts streaming.
-            if kind == "on_chat_model_start":
-                yield "\n\n"
-            # check for the model stream.
-            if kind == "on_chat_model_stream":
-                # check if we are calling the tools.
-                data_chunk = event["data"]["chunk"]
-                if "tool_calls" in data_chunk.additional_kwargs:
-                    tool = data_chunk.additional_kwargs["tool_calls"]
-                    if tool[0]["function"]["name"]:
-                        yield (
-                            f'\nCalling tool : {tool[0]["function"]["name"]} with'
-                            " arguments : "
-                        )
-                    if tool[0]["function"]["arguments"]:
-                        yield tool[0]["function"]["arguments"]
-
-                content = data_chunk.content
-                if content:
-                    yield content
-        yield "\n"
+                    content = data_chunk.content
+                    if content:
+                        yield content
+            yield "\n"
 
     @staticmethod
     def _process_output(output: Any) -> AgentOutput:

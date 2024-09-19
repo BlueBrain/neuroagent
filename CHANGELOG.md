@@ -15,4 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Migration to pydantic V2.
+
+### Fixed
+- Streaming with chat agent.
 - Deleted some legacy code.

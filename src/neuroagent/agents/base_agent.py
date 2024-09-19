@@ -40,7 +40,7 @@ class BaseAgent(BaseModel, ABC):
         """Arun method of the service."""
 
     @abstractmethod
-    async def astream(self, *args: Any, **kwargs: Any) -> AsyncIterator[str]:
+    def astream(self, *args: Any, **kwargs: Any) -> AsyncIterator[str]:
         """Astream method of the service."""
 
     @staticmethod
