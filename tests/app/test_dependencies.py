@@ -91,8 +91,8 @@ def test_get_literature_tool(monkeypatch, patch_required_env):
     literature_tool = get_literature_tool(token, settings, httpx_client)
     assert isinstance(literature_tool, LiteratureSearchTool)
     assert literature_tool.metadata["url"] == url
-    assert literature_tool.metadata["retriever_k"] == 700
-    assert literature_tool.metadata["reranker_k"] == 5
+    assert literature_tool.metadata["retriever_k"] == 500
+    assert literature_tool.metadata["reranker_k"] == 8
     assert literature_tool.metadata["use_reranker"] is True
 
     monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__RETRIEVER_K", "30")
@@ -163,9 +163,9 @@ async def test_get_memory(patch_required_env, db_connection):
 
 
 def test_language_model(monkeypatch, patch_required_env):
-    monkeypatch.setenv("NEUROAGENT_GENERATIVE__OPENAI__MODEL", "dummy")
-    monkeypatch.setenv("NEUROAGENT_GENERATIVE__OPENAI__TEMPERATURE", "99")
-    monkeypatch.setenv("NEUROAGENT_GENERATIVE__OPENAI__MAX_TOKENS", "99")
+    monkeypatch.setenv("NEUROAGENT_OPENAI__MODEL", "dummy")
+    monkeypatch.setenv("NEUROAGENT_OPENAI__TEMPERATURE", "99")
+    monkeypatch.setenv("NEUROAGENT_OPENAI__MAX_TOKENS", "99")
 
     settings = Settings()
 
@@ -217,6 +217,7 @@ def test_get_agent(monkeypatch, patch_required_env):
         kg_morpho_feature_tool=kg_morpho_feature_tool,
         electrophys_feature_tool=electrophys_feature_tool,
         traces_tool=traces_tool,
+        settings=settings,
     )
 
     assert isinstance(agent, SimpleAgent)
@@ -267,7 +268,6 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
         electrophys_feature_tool=electrophys_feature_tool,
         traces_tool=traces_tool,
         memory=memory,
-        settings=settings,
     )
 
     assert isinstance(agent, SimpleChatAgent)

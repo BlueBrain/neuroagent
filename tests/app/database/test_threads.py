@@ -65,7 +65,7 @@ async def test_get_thread(
         # Fill the thread
         app_client.post(
             f"/qa/chat/{thread_id}",
-            json={"inputs": "This is my query", "parameters": {}},
+            json={"query": "This is my query"},
         )
 
         create_output = app_client.post("/threads/").json()
@@ -131,7 +131,7 @@ async def test_delete_thread(
         # Fill the thread
         app_client.post(
             f"/qa/chat/{thread_id}",
-            json={"inputs": "This is my query", "parameters": {}},
+            json={"query": "This is my query"},
             params={"thread_id": thread_id},
         )
         # Get the messages of the thread
