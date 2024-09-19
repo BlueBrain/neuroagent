@@ -30,7 +30,7 @@ async def test_get_tool_calls(
         # Fill the thread
         app_client.post(
             f"/qa/chat/{thread_id}",
-            json={"inputs": "This is my query", "parameters": {}},
+            json={"query": "This is my query"},
             params={"thread_id": thread_id},
         )
 
@@ -121,7 +121,7 @@ async def test_get_tool_output(
         # Fill the thread
         app_client.post(
             f"/qa/chat/{thread_id}",
-            json={"inputs": "This is my query", "parameters": {}},
+            json={"query": "This is my query"},
             params={"thread_id": thread_id},
         )
 

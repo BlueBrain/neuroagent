@@ -30,10 +30,8 @@ def client_fixture():
         knowledge_graph={
             "base_url": "https://fake_url/api/nexus/v1",
         },
-        generative={
-            "openai": {
-                "token": "fake_token",
-            }
+        openai={
+            "token": "fake_token",
         },
         keycloak={
             "username": "fake_username",
@@ -59,7 +57,7 @@ def patch_required_env(monkeypatch):
     monkeypatch.setenv(
         "NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "https://fake_url/api/nexus/v1"
     )
-    monkeypatch.setenv("NEUROAGENT_GENERATIVE__OPENAI__TOKEN", "dummy")
+    monkeypatch.setenv("NEUROAGENT_OPENAI__TOKEN", "dummy")
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__TOKEN", "token")
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__USE_TOKEN", "true")
 

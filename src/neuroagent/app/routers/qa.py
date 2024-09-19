@@ -35,8 +35,8 @@ async def run_agent(
 ) -> AgentOutput:
     """Run agent."""
     logger.info("Running agent query.")
-    logger.info(f"User's query: {request.inputs}")
-    return await agent.arun(request.inputs)
+    logger.info(f"User's query: {request.query}")
+    return await agent.arun(request.query)
 
 
 @router.post("/chat/{thread_id}", response_model=AgentOutput)
@@ -48,8 +48,8 @@ async def run_chat_agent(
 ) -> AgentOutput:
     """Run chat agent."""
     logger.info("Running agent query.")
-    logger.info(f"User's query: {request.inputs}")
-    return await agent.arun(query=request.inputs, thread_id=thread_id)
+    logger.info(f"User's query: {request.query}")
+    return await agent.arun(query=request.query, thread_id=thread_id)
 
 
 @router.post("/chat_streamed/{thread_id}")
@@ -62,10 +62,10 @@ async def run_streamed_chat_agent(
 ) -> StreamingResponse:
     """Run agent in streaming mode."""
     logger.info("Running agent query.")
-    logger.info(f"User's query: {request.inputs}")
+    logger.info(f"User's query: {request.query}")
     return StreamingResponse(
         agent.astream(
-            query=request.inputs,
+            query=request.query,
             thread_id=thread_id,
             connection_string=connection_string,
         )

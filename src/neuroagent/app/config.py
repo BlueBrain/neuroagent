@@ -13,8 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class SettingsAgent(BaseModel):
     """Agent setting."""
 
-    model: str = "simple"
-    chat: str = "simple"
+    model: Literal["simple", "multi"] = "simple"
 
     model_config = ConfigDict(frozen=True)
 
@@ -84,9 +83,9 @@ class SettingsLiterature(BaseModel):
     """Literature search API settings."""
 
     url: str
-    retriever_k: int = 700
+    retriever_k: int = 500
     use_reranker: bool = True
-    reranker_k: int = 5
+    reranker_k: int = 8
 
     model_config = ConfigDict(frozen=True)
 
@@ -173,23 +172,6 @@ class SettingsOpenAI(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class SettingsGenerative(BaseModel):
-    """Generative QA settings."""
-
-    llm_type: Literal["fake", "openai"] = "openai"
-    openai: SettingsOpenAI = SettingsOpenAI()
-
-    model_config = ConfigDict(frozen=True)
-
-
-class SettingsCohere(BaseModel):
-    """Settings cohere reranker."""
-
-    token: Optional[SecretStr] = None
-
-    model_config = ConfigDict(frozen=True)
-
-
 class SettingsLogging(BaseModel):
     """Metadata settings."""
 
@@ -219,8 +201,7 @@ class Settings(BaseSettings):
     knowledge_graph: SettingsKnowledgeGraph
     agent: SettingsAgent = SettingsAgent()  # has no required
     db: SettingsDB = SettingsDB()  # has no required
-    generative: SettingsGenerative = SettingsGenerative()  # has no required
-    cohere: SettingsCohere = SettingsCohere()  # has no required
+    openai: SettingsOpenAI = SettingsOpenAI()  # has no required
     logging: SettingsLogging = SettingsLogging()  # has no required
     keycloak: SettingsKeycloak = SettingsKeycloak()  # has no required
     misc: SettingsMisc = SettingsMisc()  # has no required
@@ -240,10 +221,6 @@ class Settings(BaseSettings):
         model validator is run during instantiation.
 
         """
-        # generative
-        if self.generative.llm_type == "openai":
-            if self.generative.openai.token is None:
-                raise ValueError("OpenAI token not provided")
         if not self.keycloak.password and not self.keycloak.validate_token:
             if not self.knowledge_graph.use_token:
                 raise ValueError("if no password is provided, please use token auth.")

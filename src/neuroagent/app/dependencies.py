@@ -308,12 +308,12 @@ def get_language_model(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ChatOpenAI:
     """Get the language model."""
-    logger.info(f"OpenAI selected. Loading model {settings.generative.openai.model}.")
+    logger.info(f"OpenAI selected. Loading model {settings.openai.model}.")
     return ChatOpenAI(
-        model_name=settings.generative.openai.model,
-        temperature=settings.generative.openai.temperature,
-        openai_api_key=settings.generative.openai.token.get_secret_value(),  # type: ignore
-        max_tokens=settings.generative.openai.max_tokens,
+        model_name=settings.openai.model,
+        temperature=settings.openai.temperature,
+        openai_api_key=settings.openai.token.get_secret_value(),  # type: ignore
+        max_tokens=settings.openai.max_tokens,
         seed=78,
         streaming=True,
     )
@@ -369,19 +369,37 @@ def get_agent(
         ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent | BaseMultiAgent:
     """Get the generative question answering service."""
-    tools = [
-        literature_tool,
-        br_resolver_tool,
-        morpho_tool,
-        morphology_feature_tool,
-        kg_morpho_feature_tool,
-        electrophys_feature_tool,
-        traces_tool,
-    ]
-    logger.info("Load simple agent")
-    return SimpleAgent(llm=llm, tools=tools)  # type: ignore
+    if settings.agent.model == "multi":
+        logger.info("Load multi-agent chat")
+        tools_list = [
+            ("literature", [literature_tool]),
+            (
+                "morphologies",
+                [
+                    br_resolver_tool,
+                    morpho_tool,
+                    morphology_feature_tool,
+                    kg_morpho_feature_tool,
+                ],
+            ),
+            ("traces", [br_resolver_tool, electrophys_feature_tool, traces_tool]),
+        ]
+        return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
+    else:
+        tools = [
+            literature_tool,
+            br_resolver_tool,
+            morpho_tool,
+            morphology_feature_tool,
+            kg_morpho_feature_tool,
+            electrophys_feature_tool,
+            traces_tool,
+        ]
+        logger.info("Load simple agent")
+        return SimpleAgent(llm=llm, tools=tools)  # type: ignore
 
 
 def get_chat_agent(
@@ -402,37 +420,19 @@ def get_chat_agent(
         ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
-    settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent:
     """Get the generative question answering service."""
-    if settings.agent.chat == "multi":
-        logger.info("Load multi-agent chat")
-        tools_list = [
-            ("literature", [literature_tool]),
-            (
-                "morphologies",
-                [
-                    br_resolver_tool,
-                    morpho_tool,
-                    morphology_feature_tool,
-                    kg_morpho_feature_tool,
-                ],
-            ),
-            ("traces", [br_resolver_tool, electrophys_feature_tool, traces_tool]),
-        ]
-        return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
-    else:
-        logger.info("Load simple chat")
-        tools = [
-            literature_tool,
-            br_resolver_tool,
-            morpho_tool,
-            morphology_feature_tool,
-            kg_morpho_feature_tool,
-            electrophys_feature_tool,
-            traces_tool,
-        ]
-        return SimpleChatAgent(llm=llm, tools=tools, memory=memory)  # type: ignore
+    logger.info("Load simple chat")
+    tools = [
+        literature_tool,
+        br_resolver_tool,
+        morpho_tool,
+        morphology_feature_tool,
+        kg_morpho_feature_tool,
+        electrophys_feature_tool,
+        traces_tool,
+    ]
+    return SimpleChatAgent(llm=llm, tools=tools, memory=memory)  # type: ignore
 
 
 async def get_update_kg_hierarchy(
