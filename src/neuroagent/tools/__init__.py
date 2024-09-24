@@ -19,6 +19,7 @@ from neuroagent.tools.resolve_brain_region_tool import (
     ResolveBrainRegionTool,
 )
 from neuroagent.tools.traces_tool import GetTracesTool, TracesOutput
+from neuroagent.tools.get_me_model_tool import GetMEModelTool
 
 __all__ = [
     "BRResolveOutput",
@@ -35,4 +36,5 @@ __all__ = [
     "ParagraphMetadata",
     "ResolveBrainRegionTool",
     "TracesOutput",
+    "GetMEModelTool",
 ]

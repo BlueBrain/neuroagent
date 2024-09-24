@@ -29,6 +29,7 @@ from neuroagent.app.dependencies import (
     get_traces_tool,
     get_update_kg_hierarchy,
     get_user_id,
+    get_me_model_tool,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -37,6 +38,7 @@ from neuroagent.tools import (
     KGMorphoFeatureTool,
     LiteratureSearchTool,
     MorphologyFeatureTool,
+    GetMEModelTool,
 )
 
 
@@ -116,6 +118,7 @@ def test_get_literature_tool(monkeypatch, patch_required_env):
         [get_traces_tool, True, "TRACE", GetTracesTool],
         [get_electrophys_feature_tool, False, None, ElectrophysFeatureTool],
         [get_morphology_feature_tool, False, None, MorphologyFeatureTool],
+        [get_me_model_tool, True, "ME_MODEL", GetMEModelTool],
     ),
 )
 def test_get_tool(
@@ -207,6 +210,9 @@ def test_get_agent(monkeypatch, patch_required_env):
         httpx_client=httpx_client,
         settings=settings,
     )
+    me_model_tool = get_me_model_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
 
     agent = get_agent(
         llm=language_model,
@@ -218,6 +224,7 @@ def test_get_agent(monkeypatch, patch_required_env):
         electrophys_feature_tool=electrophys_feature_tool,
         traces_tool=traces_tool,
         settings=settings,
+        me_model_tool=me_model_tool,
     )
 
     assert isinstance(agent, SimpleAgent)
