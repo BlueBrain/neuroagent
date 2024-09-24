@@ -4,13 +4,15 @@ import json
 import os
 from pathlib import Path
 from typing import AsyncIterator
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from pydantic import SecretStr
+
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
     Settings,
@@ -28,7 +30,7 @@ from neuroagent.app.dependencies import (
     get_morphology_feature_tool,
     get_traces_tool,
     get_update_kg_hierarchy,
-    get_user_id,
+    get_user_id, get_settings,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -38,6 +40,18 @@ from neuroagent.tools import (
     LiteratureSearchTool,
     MorphologyFeatureTool,
 )
+
+
+@patch.dict(os.environ, {
+    "NEUROAGENT_TOOLS__LITERATURE__URL": "https://localhost1",
+    "NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL": "https://localhost2",
+    "NEUROAGENT_KEYCLOAK__USERNAME": "user2",
+    "NEUROAGENT_KEYCLOAK__PASSWORD": "password2"
+})
+def test_get_settings():
+    settings = get_settings()
+    assert settings.tools.literature.url == "https://localhost1"
+    assert settings.knowledge_graph.url == "https://localhost2/search/query/"
 
 
 @pytest.mark.asyncio
