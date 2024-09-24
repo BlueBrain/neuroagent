@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 from langchain_core.tools import ToolException
+
 from neuroagent.tools import GetMorphoTool
 from neuroagent.tools.get_morpho_tool import KnowledgeGraphOutput
 

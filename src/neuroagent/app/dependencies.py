@@ -28,13 +28,13 @@ from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
 from neuroagent.tools import (
     ElectrophysFeatureTool,
+    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
     LiteratureSearchTool,
     MorphologyFeatureTool,
     ResolveBrainRegionTool,
-    GetMEModelTool,
 )
 from neuroagent.utils import RegionMeta, get_file_from_KG
 

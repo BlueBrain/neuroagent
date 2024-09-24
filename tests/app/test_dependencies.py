@@ -11,6 +11,7 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
     Settings,
@@ -24,21 +25,21 @@ from neuroagent.app.dependencies import (
     get_kg_morpho_feature_tool,
     get_language_model,
     get_literature_tool,
+    get_me_model_tool,
     get_morpho_tool,
     get_morphology_feature_tool,
     get_traces_tool,
     get_update_kg_hierarchy,
     get_user_id,
-    get_me_model_tool,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
+    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
     LiteratureSearchTool,
     MorphologyFeatureTool,
-    GetMEModelTool,
 )
 
 
