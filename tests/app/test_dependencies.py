@@ -11,7 +11,8 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from pydantic import SecretStr, Secret
+from pydantic import Secret
+from sqlalchemy.exc import SQLAlchemyError
 
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
@@ -30,7 +31,7 @@ from neuroagent.app.dependencies import (
     get_morphology_feature_tool,
     get_traces_tool,
     get_update_kg_hierarchy,
-    get_user_id, get_settings, get_connection_string,
+    get_user_id, get_settings, get_connection_string, get_engine,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -409,3 +410,50 @@ def test_get_connection_string_no_prefix():
     settings = fake_get_settings()[1]
     result = get_connection_string(settings)
     assert result is None, "should return None when prefix is not set"
+
+
+@patch('neuroagent.app.dependencies.create_engine')
+def test_get_engine(create_engine_mock):
+    create_engine_mock.return_value = Mock()
+
+    settings = Mock()
+    settings.db = Mock()
+    settings.db.prefix = "prefix"
+    settings.db.password = None
+    connection_string = "https://localhost"
+    retval = get_engine(
+        settings=settings,
+        connection_string=connection_string
+    )
+    assert retval is not None
+
+
+@patch('neuroagent.app.dependencies.create_engine')
+def test_get_engine_no_connection_string(create_engine_mock):
+    create_engine_mock.return_value = Mock()
+
+    settings = Mock()
+    settings.db = Mock()
+    settings.db.prefix = "prefix"
+    settings.db.password = None
+    retval = get_engine(
+        settings=settings,
+        connection_string=None
+    )
+    assert retval is None
+
+
+@patch('neuroagent.app.dependencies.create_engine')
+def test_get_engine_error(create_engine_mock):
+    create_engine_mock.side_effect = SQLAlchemyError("An error occurred")
+
+    settings = Mock()
+    settings.db = Mock()
+    settings.db.prefix = "prefix"
+    settings.db.password = None
+    connection_string = "https://localhost"
+    with pytest.raises(SQLAlchemyError):
+        get_engine(
+            settings=settings,
+            connection_string=connection_string
+        )
