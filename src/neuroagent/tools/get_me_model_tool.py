@@ -106,7 +106,7 @@ class GetMEModelTool(BasicTool):
             logger.info(
                 f"Found {len(list(hierarchy_ids))} children of the brain ontology."
             )
-            breakpoint()
+
             if mtype_id:
                 mtype_ids = set(get_celltypes_descendants(mtype_id, self.metadata["celltypes_path"]))
                 logger.info(
