@@ -11,7 +11,7 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from pydantic import SecretStr
+from pydantic import SecretStr, Secret
 
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
@@ -30,7 +30,7 @@ from neuroagent.app.dependencies import (
     get_morphology_feature_tool,
     get_traces_tool,
     get_update_kg_hierarchy,
-    get_user_id, get_settings,
+    get_user_id, get_settings, get_connection_string,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -375,3 +375,37 @@ async def test_get_cell_types_kg_hierarchy(
     )
 
     assert os.path.exists(settings.knowledge_graph.ct_saving_path)
+
+
+def fake_get_settings():
+    class MockedDb:
+        def __init__(self, prefix, user, password, host, port, name):
+            self.prefix = prefix
+            self.user = user
+            self.password = Secret(password)
+            self.host = host
+            self.port = port
+            self.name = name
+
+    class MockedSettings:
+        def __init__(self, db):
+            self.db = db
+
+    return [
+        MockedSettings(MockedDb("http://", "John", "Doe", "localhost", 5000, "test")),
+        MockedSettings(MockedDb("", "", "", "", None, None)),
+    ]
+
+
+def test_get_connection_string_full():
+    settings = fake_get_settings()[0]
+    result = get_connection_string(settings)
+    assert (
+        result == "http://John:Doe@localhost:5000/test"
+    ), "must return fully formed connection string"
+
+
+def test_get_connection_string_no_prefix():
+    settings = fake_get_settings()[1]
+    result = get_connection_string(settings)
+    assert result is None, "should return None when prefix is not set"
