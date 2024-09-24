@@ -108,7 +108,9 @@ class GetMEModelTool(BasicTool):
             )
 
             if mtype_id:
-                mtype_ids = set(get_celltypes_descendants(mtype_id, self.metadata["celltypes_path"]))
+                mtype_ids = set(
+                    get_celltypes_descendants(mtype_id, self.metadata["celltypes_path"])
+                )
                 logger.info(
                     f"Found {len(list(mtype_ids))} children of the cell types ontology for mtype."
                 )
@@ -116,7 +118,9 @@ class GetMEModelTool(BasicTool):
                 mtype_ids = None
 
             if etype_id:
-                etype_ids = set(get_celltypes_descendants(etype_id, self.metadata["celltypes_path"]))
+                etype_ids = set(
+                    get_celltypes_descendants(etype_id, self.metadata["celltypes_path"])
+                )
                 logger.info(
                     f"Found {len(list(etype_ids))} children of the cell types ontology for etype."
                 )
