@@ -4,7 +4,7 @@ import io
 import logging
 import os
 import uuid
-from typing import Literal
+from typing import Any, Literal
 
 import boto3
 import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
-def plot_line(t: list[float], v: list[float]) -> str:
+def plot_line(t: np.ndarray[Any, Any], v: np.ndarray[Any, Any]) -> io.BytesIO:
     """Plot the result of simulation as a line plot."""
     logger.info("Plotting the simulation results")
     plt.switch_backend("Agg")
@@ -36,7 +36,7 @@ def plot_line(t: list[float], v: list[float]) -> str:
 
 
 @tool
-def simulate(type: Literal["single_cell"], plot: bool = False):
+def simulate(type: Literal["single_cell"], plot: bool = False) -> str:
     """Run a cell simulation. Optionally plot the results and interpret it."""
     logger.info(f"Entering simulation tool with inputs: {type=}, {plot=}.")
     if type == "single_cell":
@@ -80,7 +80,8 @@ def simulate(type: Literal["single_cell"], plot: bool = False):
         )
         chain = prompt | llm
         interpretation = chain.invoke(message)
-        return interpretation.content
+        return interpretation.content  # type: ignore
+    return "Success"
 
 
 logging.basicConfig(
@@ -90,7 +91,7 @@ logging.basicConfig(
 llm = ChatOpenAI(
     api_key=os.getenv("NEUROAGENT_OPENAI__TOKEN"), model="gpt-4o-mini", temperature=0
 )
-agent = create_react_agent(llm, [simulate], interrupt_after=["tools"])
+agent = create_react_agent(llm, [simulate], interrupt_after=["tools"])  # type: ignore
 message = {
     "messages": [
         (
