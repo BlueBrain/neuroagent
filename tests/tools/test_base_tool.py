@@ -1,11 +1,13 @@
 from typing import Literal, Type
+from unittest.mock import Mock
 
+import pytest
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import ToolException
 from langgraph.prebuilt import create_react_agent
-from neuroagent.tools.base_tool import BasicTool
-from pydantic import BaseModel
+from neuroagent.tools.base_tool import BasicTool, process_validation_error
+from pydantic import BaseModel, ValidationError
 
 
 class input_for_test(BaseModel):
@@ -103,3 +105,21 @@ def test_basic_tool_error_handling():
         'unable to parse string as an integer"}]'
     )
     assert response["messages"][7].content == "fake answer"
+
+
+@pytest.mark.parametrize("title, errors, expected", [
+    ("ValidationError", [{"type": "literal_error", "input": "distinct", "loc": ["led"]}],
+     '[{"Validation error": "Wrong value: provided distinct for input led. Try again and change this problematic input."}]'),
+    ("ValidationError", [{"type": "missing", "loc": ["led"]}],
+     '[{"Validation error": "Missing input : led. Try again and add this input."}]'),
+    ("ValidationError", [{"type": "other_error", "loc": ["led"], "msg": "This is a test error message"}],
+     '[{"Validation error": "led. This is a test error message"}]'),
+    ("ValidationError", [{}],
+     '[{"Validation error": "Error in ValidationError : \'type\'"}]')
+])
+def test_process_validation_error(title, errors, expected):
+    error = Mock()
+    error.title = title
+    error.errors.return_value = errors
+    result = process_validation_error(error)
+    assert result == expected

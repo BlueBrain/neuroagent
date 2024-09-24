@@ -33,7 +33,7 @@ from neuroagent.app.dependencies import (
     get_morphology_feature_tool,
     get_traces_tool,
     get_update_kg_hierarchy,
-    get_user_id, get_settings, get_connection_string, get_engine, get_session,
+    get_user_id, get_settings, get_connection_string, get_engine, get_session, get_kg_token,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -471,3 +471,21 @@ def test_get_session_success(_):
 def test_get_session_no_engine():
     with pytest.raises(HTTPException):
         next(get_session(None))
+
+
+def test_get_kg_token_with_token():
+    settings = Mock()
+    token = "Test_Token"
+    result = get_kg_token(settings, token)
+    assert result == "Test_Token"
+
+
+def test_get_kg_token_with_settings_knowledge_graph_token():
+    settings = Mock()
+    settings.knowledge_graph.use_token = True
+    settings.knowledge_graph.token.get_secret_value.return_value = "Test_kg_Token"
+    token = None
+
+    result = get_kg_token(settings, token)
+
+    assert result == "Test_kg_Token"
