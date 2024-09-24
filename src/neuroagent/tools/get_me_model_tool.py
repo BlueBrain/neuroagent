@@ -39,7 +39,7 @@ class InputGetMEModel(BaseModel):
 class MEModelOutput(BaseToolOutput):
     """Output schema for the knowledge graph API."""
 
-    model_id: str
+    me_model_id: str
     model_name: str | None
     model_description: str | None
     mtype: str | None
@@ -235,7 +235,7 @@ class GetMEModelTool(BasicTool):
         """
         formatted_output = [
             MEModelOutput(
-                model_id=res["_source"]["@id"],
+                me_model_id=res["_source"]["@id"],
                 model_name=res["_source"].get("name"),
                 model_description=res["_source"].get("description"),
                 mtype=(
