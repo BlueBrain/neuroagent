@@ -7,12 +7,14 @@ from typing import AsyncIterator
 from unittest.mock import Mock, patch
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import Secret
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
@@ -31,7 +33,7 @@ from neuroagent.app.dependencies import (
     get_morphology_feature_tool,
     get_traces_tool,
     get_update_kg_hierarchy,
-    get_user_id, get_settings, get_connection_string, get_engine,
+    get_user_id, get_settings, get_connection_string, get_engine, get_session,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -457,3 +459,15 @@ def test_get_engine_error(create_engine_mock):
             settings=settings,
             connection_string=connection_string
         )
+
+
+@patch('sqlalchemy.orm.Session')
+def test_get_session_success(_):
+    engine = Mock()
+    result = next(get_session(engine))
+    assert isinstance(result, Session)
+
+
+def test_get_session_no_engine():
+    with pytest.raises(HTTPException):
+        next(get_session(None))
