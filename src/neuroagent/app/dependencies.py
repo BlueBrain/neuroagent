@@ -304,6 +304,7 @@ def get_morphology_feature_tool(
     )
     return tool
 
+
 def get_me_model_tool(
     settings: Annotated[Settings, Depends(get_settings)],
     token: Annotated[str, Depends(get_kg_token)],
@@ -322,6 +323,7 @@ def get_me_model_tool(
     )
     return tool
 
+
 def get_language_model(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ChatOpenAI:
@@ -339,7 +341,7 @@ def get_language_model(
 
 async def get_agent_memory(
     connection_string: Annotated[str | None, Depends(get_connection_string)],
-) -> AsyncIterator[BaseCheckpointSaver | None]:
+) -> AsyncIterator[BaseCheckpointSaver[Any] | None]:
     """Get the agent checkpointer."""
     if connection_string:
         if connection_string.startswith("sqlite"):
@@ -424,7 +426,7 @@ def get_agent(
 
 def get_chat_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    memory: Annotated[BaseCheckpointSaver, Depends(get_agent_memory)],
+    memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)

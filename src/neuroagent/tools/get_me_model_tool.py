@@ -3,8 +3,8 @@
 import logging
 from typing import Any, Literal, Optional, Type
 
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import ToolException
+from pydantic import BaseModel, Field
 
 from neuroagent.cell_types import get_celltypes_descendants
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
@@ -108,11 +108,7 @@ class GetMEModelTool(BasicTool):
             )
             breakpoint()
             if mtype_id:
-                mtype_ids = list(
-                    get_celltypes_descendants(mtype_id, self.metadata["celltypes_path"])
-                    if mtype_id
-                    else None
-                )
+                mtype_ids = set(get_celltypes_descendants(mtype_id, self.metadata["celltypes_path"]))
                 logger.info(
                     f"Found {len(list(mtype_ids))} children of the cell types ontology for mtype."
                 )
@@ -120,11 +116,7 @@ class GetMEModelTool(BasicTool):
                 mtype_ids = None
 
             if etype_id:
-                etype_ids = list(
-                    get_celltypes_descendants(etype_id, self.metadata["celltypes_path"])
-                    if etype_id
-                    else None
-                )
+                etype_ids = set(get_celltypes_descendants(etype_id, self.metadata["celltypes_path"]))
                 logger.info(
                     f"Found {len(list(etype_ids))} children of the cell types ontology for etype."
                 )
@@ -144,7 +136,7 @@ class GetMEModelTool(BasicTool):
                 headers={"Authorization": f"Bearer {self.metadata['token']}"},
                 json=entire_query,
             )
-            logging.info(f"Response status code: {response.status_code}")
+
             # Process the output and return.
             return self._process_output(response.json())
 

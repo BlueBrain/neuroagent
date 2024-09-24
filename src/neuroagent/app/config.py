@@ -121,6 +121,7 @@ class SettingsGetMEModel(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
 
