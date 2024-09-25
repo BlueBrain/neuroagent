@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import ToolException
 from langgraph.prebuilt import create_react_agent
 from neuroagent.tools.base_tool import BasicTool, process_validation_error
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 
 class input_for_test(BaseModel):
