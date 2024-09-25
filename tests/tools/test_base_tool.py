@@ -107,16 +107,37 @@ def test_basic_tool_error_handling():
     assert response["messages"][7].content == "fake answer"
 
 
-@pytest.mark.parametrize("title, errors, expected", [
-    ("ValidationError", [{"type": "literal_error", "input": "distinct", "loc": ["led"]}],
-     '[{"Validation error": "Wrong value: provided distinct for input led. Try again and change this problematic input."}]'),
-    ("ValidationError", [{"type": "missing", "loc": ["led"]}],
-     '[{"Validation error": "Missing input : led. Try again and add this input."}]'),
-    ("ValidationError", [{"type": "other_error", "loc": ["led"], "msg": "This is a test error message"}],
-     '[{"Validation error": "led. This is a test error message"}]'),
-    ("ValidationError", [{}],
-     '[{"Validation error": "Error in ValidationError : \'type\'"}]')
-])
+@pytest.mark.parametrize(
+    "title, errors, expected",
+    [
+        (
+            "ValidationError",
+            [{"type": "literal_error", "input": "distinct", "loc": ["led"]}],
+            '[{"Validation error": "Wrong value: provided distinct for input led. Try again and change this problematic input."}]',
+        ),
+        (
+            "ValidationError",
+            [{"type": "missing", "loc": ["led"]}],
+            '[{"Validation error": "Missing input : led. Try again and add this input."}]',
+        ),
+        (
+            "ValidationError",
+            [
+                {
+                    "type": "other_error",
+                    "loc": ["led"],
+                    "msg": "This is a test error message",
+                }
+            ],
+            '[{"Validation error": "led. This is a test error message"}]',
+        ),
+        (
+            "ValidationError",
+            [{}],
+            '[{"Validation error": "Error in ValidationError : \'type\'"}]',
+        ),
+    ],
+)
 def test_process_validation_error(title, errors, expected):
     error = Mock()
     error.title = title
