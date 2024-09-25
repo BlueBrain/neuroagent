@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class SimpleChatAgent(BaseAgent):
     """Simple Agent class."""
 
-    memory: BaseCheckpointSaver
+    memory: BaseCheckpointSaver  # type: ignore
 
     @model_validator(mode="before")
     @classmethod

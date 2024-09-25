@@ -321,7 +321,7 @@ def get_language_model(
 
 async def get_agent_memory(
     connection_string: Annotated[str | None, Depends(get_connection_string)],
-) -> AsyncIterator[BaseCheckpointSaver | None]:
+) -> AsyncIterator[BaseCheckpointSaver | None]:  # type: ignore
     """Get the agent checkpointer."""
     if connection_string:
         if connection_string.startswith("sqlite"):
@@ -404,7 +404,7 @@ def get_agent(
 
 def get_chat_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    memory: Annotated[BaseCheckpointSaver, Depends(get_agent_memory)],
+    memory: Annotated[BaseCheckpointSaver, Depends(get_agent_memory)],  # type: ignore
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
