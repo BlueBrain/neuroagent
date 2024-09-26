@@ -62,11 +62,11 @@ class AsyncSqliteSaverWithPrefix(AsyncSqliteSaver):
         """Create a new AsyncSqliteSaver instance from a connection string.
 
         Args:
-            conn_string (str): The SQLite connection string.
+            conn_string (str): The SQLite connection string. It can have the 'sqlite:///' prefix.
 
         Yields
         ------
-            AsyncSqliteSaver: A new AsyncSqliteSaver instance.
+            AsyncSqliteSaverWithPrefix: A new AsyncSqliteSaverWithPrefix instance.
         """
         conn_string = conn_string.split("///")[-1]
         async with super().from_conn_string(conn_string) as memory:
