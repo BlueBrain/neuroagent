@@ -84,8 +84,8 @@ async def test_astream(fake_llm_with_tools, httpx_mock):
 
         msg_list = "".join([el async for el in response])
         assert (
-            msg_list == "\n\n\nCalling tool : get-morpho-tool with arguments :"
-            ' {"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}\n\nGreat'
+            msg_list == "\nCalling tool : get-morpho-tool with arguments :"
+            ' {"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}\n<begin_llm_response>\nGreat'
             " answer\n"
         )
 
