@@ -184,7 +184,7 @@ async def test_get_file_from_KG_errors(httpx_mock):
         )
     assert not_found.value.args[0] == "No file url was found."
 
-    httpx_mock.reset(assert_all_responses_were_requested=True)
+    httpx_mock.reset()
     # no file found corresponding to file_url
     test_file_url = "http://test_url.com"
     json_response = {

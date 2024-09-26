@@ -11,7 +11,6 @@ from keycloak import KeycloakOpenID
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,6 +22,7 @@ from neuroagent.agents import (
     SimpleAgent,
     SimpleChatAgent,
 )
+from neuroagent.agents.base_agent import AsyncSqliteSaverWithPrefix
 from neuroagent.app.config import Settings
 from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
@@ -321,12 +321,12 @@ def get_language_model(
 
 async def get_agent_memory(
     connection_string: Annotated[str | None, Depends(get_connection_string)],
-) -> AsyncIterator[BaseCheckpointSaver | None]:
+) -> AsyncIterator[BaseCheckpointSaver[Any] | None]:
     """Get the agent checkpointer."""
     if connection_string:
         if connection_string.startswith("sqlite"):
-            async with AsyncSqliteSaver.from_conn_string(
-                connection_string.split("///")[-1]
+            async with AsyncSqliteSaverWithPrefix.from_conn_string(
+                connection_string
             ) as memory:
                 await memory.setup()
                 yield memory
@@ -404,7 +404,7 @@ def get_agent(
 
 def get_chat_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    memory: Annotated[BaseCheckpointSaver, Depends(get_agent_memory)],
+    memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
