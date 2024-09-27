@@ -6,7 +6,7 @@ from typing import Literal, Optional
 
 from dotenv import dotenv_values
 from fastapi.openapi.models import OAuthFlowPassword, OAuthFlows
-from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, SecretStr, model_validator, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -121,13 +121,12 @@ class SettingsGetMEModel(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+
 class SettingsBlueNaaS(BaseModel):
     """BlueNaaS settings."""
 
-    url: str
-
+    url: str = "https://openbluebrain.com/api/bluenaas/single-neuron/run" #TODO: move to .env
     model_config = ConfigDict(frozen=True)
-
 
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
@@ -222,6 +221,7 @@ class Settings(BaseSettings):
     logging: SettingsLogging = SettingsLogging()  # has no required
     keycloak: SettingsKeycloak = SettingsKeycloak()  # has no required
     misc: SettingsMisc = SettingsMisc()  # has no required
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

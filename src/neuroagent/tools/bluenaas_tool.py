@@ -12,12 +12,12 @@ from neuroagent.utils import get_kg_data
 logger = logging.getLogger(__name__)
 
 #TODO : since bluenaaas has multiple endpoints for synapse generation ,nexus query, simulation, how should we handle those?
-class SynapseSimulationConfig(BaseModel):
-    id: str
-    delay: int
-    duration: int
-    frequency: PositiveInt
-    weightScalar: int
+# class SynapseSimulationConfig(BaseModel):
+#     id: str
+#     delay: int
+#     duration: int
+#     frequency: PositiveInt
+#     weightScalar: int
 
 class SimulationStimulusConfig(BaseModel):
     stimulusType: Literal["current_clamp", "voltage_clamp", "conductance"]
@@ -40,9 +40,9 @@ class SimulationConditionsConfig(BaseModel):
     time_step: float # usually 0.025 ms
     seed: int # can be any nubmer
 
-class SimulationWithSynapseBody(BaseModel):
-    directCurrentConfig: CurrentInjectionConfig
-    synapseConfigs: list[SynapseSimulationConfig]
+# class SimulationWithSynapseBody(BaseModel):
+#     directCurrentConfig: CurrentInjectionConfig
+#     synapseConfigs: list[SynapseSimulationConfig]
 
 
 class InputBlueNaaS(BaseModel):
@@ -54,12 +54,12 @@ class InputBlueNaaS(BaseModel):
             " fetched using the 'get-me-model-tool'."
         )
     )
-    synapses: list[SynapseSimulationConfig] = Field(
-        description=(
-            "List of synapse configurations. Each synapse configuration includes the"
-            " synapse ID, delay, duration, frequency, and weight scalar."
-        )
-    )
+    # synapses: list[SynapseSimulationConfig] = Field(
+    #     description=(
+    #         "List of synapse configurations. Each synapse configuration includes the"
+    #         " synapse ID, delay, duration, frequency, and weight scalar."
+    #     )
+    # )
     currentInjection: CurrentInjectionConfig = Field(
         description=(
             "Configuration for current injection. Includes the target section to inject"
@@ -79,10 +79,9 @@ class InputBlueNaaS(BaseModel):
             " (max_time, in ms), time step (time_step, in ms), and random seed (seed)."
         )
     )
-    simulationType: Literal["single-neuron-simulation","synaptome-simulation"] = Field(
+    simulationType: Literal["single-neuron-simulation"] = Field(
         description=(
-            "Type of the simulation. it can be single neuron simulation for simulation"
-            " without synapse placement or synaptome-simulation to put synapses on the morphology."
+            "Type of the simulation. For now , its set to only single-neuron-simulation"
         )
     )
     simulationDuration: int = Field(
@@ -109,11 +108,11 @@ class BlueNaaSTool(BasicTool):
 
     async def _arun(self,
                     me_model_id: str,
-                    synapses: List[SynapseSimulationConfig],
+                    # synapses: List[SynapseSimulationConfig],
                     currentInjection: CurrentInjectionConfig,
                     recordFrom: List[RecordingLocation],
                     conditions: SimulationConditionsConfig,
-                    simulationType: Literal["single-neuron-simulation","synaptome-simulation"],
+                    simulationType: Literal["single-neuron-simulation"],
                     simulationDuration: int
                     ) -> BaseToolOutput:
         """
@@ -121,7 +120,7 @@ class BlueNaaSTool(BasicTool):
 
         Args:
             me_model_id: ID of the neuron model to be used in the simulation.
-            synapses: List of synapse configurations.
+            # synapses: List of synapse configurations.
             currentInjection: Configuration for current injection.
             recordFrom: List of sections to record from during the simulation.
             conditions: Simulation conditions.
@@ -138,7 +137,7 @@ class BlueNaaSTool(BasicTool):
                 headers={"Authorization": f"Bearer {self.metadata['token']}"},
                 json={
                     "model_id": me_model_id,
-                    "synapses": [synapse.dict() for synapse in synapses],
+                    # "synapses": [synapse.dict() for synapse in synapses],
                     "currentInjection": currentInjection.dict(),
                     "recordFrom": [record.dict() for record in recordFrom],
                     "conditions": conditions.dict(),
