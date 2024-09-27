@@ -23,6 +23,7 @@ from neuroagent.app.dependencies import (
     get_kg_token,
     get_settings,
     get_update_kg_hierarchy,
+    get_project_id,
 )
 from neuroagent.app.middleware import strip_path_prefix
 from neuroagent.app.routers import qa
@@ -125,7 +126,8 @@ app = FastAPI(
     title="Agents",
     summary=(
         "Use an AI agent to answer queries based on the knowledge graph, literature"
-        " search and neuroM."
+        " search and neuroM. Extract statistical information from morphologies and electrophysiology."
+        "Run single cell simulations with BlueNaaS API."
     ),
     version=__version__,
     swagger_ui_parameters={"tryItOutEnabled": True},

@@ -35,6 +35,7 @@ from neuroagent.tools import (
     LiteratureSearchTool,
     MorphologyFeatureTool,
     ResolveBrainRegionTool,
+    BlueNaaSTool,
 )
 from neuroagent.utils import RegionMeta, get_file_from_KG
 
@@ -323,6 +324,23 @@ def get_me_model_tool(
     )
     return tool
 
+def run_single_cell_sim_tool(
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> BlueNaaSTool:
+    """Load BlueNaaS tool."""
+    tool = BlueNaaSTool(
+        metadata={
+            "url": settings.bluenaas.url,
+            "token": token,
+            "httpx_client": httpx_client,
+        }
+    )
+    return tool
+
+def get_project_id():
+    pass
 
 def get_language_model(
     settings: Annotated[Settings, Depends(get_settings)],

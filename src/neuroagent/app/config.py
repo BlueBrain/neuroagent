@@ -121,6 +121,13 @@ class SettingsGetMEModel(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+class SettingsBlueNaaS(BaseModel):
+    """BlueNaaS settings."""
+
+    url: str
+
+    model_config = ConfigDict(frozen=True)
+
 
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
@@ -166,6 +173,7 @@ class SettingsTools(BaseModel):
     trace: SettingsTrace = SettingsTrace()
     kg_morpho_features: SettingsKGMorpho = SettingsKGMorpho()
     me_model: SettingsGetMEModel = SettingsGetMEModel()
+    blue_naas: SettingsBlueNaaS = SettingsBlueNaaS()
 
     model_config = ConfigDict(frozen=True)
 
