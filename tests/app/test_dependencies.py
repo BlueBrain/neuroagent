@@ -44,6 +44,7 @@ from neuroagent.tools import (
     LiteratureSearchTool,
     MorphologyFeatureTool,
 )
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -469,7 +470,8 @@ def test_get_engine_error(create_engine_mock, monkeypatch):
 
 @patch("sqlalchemy.orm.Session")
 def test_get_session_success(_):
-    engine = Mock()
+    database_url = "sqlite:///:memory:"
+    engine = create_engine(database_url)
     result = next(get_session(engine))
     assert isinstance(result, Session)
 
