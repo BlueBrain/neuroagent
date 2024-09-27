@@ -1,11 +1,10 @@
-from unittest.mock import MagicMock, AsyncMock
-
-from langchain_core.language_models import GenericFakeChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
+from langchain_core.language_models import GenericFakeChatModel
+from langchain_core.messages import HumanMessage, SystemMessage
 from neuroagent.multi_agents.supervisor_multi_agent import AgentState
+
 from src.neuroagent.multi_agents import SupervisorMultiAgent
 
 
@@ -14,11 +13,9 @@ def test_create_main_agent():
     bind_function_result = MagicMock()
     bind_function_result.__ror__.return_value = {}
     mock_llm.bind_functions.return_value = bind_function_result
-    data = {
-        "llm": mock_llm,
-        "agents": [("agent1",)]
-    }
+    data = {"llm": mock_llm, "agents": [("agent1",)]}
     from src.neuroagent.multi_agents import SupervisorMultiAgent
+
     result = SupervisorMultiAgent.create_main_agent(data)
     assert "main_agent" in result
     assert "summarizer" in result
@@ -32,17 +29,16 @@ async def test_agent_node():
     )
 
     async def mock_ainvoke(_):
-        return {
-            "messages": [
-                mock_message
-            ]
-        }
+        return {"messages": [mock_message]}
 
     agent_state = MagicMock()
     agent = MagicMock()
     agent.ainvoke = mock_ainvoke
     from src.neuroagent.multi_agents import SupervisorMultiAgent
-    agent_node_test = await SupervisorMultiAgent.agent_node(agent_state, agent, "test_agent")
+
+    agent_node_test = await SupervisorMultiAgent.agent_node(
+        agent_state, agent, "test_agent"
+    )
 
     assert isinstance(agent_node_test, dict)
     assert "messages" in agent_node_test
@@ -61,9 +57,14 @@ async def test_summarizer_node():
         def bind_functions(self, **kwargs):
             return self
 
-
-    fake_state = AgentState(messages=[HumanMessage(content="What is the airspeed velocity of an unladen swallow?"),
-                                      SystemMessage(content="11 m/s")])
+    fake_state = AgentState(
+        messages=[
+            HumanMessage(
+                content="What is the airspeed velocity of an unladen swallow?"
+            ),
+            SystemMessage(content="11 m/s"),
+        ]
+    )
 
     mock_llm = FakeChatModel(messages=iter([]))
     agent = SupervisorMultiAgent(agents=[("agent1", [])], llm=mock_llm)
