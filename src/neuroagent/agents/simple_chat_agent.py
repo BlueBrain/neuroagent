@@ -73,12 +73,9 @@ class SimpleChatAgent(BaseAgent):
             streamed_response = self.agent.astream_events(
                 {"messages": query}, version="v2", config=config
             )
+            is_streaming = False
             async for event in streamed_response:
                 kind = event["event"]
-
-                # newline everytime model starts streaming.
-                if kind == "on_chat_model_start":
-                    yield "\n\n"
                 # check for the model stream.
                 if kind == "on_chat_model_stream":
                     # check if we are calling the tools.
@@ -95,6 +92,9 @@ class SimpleChatAgent(BaseAgent):
 
                     content = data_chunk.content
                     if content:
+                        if not is_streaming:
+                            yield "\n<begin_llm_response>\n"
+                        is_streaming = True
                         yield content
             yield "\n"
 

@@ -33,7 +33,7 @@ async def test_sparql_exact_resolve(httpx_mock, get_resolve_query_output):
         }
     ]
 
-    httpx_mock.reset(assert_all_responses_were_requested=False)
+    httpx_mock.reset()
 
     mtype = "Interneuron"
     mocked_response = get_resolve_query_output[1]
@@ -84,7 +84,7 @@ async def test_sparql_fuzzy_resolve(httpx_mock, get_resolve_query_output):
             "id": "http://api.brain-map.org/api/v2/data/Structure/463",
         },
     ]
-    httpx_mock.reset(assert_all_responses_were_requested=False)
+    httpx_mock.reset()
 
     mtype = "Interneu"
     mocked_response = get_resolve_query_output[3]
@@ -143,7 +143,7 @@ async def test_es_resolve(httpx_mock, get_resolve_query_output):
             "id": "http://api.brain-map.org/api/v2/data/Structure/184",
         },
     ]
-    httpx_mock.reset(assert_all_responses_were_requested=True)
+    httpx_mock.reset()
 
     mtype = "Ventral neuron"
     mocked_response = get_resolve_query_output[5]
@@ -222,7 +222,7 @@ async def test_resolve_query(httpx_mock, get_resolve_query_output):
             "id": "http://api.brain-map.org/api/v2/data/Structure/463",
         },
     ]
-    httpx_mock.reset(assert_all_responses_were_requested=True)
+    httpx_mock.reset()
 
     httpx_mock.add_response(url=url, json=get_resolve_query_output[0])
 
@@ -253,7 +253,7 @@ async def test_resolve_query(httpx_mock, get_resolve_query_output):
             "id": "http://api.brain-map.org/api/v2/data/Structure/549",
         }
     ]
-    httpx_mock.reset(assert_all_responses_were_requested=True)
+    httpx_mock.reset()
     httpx_mock.add_response(
         url=url,
         json={

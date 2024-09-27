@@ -11,7 +11,6 @@ from keycloak import KeycloakOpenID
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,6 +22,7 @@ from neuroagent.agents import (
     SimpleAgent,
     SimpleChatAgent,
 )
+from neuroagent.agents.base_agent import AsyncSqliteSaverWithPrefix
 from neuroagent.app.config import Settings
 from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
@@ -345,8 +345,8 @@ async def get_agent_memory(
     """Get the agent checkpointer."""
     if connection_string:
         if connection_string.startswith("sqlite"):
-            async with AsyncSqliteSaver.from_conn_string(
-                connection_string.split("///")[-1]
+            async with AsyncSqliteSaverWithPrefix.from_conn_string(
+                connection_string
             ) as memory:
                 await memory.setup()
                 yield memory

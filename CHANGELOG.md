@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Add get morphoelectric (me) model tool
+## [0.1.1] - 26.09.2024
+
+### Fixed
+- Fixed a bug that prevented AsyncSqlite checkpoint to access the DB in streamed endpoints.
 
 ## [0.1.0] - 19.09.2024
 
