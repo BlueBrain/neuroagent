@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 from langchain_core.tools import ToolException
+
 from neuroagent.tools import ElectrophysFeatureTool
 from neuroagent.tools.electrophys_tool import (
     CALCULATED_FEATURES,
@@ -15,6 +16,7 @@ from neuroagent.tools.electrophys_tool import (
 
 
 class TestElectrophysTool:
+    @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
     @pytest.mark.asyncio
     async def test_arun(self, httpx_mock):
         url = "http://fake_url"
