@@ -1,7 +1,6 @@
 """Test of the tool router."""
 
 import pytest
-
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import get_language_model, get_settings
 from neuroagent.app.main import app
