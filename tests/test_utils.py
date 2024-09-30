@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
-
 from neuroagent.schemas import KGMetadata
 from neuroagent.utils import (
     RegionMeta,

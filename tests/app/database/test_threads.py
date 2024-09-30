@@ -1,14 +1,13 @@
 """Test of the thread router."""
 
 import pytest
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import Select
-
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import get_language_model, get_settings
 from neuroagent.app.main import app
 from neuroagent.app.routers.database.schemas import GetThreadsOutput
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import Select
 
 
 def test_create_thread(patch_required_env, app_client, db_connection):

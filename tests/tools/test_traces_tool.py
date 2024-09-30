@@ -6,7 +6,6 @@ from pathlib import Path
 import httpx
 import pytest
 from langchain_core.tools import ToolException
-
 from neuroagent.tools import GetTracesTool
 from neuroagent.tools.traces_tool import TracesOutput
 
