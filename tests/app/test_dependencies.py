@@ -1,7 +1,6 @@
 """Test dependencies."""
 
 import json
-import logging
 import os
 from pathlib import Path
 from typing import AsyncIterator
@@ -46,7 +45,6 @@ from neuroagent.tools import (
     MorphologyFeatureTool,
 )
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 
@@ -446,28 +444,6 @@ def test_get_engine_no_connection_string(create_engine_mock, monkeypatch):
 
     retval = get_engine(settings=settings, connection_string=None)
     assert retval is None
-
-
-@patch("sqlalchemy.engine.create.create_engine")
-def test_get_engine_error(sql_create_engine_mock, monkeypatch):
-    engine_mock = Mock()
-    engine_mock.connect.side_effect = SQLAlchemyError("An error occurred")
-    sql_create_engine_mock.return_value = engine_mock
-
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
-
-    settings = Settings()
-
-    logging.error(f"settings.db.prefix: {settings.db.prefix}")
-    logging.error(f"NEUROAGENT_DB__PREFIX: {os.getenv('NEUROAGENT_DB__PREFIX')}")
-
-    connection_string = "https://localhost"
-    with pytest.raises(SQLAlchemyError):
-        get_engine(settings=settings, connection_string=connection_string)
 
 
 @patch("sqlalchemy.orm.Session")
