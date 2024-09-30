@@ -9,6 +9,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from neuroagent.agents import AgentOutput, AgentStep, SimpleChatAgent
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_arun(fake_llm_with_tools, httpx_mock):
     llm, tools, fake_responses = await anext(fake_llm_with_tools)
@@ -64,6 +65,7 @@ async def test_arun(fake_llm_with_tools, httpx_mock):
         assert len(messages_list) == 10
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_astream(fake_llm_with_tools, httpx_mock):
     llm, tools, fake_responses = await anext(fake_llm_with_tools)
@@ -84,8 +86,8 @@ async def test_astream(fake_llm_with_tools, httpx_mock):
 
         msg_list = "".join([el async for el in response])
         assert (
-            msg_list == "\n\n\nCalling tool : get-morpho-tool with arguments :"
-            ' {"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}\n\nGreat'
+            msg_list == "\nCalling tool : get-morpho-tool with arguments :"
+            ' {"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}\n<begin_llm_response>\nGreat'
             " answer\n"
         )
 

@@ -1,10 +1,12 @@
 """Base agent."""
 
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from langchain.chat_models.base import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel, ConfigDict
 
 
@@ -47,3 +49,25 @@ class BaseAgent(BaseModel, ABC):
     @abstractmethod
     def _process_output(*args: Any, **kwargs: Any) -> AgentOutput:
         """Format the output."""
+
+
+class AsyncSqliteSaverWithPrefix(AsyncSqliteSaver):
+    """Wrapper around the AsyncSqliteSaver that accepts a connection string with prefix."""
+
+    @classmethod
+    @asynccontextmanager
+    async def from_conn_string(
+        cls, conn_string: str
+    ) -> AsyncIterator["AsyncSqliteSaver"]:
+        """Create a new AsyncSqliteSaver instance from a connection string.
+
+        Args:
+            conn_string (str): The SQLite connection string. It can have the 'sqlite:///' prefix.
+
+        Yields
+        ------
+            AsyncSqliteSaverWithPrefix: A new AsyncSqliteSaverWithPrefix instance.
+        """
+        conn_string = conn_string.split("///")[-1]
+        async with super().from_conn_string(conn_string) as memory:
+            yield AsyncSqliteSaverWithPrefix(memory.conn)

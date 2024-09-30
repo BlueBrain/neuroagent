@@ -313,6 +313,7 @@ async def test_get_kg_data_errors(httpx_mock):
     )
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_get_kg_data(httpx_mock):
     url = "http://fake_url"

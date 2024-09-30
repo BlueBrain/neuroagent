@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 26.09.2024
+
+### Fixed
+- Fixed a bug that prevented AsyncSqlite checkpoint to access the DB in streamed endpoints.
+- Fixed a bug that caused some unit tests to fail due to a change in how httpx_mock works in version 0.32
+
 ## [0.1.0] - 19.09.2024
 
 ### Added
