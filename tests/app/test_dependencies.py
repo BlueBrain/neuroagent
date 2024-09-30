@@ -1,6 +1,7 @@
 """Test dependencies."""
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import AsyncIterator
@@ -49,16 +50,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 
-@patch.dict(
-    os.environ,
-    {
-        "NEUROAGENT_TOOLS__LITERATURE__URL": "https://localhost1",
-        "NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL": "https://localhost2",
-        "NEUROAGENT_KEYCLOAK__USERNAME": "user2",
-        "NEUROAGENT_KEYCLOAK__PASSWORD": "password2",
-    },
-)
-def test_get_settings():
+def test_get_settings(monkeypatch):
+    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "https://localhost1")
+    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "https://localhost2")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
     settings = get_settings()
     assert settings.tools.literature.url == "https://localhost1"
     assert settings.knowledge_graph.url == "https://localhost2/search/query/"
@@ -399,7 +395,7 @@ def test_get_connection_string_full(monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
-    settings = get_settings()
+    settings = Settings()
     result = get_connection_string(settings)
     assert (
         result == "http://John:Doe@localhost:5000/test"
@@ -413,7 +409,8 @@ def test_get_connection_string_no_prefix(monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
-    settings = get_settings()
+    settings = Settings()
+
     result = get_connection_string(settings)
     assert result is None, "should return None when prefix is not set"
 
@@ -428,7 +425,7 @@ def test_get_engine(create_engine_mock, monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
-    settings = get_settings()
+    settings = Settings()
 
     connection_string = "https://localhost"
     retval = get_engine(settings=settings, connection_string=connection_string)
@@ -445,15 +442,17 @@ def test_get_engine_no_connection_string(create_engine_mock, monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
-    settings = get_settings()
+    settings = Settings()
 
     retval = get_engine(settings=settings, connection_string=None)
     assert retval is None
 
 
-@patch("neuroagent.app.dependencies.create_engine")
-def test_get_engine_error(create_engine_mock, monkeypatch):
-    create_engine_mock.side_effect = SQLAlchemyError("An error occurred")
+@patch("sqlalchemy.engine.create.create_engine")
+def test_get_engine_error(sql_create_engine_mock, monkeypatch):
+    engine_mock = Mock()
+    engine_mock.connect.side_effect = SQLAlchemyError("An error occurred")
+    sql_create_engine_mock.return_value = engine_mock
 
     monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
@@ -461,7 +460,10 @@ def test_get_engine_error(create_engine_mock, monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
-    settings = get_settings()
+    settings = Settings()
+
+    logging.error(f"settings.db.prefix: {settings.db.prefix}")
+    logging.error(f"NEUROAGENT_DB__PREFIX: {os.getenv('NEUROAGENT_DB__PREFIX')}")
 
     connection_string = "https://localhost"
     with pytest.raises(SQLAlchemyError):
@@ -488,7 +490,7 @@ def test_get_kg_token_with_token(monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
-    settings = get_settings()
+    settings = Settings()
 
     token = "Test_Token"
     result = get_kg_token(settings, token)
@@ -504,7 +506,7 @@ def test_get_kg_token_with_settings_knowledge_graph_token(monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__USE_TOKEN", "true")
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__TOKEN", "Test_kg_Token")
 
-    settings = get_settings()
+    settings = Settings()
 
     token = None
 

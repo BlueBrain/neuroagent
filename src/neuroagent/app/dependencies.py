@@ -101,12 +101,14 @@ def get_engine(
         if "sqlite" in settings.db.prefix:  # type: ignore
             # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-the-sqlalchemy-engine
             engine_kwargs["connect_args"] = {"check_same_thread": False}
-
         engine = create_engine(**engine_kwargs)
+        # breakpoint()
     else:
         logger.warning("The SQL db_prefix needs to be set to use the SQL DB.")
+        # breakpoint()#
         return None
     try:
+        # breakpoint()
         engine.connect()
         logger.info(
             "Successfully connected to the SQL database"
@@ -114,6 +116,7 @@ def get_engine(
         )
         return engine
     except SQLAlchemyError:
+        # breakpoint()
         logger.warning(
             "Failed connection to SQL database"
             f" {connection_string if not settings.db.password else connection_string.replace(settings.db.password.get_secret_value(), '*****')}."
