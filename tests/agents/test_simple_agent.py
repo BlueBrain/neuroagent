@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from neuroagent.agents import AgentOutput, AgentStep, SimpleAgent
 
 
