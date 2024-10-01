@@ -22,6 +22,7 @@ ETYPE_IDS = {
     "cSTUT": "http://uri.interlex.org/base/ilx_0738198",
     "dNAC": "http://uri.interlex.org/base/ilx_0738205",
     "dSTUT": "http://uri.interlex.org/base/ilx_0738202",
+    "cADpyr": "http://uri.interlex.org/base/ilx_0738441",
 }
 
 
@@ -41,14 +42,16 @@ class InputGetTraces(BaseModel):
             "cSTUT",
             "dNAC",
             "dSTUT",
+            "cADpyr",
         ]
     ] = Field(
         default=None,
         description=(
             "E-type of interest specified by the user. Possible values:"
             f" {', '.join(list(ETYPE_IDS.keys()))}. The first letter meaning classical,"
-            " bursting or delayed, The other letters in capital meaning accomodating,"
-            " non-accomodating, stuttering or irregular spiking."
+            " bursting or delayed, The other capital letters in capital meaning accomodating,"
+            " non-accomodating, stuttering or irregular spiking. final non-capital letters might "
+            " indicate more details. for example pyr stands for pyramidal"
         ),
     )
 
@@ -106,6 +109,7 @@ class GetTracesTool(BasicTool):
                 "dIR",
                 "dNAC",
                 "dSTUT",
+                "cADpyr",
             ]
             | None
         ) = None,
@@ -165,6 +169,7 @@ class GetTracesTool(BasicTool):
                 "dIR",
                 "dNAC",
                 "dSTUT",
+                "cADpyr",
             ]
             | None
         ) = None,

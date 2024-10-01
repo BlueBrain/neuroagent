@@ -9,8 +9,14 @@ from pydantic import BaseModel, Field
 from neuroagent.cell_types import get_celltypes_descendants
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
 from neuroagent.utils import get_descendants_id
+from neuroagent.app.config import Settings
 
 logger = logging.getLogger(__name__)
+
+# settings = Settings()
+# langsmith_api_key = settings.langsmith.api_key.get_secret_value()
+# langsmith_project = settings.langsmith.project
+# langsmith_endpoint = settings.langsmith.endpoint
 
 
 class InputGetMEModel(BaseModel):
@@ -32,6 +38,7 @@ class InputGetMEModel(BaseModel):
             "cSTUT",
             "dNAC",
             "dSTUT",
+            "cADpyr"
         ]
     ] = Field(default=None, description="ID of the E-type of interest.")
 
@@ -66,8 +73,7 @@ class GetMEModelTool(BasicTool):
     - The subject age.
     - The model ID.
     - The model name.
-    - The model description.
-    The model ID is in the form of an HTTP(S) link such as 'https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/...'."""
+    - The model description."""
     metadata: dict[str, Any]
     args_schema: Type[BaseModel] = InputGetMEModel
 
@@ -133,7 +139,6 @@ class GetMEModelTool(BasicTool):
                 mtype_ids=mtype_ids,
                 etype_ids=etype_ids,
             )
-
             # Send the query to get ME models.
             response = await self.metadata["httpx_client"].post(
                 url=self.metadata["url"],

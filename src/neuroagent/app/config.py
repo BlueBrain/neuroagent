@@ -17,6 +17,14 @@ class SettingsAgent(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+# class SettingsLangsmith(BaseModel):
+#         """Langsmith settings."""
+#         api_key: SecretStr = Field(..., alias="LANGSMITH_API_KEY")
+#         project: str = Field(..., alias="LANGSMITH_PROJECT")
+#         endpoint: str = Field(..., alias="LANGSMITH_ENDPOINT")
+#         tracing_v2: bool = Field(..., alias="LANGSMITH_TRACING_V2")
+
+#         model_config = ConfigDict(frozen=True)
 
 class SettingsDB(BaseModel):
     """DB settings for retrieving history."""
@@ -221,6 +229,7 @@ class Settings(BaseSettings):
     logging: SettingsLogging = SettingsLogging()  # has no required
     keycloak: SettingsKeycloak = SettingsKeycloak()  # has no required
     misc: SettingsMisc = SettingsMisc()  # has no required
+    # langsmith: SettingsLangsmith = SettingsLangsmith()
 
 
     model_config = SettingsConfigDict(

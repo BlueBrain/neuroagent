@@ -353,7 +353,7 @@ def get_language_model(
         openai_api_key=settings.openai.token.get_secret_value(),  # type: ignore
         max_tokens=settings.openai.max_tokens,
         seed=78,
-        streaming=True,
+        streaming=False,
     )
 
 
