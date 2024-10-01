@@ -324,17 +324,30 @@ def get_me_model_tool(
     )
     return tool
 
-def run_single_cell_sim_tool(
+async def run_single_cell_sim_tool(
     settings: Annotated[Settings, Depends(get_settings)],
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
 ) -> BlueNaaSTool:
     """Load BlueNaaS tool."""
+    # Run GetMEModelTool to fetch me_model_id
+    get_me_model_tool = GetMEModelTool(
+        metadata={
+            "url": settings.me_model.url,
+            "token": token,
+            "httpx_client": httpx_client,
+        }
+    )
+    me_model_output = await get_me_model_tool._arun()
+    me_model_id = me_model_output.result["me_model_id"]
+
+    # Create BlueNaaSTool with the fetched me_model_id
     tool = BlueNaaSTool(
         metadata={
             "url": settings.bluenaas.url,
             "token": token,
             "httpx_client": httpx_client,
+            "me_model_id": me_model_id,  # Pass the fetched me_model_id
         }
     )
     return tool

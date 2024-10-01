@@ -47,6 +47,7 @@ class MEModelOutput(BaseToolOutput):
     """Output schema for the knowledge graph API."""
 
     me_model_id: str
+    me_model_self_link: str
     me_model_name: str | None
     me_model_description: str | None
     mtype: str | None
@@ -66,14 +67,19 @@ class GetMEModelTool(BasicTool):
     description: str = """Searches a neuroscience based knowledge graph to retrieve neuron morpho-electric model names, IDs and descriptions.
     Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph. To get this ID, please use the `resolve-brain-region-tool` first.
     Ideally, the user should also provide an 'mtype_id' and/or an 'etype_id' to filter the search results. But in case they are not provided, the search will return all models that match the brain region.
+    Output of this can be passed to 'BlueNaaSTool'
     The output is a list of ME models, containing:
-    - The brain region ID.
-    - The brain region name.
-    - The subject species name.
-    - The subject age.
-    - The model ID.
-    - The model name.
-    - The model description."""
+    -me_model_id
+    -me_model_self_link: global link to the me model that should be used for reference
+    -me_model_name
+    -me_model_description
+    -mtype:
+    -etype: 
+    -brain_region_id: 
+    -brain_region_label
+    -subject_species_label 
+    -subject_age
+    """
     metadata: dict[str, Any]
     args_schema: Type[BaseModel] = InputGetMEModel
 
@@ -241,6 +247,7 @@ class GetMEModelTool(BasicTool):
         formatted_output = [
             MEModelOutput(
                 me_model_id=res["_source"]["@id"],
+                me_model_self_link=res["_source"]["_self"],
                 me_model_name=res["_source"].get("name"),
                 me_model_description=res["_source"].get("description"),
                 mtype=(
