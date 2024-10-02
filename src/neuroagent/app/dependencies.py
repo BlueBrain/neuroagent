@@ -28,6 +28,7 @@ from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
 from neuroagent.tools import (
     ElectrophysFeatureTool,
+    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
@@ -303,6 +304,25 @@ def get_morphology_feature_tool(
     return tool
 
 
+def get_me_model_tool(
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> GetMEModelTool:
+    """Load get ME model tool."""
+    tool = GetMEModelTool(
+        metadata={
+            "url": settings.knowledge_graph.url,
+            "token": token,
+            "httpx_client": httpx_client,
+            "search_size": settings.tools.me_model.search_size,
+            "brainregion_path": settings.knowledge_graph.br_saving_path,
+            "celltypes_path": settings.knowledge_graph.ct_saving_path,
+        }
+    )
+    return tool
+
+
 def get_language_model(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ChatOpenAI:
@@ -368,6 +388,7 @@ def get_agent(
         ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
+    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent | BaseMultiAgent:
     """Get the generative question answering service."""
@@ -396,6 +417,7 @@ def get_agent(
             kg_morpho_feature_tool,
             electrophys_feature_tool,
             traces_tool,
+            me_model_tool,
         ]
         logger.info("Load simple agent")
         return SimpleAgent(llm=llm, tools=tools)  # type: ignore

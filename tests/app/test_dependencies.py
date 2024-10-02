@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
     Settings,
@@ -28,6 +29,7 @@ from neuroagent.app.dependencies import (
     get_kg_token,
     get_language_model,
     get_literature_tool,
+    get_me_model_tool,
     get_morpho_tool,
     get_morphology_feature_tool,
     get_session,
@@ -38,6 +40,7 @@ from neuroagent.app.dependencies import (
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
+    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
@@ -130,6 +133,7 @@ def test_get_literature_tool(monkeypatch, patch_required_env):
         [get_traces_tool, True, "TRACE", GetTracesTool],
         [get_electrophys_feature_tool, False, None, ElectrophysFeatureTool],
         [get_morphology_feature_tool, False, None, MorphologyFeatureTool],
+        [get_me_model_tool, True, "ME_MODEL", GetMEModelTool],
     ),
 )
 def test_get_tool(
@@ -221,6 +225,9 @@ def test_get_agent(monkeypatch, patch_required_env):
         httpx_client=httpx_client,
         settings=settings,
     )
+    me_model_tool = get_me_model_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
 
     agent = get_agent(
         llm=language_model,
@@ -232,6 +239,7 @@ def test_get_agent(monkeypatch, patch_required_env):
         electrophys_feature_tool=electrophys_feature_tool,
         traces_tool=traces_tool,
         settings=settings,
+        me_model_tool=me_model_tool,
     )
 
     assert isinstance(agent, SimpleAgent)

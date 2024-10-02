@@ -1,6 +1,7 @@
 """Tools folder."""
 
 from neuroagent.tools.electrophys_tool import ElectrophysFeatureTool, FeaturesOutput
+from neuroagent.tools.get_me_model_tool import GetMEModelTool
 from neuroagent.tools.get_morpho_tool import GetMorphoTool, KnowledgeGraphOutput
 from neuroagent.tools.kg_morpho_features_tool import (
     KGMorphoFeatureOutput,
@@ -35,4 +36,5 @@ __all__ = [
     "ParagraphMetadata",
     "ResolveBrainRegionTool",
     "TracesOutput",
+    "GetMEModelTool",
 ]
