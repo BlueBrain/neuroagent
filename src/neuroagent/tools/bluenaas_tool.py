@@ -101,7 +101,7 @@ class BlueNaaSOutput(BaseModel):
 class BlueNaaSTool(BasicTool):
     name: str = "bluenaas-tool"
     description: str = """Runs a single-neuron simulation using the BlueNaaS service.
-    Requires a 'model_id' which can be fetched using the 'get-me-model-tool'.
+    Requires a 'me_model_id' which must be fetched by GetMEModelTool.
     The input configuration should be provided by the user otherwise agent 
     will probe the user with the selected default values."""
     metadata: dict[str, Any]
@@ -109,7 +109,7 @@ class BlueNaaSTool(BasicTool):
 
     def get_default_values(self) -> dict:
         return {
-            "me_model_id": "default_model_id",
+            "me_model_id": None,
             "currentInjection": {
                 "injectTo": "soma",
                 "stimulus": {
@@ -173,7 +173,7 @@ class BlueNaaSTool(BasicTool):
         default_values = self.get_default_values()
 
         # Use provided values or default values
-        me_model_id = me_model_id or default_values["me_model_id"]
+        # me_model_id = me_model_id
         currentInjection = currentInjection or CurrentInjectionConfig(**default_values["currentInjection"])
         recordFrom = recordFrom or [RecordingLocation(**rec) for rec in default_values["recordFrom"]]
         conditions = conditions or SimulationConditionsConfig(**default_values["conditions"])

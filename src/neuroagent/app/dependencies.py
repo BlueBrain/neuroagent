@@ -421,6 +421,7 @@ def get_agent(
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
     me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
+    bluenaas_tool: Annotated[BlueNaaSTool, Depends(run_single_cell_sim_tool)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent | BaseMultiAgent:
     """Get the generative question answering service."""
@@ -450,6 +451,7 @@ def get_agent(
             electrophys_feature_tool,
             traces_tool,
             me_model_tool,
+            bluenaas_tool,
         ]
         logger.info("Load simple agent")
         return SimpleAgent(llm=llm, tools=tools)  # type: ignore
@@ -473,6 +475,8 @@ def get_chat_agent(
         ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
+    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
+    bluenaas_tool: Annotated[BlueNaaSTool, Depends(run_single_cell_sim_tool)],
 ) -> BaseAgent:
     """Get the generative question answering service."""
     logger.info("Load simple chat")
@@ -484,6 +488,8 @@ def get_chat_agent(
         kg_morpho_feature_tool,
         electrophys_feature_tool,
         traces_tool,
+        me_model_tool,
+        bluenaas_tool,
     ]
     return SimpleChatAgent(llm=llm, tools=tools, memory=memory)  # type: ignore
 
