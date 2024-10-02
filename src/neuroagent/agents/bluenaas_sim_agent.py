@@ -18,6 +18,7 @@ class BluenaasSimAgent(BaseAgent):
         state_graph.add_node("finalize_config", self.finalize_config)
         state_graph.add_node("run_simulation", self.run_simulation)
         state_graph.add_node("process_results", self.process_results)
+        state_graph.add_node("handle_interruption", self.handle_interruption)
 
         state_graph.add_edge("parse_input", "validate_config")
         state_graph.add_edge("validate_config", "prompt_user_for_missing_fields", condition=lambda x: not x["valid"])
@@ -25,6 +26,7 @@ class BluenaasSimAgent(BaseAgent):
         state_graph.add_edge("prompt_user_for_missing_fields", "validate_config")
         state_graph.add_edge("finalize_config", "run_simulation")
         state_graph.add_edge("run_simulation", "process_results")
+        state_graph.add_edge("finalize_config", "handle_interruption", condition=lambda x: x.get("interrupted", False))
 
         initial_state = {"query": query}
         result = await state_graph.run(initial_state)
@@ -94,6 +96,7 @@ class BluenaasSimAgent(BaseAgent):
             ]
         })
         if user_response.lower() != "yes":
+            state["interrupted"] = True
             raise NodeInterruption("User did not approve the configuration.")
         return state
 
@@ -107,4 +110,15 @@ class BluenaasSimAgent(BaseAgent):
     async def process_results(self, state: dict) -> dict:
         """Process the simulation results and run electrophysiological analysis."""
         # Implement logic to process simulation results and run electrophysiological analysis
+        return state
+
+    async def handle_interruption(self, state: dict) -> dict:
+        """Handle interruptions in the state graph."""
+        # Implement logic to handle interruptions, such as user disapproval
+        await self.metadata["llm"].ainvoke({
+            "messages": [
+                {"role": "system", "content": "The simulation configuration was not approved by the user."},
+                {"role": "user", "content": "Please provide the necessary changes to proceed."}
+            ]
+        })
         return state
