@@ -42,6 +42,9 @@ class InputGetMEModel(BaseModel):
         ]
     ] = Field(default=None, description="ID of the E-type of interest.")
 
+    createdBy: Optional[str] = Field(default=None,
+                                     description="Me models created by a specific user")
+
 
 class MEModelOutput(BaseToolOutput):
     """Output schema for the knowledge graph API."""
@@ -59,6 +62,7 @@ class MEModelOutput(BaseToolOutput):
     subject_species_label: str | None
     subject_age: str | None
 
+    createdBy: str | None
 
 class GetMEModelTool(BasicTool):
     """Class defining the Get ME Model logic."""
@@ -79,6 +83,7 @@ class GetMEModelTool(BasicTool):
     -brain_region_label
     -subject_species_label 
     -subject_age
+    -createdBy
     """
     metadata: dict[str, Any]
     args_schema: Type[BaseModel] = InputGetMEModel
@@ -91,6 +96,7 @@ class GetMEModelTool(BasicTool):
         brain_region_id: str,
         mtype_id: str | None = None,
         etype_id: str | None = None,
+        createdBy: str | None = None,
     ) -> list[MEModelOutput]:
         """From a brain region ID, extract ME models.
 
@@ -102,6 +108,8 @@ class GetMEModelTool(BasicTool):
             ID of the mtype of the model
         etype_id
             ID of the etype of the model
+        createdBy
+            To fetch models created by a specific user name(s)
 
         Returns
         -------
@@ -139,11 +147,18 @@ class GetMEModelTool(BasicTool):
             else:
                 etype_ids = None
 
+            if createdBy:
+                user_link = f"https://openbluebrain.com/api/nexus/v1/realms/bbp/users/{createdBy}"
+                logger.info(f"Filtering me models created by {createdBy}")
+            else:
+                user_link = None
+
             # Create the ES query to query the KG.
             entire_query = self.create_query(
                 brain_regions_ids=hierarchy_ids,
                 mtype_ids=mtype_ids,
                 etype_ids=etype_ids,
+                createdBy=user_link,
             )
             # Send the query to get ME models.
             response = await self.metadata["httpx_client"].post(
@@ -163,6 +178,7 @@ class GetMEModelTool(BasicTool):
         brain_regions_ids: set[str],
         mtype_ids: set[str] | None = None,
         etype_ids: set[str] | None = None,
+        createdBy: str = None,
     ) -> dict[str, Any]:
         """Create ES query out of the BR, mtype, and etype IDs.
 
@@ -174,6 +190,9 @@ class GetMEModelTool(BasicTool):
             ID of the mtype of the model
         etype_id
             ID of the etype of the model
+        createdBy
+            To fetch models created by a specific user name(s)
+
 
         Returns
         -------
@@ -222,6 +241,20 @@ class GetMEModelTool(BasicTool):
                 }
             )
 
+        if createdBy:
+            conditions.append(
+                {
+                    "bool": {
+                        "must": [
+                            {
+                                "match": {
+                                    "createdBy": createdBy
+                                }
+                            },   
+                        ]
+                    }
+                }
+            )          
         # Assemble the query to return ME models.
         entire_query = {
             "size": self.metadata["search_size"],
@@ -248,6 +281,7 @@ class GetMEModelTool(BasicTool):
             MEModelOutput(
                 me_model_id=res["_source"]["@id"],
                 me_model_self_link=res["_source"]["_self"],
+                createdBy=res["_source"]["createdBy"],
                 me_model_name=res["_source"].get("name"),
                 me_model_description=res["_source"].get("description"),
                 mtype=(
