@@ -48,14 +48,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 
-def test_get_settings(monkeypatch):
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "https://localhost1")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "https://localhost2")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
+def test_get_settings(monkeypatch, patch_required_env):
     settings = get_settings()
-    assert settings.tools.literature.url == "https://localhost1"
-    assert settings.knowledge_graph.url == "https://localhost2/search/query/"
+    assert settings.tools.literature.url == "https://fake_url"
+    assert settings.knowledge_graph.url == "https://fake_url/api/nexus/v1/search/query/"
 
 
 @pytest.mark.asyncio
@@ -388,8 +384,6 @@ def test_get_connection_string_full(monkeypatch, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_DB__HOST", "localhost")
     monkeypatch.setenv("NEUROAGENT_DB__PORT", "5000")
     monkeypatch.setenv("NEUROAGENT_DB__NAME", "test")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
     settings = Settings()
     result = get_connection_string(settings)
@@ -400,8 +394,6 @@ def test_get_connection_string_full(monkeypatch, patch_required_env):
 
 def test_get_connection_string_no_prefix(monkeypatch, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
     settings = Settings()
 
@@ -414,8 +406,6 @@ def test_get_engine(create_engine_mock, monkeypatch, patch_required_env):
     create_engine_mock.return_value = Mock()
 
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
     settings = Settings()
 
@@ -431,8 +421,6 @@ def test_get_engine_no_connection_string(
     create_engine_mock.return_value = Mock()
 
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
     settings = Settings()
 
@@ -455,8 +443,6 @@ def test_get_session_no_engine():
 
 def test_get_kg_token_with_token(monkeypatch, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
 
     settings = Settings()
 
@@ -469,8 +455,6 @@ def test_get_kg_token_with_settings_knowledge_graph_token(
     monkeypatch, patch_required_env
 ):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
-    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__USE_TOKEN", "true")
     monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__TOKEN", "Test_kg_Token")
 
