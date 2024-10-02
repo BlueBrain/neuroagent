@@ -12,6 +12,9 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
     Settings,
@@ -46,8 +49,6 @@ from neuroagent.tools import (
     LiteratureSearchTool,
     MorphologyFeatureTool,
 )
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
 
 def test_get_settings(monkeypatch, patch_required_env):

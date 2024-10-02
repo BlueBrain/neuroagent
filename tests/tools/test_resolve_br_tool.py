@@ -2,6 +2,7 @@
 
 import pytest
 from httpx import AsyncClient
+
 from neuroagent.tools import ResolveBrainRegionTool
 from neuroagent.tools.resolve_brain_region_tool import (
     BRResolveOutput,
