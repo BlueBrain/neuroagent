@@ -6,7 +6,7 @@
 .python-version
 .vscode
 .pypirc
-
+src/neuroagent/app/data
 # Version file
 
 # Byte-compiled / optimized / DLL files
