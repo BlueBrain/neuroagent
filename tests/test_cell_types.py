@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from neuroagent.cell_types import CellTypesMeta, get_celltypes_descendants
 
 CELL_TYPES_FILE = Path(__file__).parent / "data" / "kg_cell_types_hierarchy_test.json"

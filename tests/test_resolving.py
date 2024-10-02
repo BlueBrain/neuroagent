@@ -1,6 +1,5 @@
 import pytest
 from httpx import AsyncClient
-
 from neuroagent.resolving import (
     es_resolve,
     escape_punctuation,

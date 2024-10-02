@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-
 from neuroagent.agents import AgentOutput, AgentStep, SimpleChatAgent
 
 
