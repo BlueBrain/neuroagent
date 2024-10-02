@@ -8,13 +8,12 @@ from neuroagent.multi_agents.supervisor_multi_agent import AgentState
 from src.neuroagent.multi_agents import SupervisorMultiAgent
 
 
-def test_create_main_agent():
+def test_create_main_agent_initialization():
     mock_llm = MagicMock()
     bind_function_result = MagicMock()
     bind_function_result.__ror__.return_value = {}
     mock_llm.bind_functions.return_value = bind_function_result
     data = {"llm": mock_llm, "agents": [("agent1",)]}
-    from src.neuroagent.multi_agents import SupervisorMultiAgent
 
     result = SupervisorMultiAgent.create_main_agent(data)
     assert "main_agent" in result
@@ -34,7 +33,6 @@ async def test_agent_node():
     agent_state = MagicMock()
     agent = MagicMock()
     agent.ainvoke = mock_ainvoke
-    from src.neuroagent.multi_agents import SupervisorMultiAgent
 
     agent_node_test = await SupervisorMultiAgent.agent_node(
         agent_state, agent, "test_agent"
