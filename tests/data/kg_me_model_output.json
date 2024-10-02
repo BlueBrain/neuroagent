@@ -1,0 +1,152 @@
+{
+    "hits": {
+        "hits": [
+            {
+                "sort": [
+                    1716989796908
+                ],
+                "_id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/eeeeac3c-6bf1-47ed-ab97-460668eba2d2",
+                "_index": "nexus_search_711d6b8f-1285-42db-9259-b277dd687435_711d6b8f-1285-42db-9259-b277dd687435_21",
+                "_source": {
+                    "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/eeeeac3c-6bf1-47ed-ab97-460668eba2d2",
+                    "@type": "https://neuroshapes.org/MEModel",
+                    "analysisSuitable": false,
+                    "brainRegion": {
+                        "@id": "http://api.brain-map.org/api/v2/data/Structure/322",
+                        "idLabel": "http://api.brain-map.org/api/v2/data/Structure/322|Primary somatosensory area",
+                        "identifier": "http://api.brain-map.org/api/v2/data/Structure/322",
+                        "label": "Primary somatosensory area"
+                    },
+                    "createdAt": "2024-05-29T13:36:36.908Z",
+                    "createdBy": "https://openbluebrain.com/api/nexus/v1/realms/bbp/users/antonel",
+                    "deprecated": false,
+                    "description": "My me-model",
+                    "eType": {
+                        "@id": "_:b0",
+                        "identifier": "_:b0",
+                        "label": "cNAC"
+                    },
+                    "generation": {},
+                    "image": [
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/2869d500-3c6e-4d15-bcae-b4ece55c5586",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/2869d500-3c6e-4d15-bcae-b4ece55c5586"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/aea6c71b-41a9-4268-96e7-d0f9265693e1",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/parameters_distribution",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/aea6c71b-41a9-4268-96e7-d0f9265693e1"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/ea0b79b5-66bb-48bf-8933-9b43b56959d5",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/traces",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/ea0b79b5-66bb-48bf-8933-9b43b56959d5"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/ba3c8d1a-2839-4fdd-b13f-73950c84954a",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/ba3c8d1a-2839-4fdd-b13f-73950c84954a"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/af301c80-0c51-4726-95b7-dc65e5e180fd",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/scores",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/af301c80-0c51-4726-95b7-dc65e5e180fd"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/798bab6a-4caa-460b-bac7-a6f08672f11b",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/798bab6a-4caa-460b-bac7-a6f08672f11b"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/489673cc-27c1-46bf-ad6a-510ea124a4cc",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/489673cc-27c1-46bf-ad6a-510ea124a4cc"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/3cb119a2-6a3a-4e75-99c5-53f2405d3e91",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/3cb119a2-6a3a-4e75-99c5-53f2405d3e91"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/3819e25e-ace3-4809-9a96-964d5d9fb932",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/3819e25e-ace3-4809-9a96-964d5d9fb932"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/33bcf9d3-b6db-4d2c-b3c6-3ea8a5932202",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/33bcf9d3-b6db-4d2c-b3c6-3ea8a5932202"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/29dc72cb-bb9d-4966-bc3b-70e6ff65c6e3",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/currentscape",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/29dc72cb-bb9d-4966-bc3b-70e6ff65c6e3"
+                        },
+                        {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/e5e20e7a-87b5-47a2-abda-2d7212ab00e1",
+                            "about": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/thumbnail",
+                            "identifier": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/e5e20e7a-87b5-47a2-abda-2d7212ab00e1"
+                        }
+                    ],
+                    "layer": [
+                        {
+                            "@id": "http://purl.obolibrary.org/obo/UBERON_0005394",
+                            "idLabel": "http://purl.obolibrary.org/obo/UBERON_0005394|layer 5",
+                            "identifier": "http://purl.obolibrary.org/obo/UBERON_0005394",
+                            "label": "layer 5"
+                        }
+                    ],
+                    "mType": {
+                        "@id": "_:b2",
+                        "identifier": "_:b2",
+                        "label": "L5_TPC:B"
+                    },
+                    "memodel": {
+                        "emodelResource": {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/67acf101-12f6-4b7b-8a89-5237aadf94db",
+                            "name": "EM__hipp_rat__CA1_int_cNAC_010710HP2_20190328163258__2"
+                        },
+                        "neuronMorphology": {
+                            "@id": "https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/255e007e-a6d1-4fc9-b984-1e0221e39ea3",
+                            "name": "ch150801A1"
+                        },
+                        "validated": true
+                    },
+                    "name": "My me-model",
+                    "objectOfStudy": {
+                        "@id": "http://bbp.epfl.ch/neurosciencegraph/taxonomies/objectsofstudy/singlecells",
+                        "identifier": "http://bbp.epfl.ch/neurosciencegraph/taxonomies/objectsofstudy/singlecells",
+                        "label": "Single Cell"
+                    },
+                    "project": {
+                        "@id": "https://openbluebrain.com/api/nexus/v1/projects/bbp/mmb-point-neuron-framework-model",
+                        "identifier": "https://openbluebrain.com/api/nexus/v1/projects/bbp/mmb-point-neuron-framework-model",
+                        "label": "bbp/mmb-point-neuron-framework-model"
+                    },
+                    "seed": 2,
+                    "subjectSpecies": {
+                        "@id": "http://purl.obolibrary.org/obo/NCBITaxon_10116",
+                        "identifier": "http://purl.obolibrary.org/obo/NCBITaxon_10116",
+                        "label": "Rattus norvegicus"
+                    },
+                    "updatedAt": "2024-07-09T10:53:01.208Z",
+                    "updatedBy": "https://openbluebrain.com/api/nexus/v1/realms/bbp/users/ajaquier",
+                    "_self": "https://openbluebrain.com/api/nexus/v1/resources/bbp/mmb-point-neuron-framework-model/_/https:%2F%2Fbbp.epfl.ch%2Fdata%2Fbbp%2Fmmb-point-neuron-framework-model%2Feeeeac3c-6bf1-47ed-ab97-460668eba2d2"
+                }
+            }
+        ],
+        "total": {
+            "relation": "eq",
+            "value": 1
+        }
+    },
+    "timed_out": false,
+    "took": 14,
+    "_shards": {
+        "failed": 0,
+        "skipped": 4,
+        "successful": 15,
+        "total": 15
+    }
+}

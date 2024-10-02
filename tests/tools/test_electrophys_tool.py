@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 from langchain_core.tools import ToolException
+
 from neuroagent.tools import ElectrophysFeatureTool
 from neuroagent.tools.electrophys_tool import (
     CALCULATED_FEATURES,
