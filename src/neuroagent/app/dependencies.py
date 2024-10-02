@@ -21,11 +21,12 @@ from neuroagent.agents import (
     BaseAgent,
     SimpleAgent,
     SimpleChatAgent,
+    BluenaasSimAgent,
 )
 from neuroagent.agents.base_agent import AsyncSqliteSaverWithPrefix
 from neuroagent.app.config import Settings
 from neuroagent.cell_types import CellTypesMeta
-from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
+from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent, HierarchicalTeamAgent
 from neuroagent.tools import (
     ElectrophysFeatureTool,
     GetMEModelTool,
@@ -324,33 +325,46 @@ def get_me_model_tool(
     )
     return tool
 
-async def run_single_cell_sim_tool(
+# async def run_single_cell_sim_tool(
+#     settings: Annotated[Settings, Depends(get_settings)],
+#     token: Annotated[str, Depends(get_kg_token)],
+#     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+# ) -> BlueNaaSTool:
+#     """Load BlueNaaS tool."""
+#     # Run GetMEModelTool to fetch me_model_id
+#     get_me_model_tool = GetMEModelTool(
+#         metadata={
+#             "url": settings.me_model.url,
+#             "token": token,
+#             "httpx_client": httpx_client,
+#         }
+#     )
+#     me_model_output = await get_me_model_tool._arun()
+#     me_model_id = me_model_output.result["me_model_id"]
+
+#     # Create BlueNaaSTool with the fetched me_model_id
+#     tool = BlueNaaSTool(
+#         metadata={
+#             "url": settings.bluenaas.url,
+#             "token": token,
+#             "httpx_client": httpx_client,
+#             "me_model_id": me_model_id,  # Pass the fetched me_model_id
+#         }
+#     )
+#     return tool
+
+async def get_bluenaas_sim_agent(
     settings: Annotated[Settings, Depends(get_settings)],
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> BlueNaaSTool:
-    """Load BlueNaaS tool."""
-    # Run GetMEModelTool to fetch me_model_id
-    get_me_model_tool = GetMEModelTool(
-        metadata={
-            "url": settings.me_model.url,
-            "token": token,
-            "httpx_client": httpx_client,
-        }
-    )
-    me_model_output = await get_me_model_tool._arun()
-    me_model_id = me_model_output.result["me_model_id"]
-
-    # Create BlueNaaSTool with the fetched me_model_id
-    tool = BlueNaaSTool(
-        metadata={
-            "url": settings.bluenaas.url,
-            "token": token,
-            "httpx_client": httpx_client,
-            "me_model_id": me_model_id,  # Pass the fetched me_model_id
-        }
-    )
-    return tool
+) -> BluenaasSimAgent:
+    # Instantiate the BluenaasSimAgent with necessary metadata
+    agent = BluenaasSimAgent(metadata={
+        "settings": settings,
+        "token": token,
+        "httpx_client": httpx_client,
+    })
+    return agent
 
 def get_project_id():
     pass
@@ -421,12 +435,14 @@ def get_agent(
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
     me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
-    bluenaas_tool: Annotated[BlueNaaSTool, Depends(run_single_cell_sim_tool)],
+    # bluenaas_tool: Annotated[BlueNaaSTool, Depends(run_single_cell_sim_tool)],
+    bluenaas_sim_agent: Annotated[BluenaasSimAgent, Depends(get_bluenaas_sim_agent)],  # Include BluenaasSimAgent
+
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent | BaseMultiAgent:
     """Get the generative question answering service."""
-    if settings.agent.model == "multi":
-        logger.info("Load multi-agent chat")
+    if settings.agent.model == "multi-supervisor":
+        logger.info("Load multi-agent (flat) chat")
         tools_list = [
             ("literature", [literature_tool]),
             (
@@ -441,6 +457,12 @@ def get_agent(
             ("traces", [br_resolver_tool, electrophys_feature_tool, traces_tool]),
         ]
         return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
+    
+    elif settings.agent.model == "multi-hierarchical":
+        logger.info("Load multi-agent (hierarchical teams) chat")
+        tools_list = []
+        return HierarchicalTeamAgent(llm=llm,agents=tools_list)  # type: ignore
+    
     else:
         tools = [
             literature_tool,
@@ -451,7 +473,8 @@ def get_agent(
             electrophys_feature_tool,
             traces_tool,
             me_model_tool,
-            bluenaas_tool,
+            # bluenaas_tool,
+            bluenaas_sim_agent,
         ]
         logger.info("Load simple agent")
         return SimpleAgent(llm=llm, tools=tools)  # type: ignore
@@ -476,7 +499,8 @@ def get_chat_agent(
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
     me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
-    bluenaas_tool: Annotated[BlueNaaSTool, Depends(run_single_cell_sim_tool)],
+    # bluenaas_tool: Annotated[BlueNaaSTool, Depends(run_single_cell_sim_tool)],
+    bluenaas_sim_agent: Annotated[BluenaasSimAgent, Depends(get_bluenaas_sim_agent)], 
 ) -> BaseAgent:
     """Get the generative question answering service."""
     logger.info("Load simple chat")
@@ -489,7 +513,8 @@ def get_chat_agent(
         electrophys_feature_tool,
         traces_tool,
         me_model_tool,
-        bluenaas_tool,
+        # bluenaas_tool,
+        bluenaas_sim_agent
     ]
     return SimpleChatAgent(llm=llm, tools=tools, memory=memory)  # type: ignore
 

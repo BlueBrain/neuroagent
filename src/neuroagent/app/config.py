@@ -13,18 +13,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class SettingsAgent(BaseModel):
     """Agent setting."""
 
-    model: Literal["simple", "multi"] = "simple"
+    model: Literal["simple", "multi-supervisor","multi-hierarchical"] = "simple"
 
     model_config = ConfigDict(frozen=True)
-
-# class SettingsLangsmith(BaseModel):
-#         """Langsmith settings."""
-#         api_key: SecretStr = Field(..., alias="LANGSMITH_API_KEY")
-#         project: str = Field(..., alias="LANGSMITH_PROJECT")
-#         endpoint: str = Field(..., alias="LANGSMITH_ENDPOINT")
-#         tracing_v2: bool = Field(..., alias="LANGSMITH_TRACING_V2")
-
-#         model_config = ConfigDict(frozen=True)
 
 class SettingsDB(BaseModel):
     """DB settings for retrieving history."""

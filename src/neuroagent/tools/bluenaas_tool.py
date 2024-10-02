@@ -133,18 +133,6 @@ class BlueNaaSTool(BasicTool):
             "simulationDuration": 1000
         }
 
-    async def prompt_user_for_approval(self, default_values: dict) -> bool:
-        # This is a placeholder for the actual implementation
-        # You might use a chat interface or some other method to get user approval
-        user_response = await self.metadata["llm"].ainvoke({
-            "messages": [
-                {"role": "system", "content": "The following default values will be used for the simulation:"},
-                {"role": "system", "content": str(default_values)},
-                {"role": "user", "content": "Do you approve these values? (yes/no)"}
-            ]
-        })
-        return user_response.lower() == "yes"
-
     async def _arun(self,
                     me_model_id: Optional[str] = None,
                     currentInjection: Optional[CurrentInjectionConfig] = None,
@@ -172,24 +160,12 @@ class BlueNaaSTool(BasicTool):
         # Get default values
         default_values = self.get_default_values()
 
-        # Use provided values or default values
-        # me_model_id = me_model_id
+       # Use provided values or default values
         currentInjection = currentInjection or CurrentInjectionConfig(**default_values["currentInjection"])
         recordFrom = recordFrom or [RecordingLocation(**rec) for rec in default_values["recordFrom"]]
         conditions = conditions or SimulationConditionsConfig(**default_values["conditions"])
         simulationType = simulationType or default_values["simulationType"]
         simulationDuration = simulationDuration or default_values["simulationDuration"]
-
-        # Prompt user for approval
-        if not await self.prompt_user_for_approval({
-            "me_model_id": me_model_id,
-            "currentInjection": currentInjection.dict(),
-            "recordFrom": [rec.dict() for rec in recordFrom],
-            "conditions": conditions.dict(),
-            "simulationType": simulationType,
-            "simulationDuration": simulationDuration
-        }):
-            return BlueNaaSOutput(status="error", error="User did not approve the default values.")
 
         try:
             response = await self.metadata["httpx_client"].post(

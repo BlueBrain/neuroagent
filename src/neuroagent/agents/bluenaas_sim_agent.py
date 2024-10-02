@@ -1,6 +1,7 @@
 from typing import Any, AsyncIterator
 from pydantic import BaseModel, Field, ValidationError
-from langgraph import StateGraph, NodeInterruption
+from langgraph.graph import StateGraph, START, END
+from langgraph.errors import NodeInterrupt
 from neuroagent.tools.bluenaas_tool import BlueNaaSTool, InputBlueNaaS, BlueNaaSOutput
 from neuroagent.tools.get_me_model_tool import GetMEModelTool
 from neuroagent.tools.electrophys_tool import ElectrophysFeatureTool
@@ -97,7 +98,7 @@ class BluenaasSimAgent(BaseAgent):
         })
         if user_response.lower() != "yes":
             state["interrupted"] = True
-            raise NodeInterruption("User did not approve the configuration.")
+            raise NodeInterrupt("User did not approve the configuration.")
         return state
 
     async def run_simulation(self, state: dict) -> dict:
