@@ -250,7 +250,7 @@ class GetMEModelTool(BasicTool):
                                 "match": {
                                     "createdBy": createdBy
                                 }
-                            },   
+                            }   
                         ]
                     }
                 }
