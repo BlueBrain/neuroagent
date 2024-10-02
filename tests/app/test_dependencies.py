@@ -381,9 +381,7 @@ async def test_get_cell_types_kg_hierarchy(
     assert os.path.exists(settings.knowledge_graph.ct_saving_path)
 
 
-def test_get_connection_string_full(monkeypatch):
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
+def test_get_connection_string_full(monkeypatch, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "http://")
     monkeypatch.setenv("NEUROAGENT_DB__USER", "John")
     monkeypatch.setenv("NEUROAGENT_DB__PASSWORD", "Doe")
@@ -400,9 +398,7 @@ def test_get_connection_string_full(monkeypatch):
     ), "must return fully formed connection string"
 
 
-def test_get_connection_string_no_prefix(monkeypatch):
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
+def test_get_connection_string_no_prefix(monkeypatch, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
@@ -414,11 +410,9 @@ def test_get_connection_string_no_prefix(monkeypatch):
 
 
 @patch("neuroagent.app.dependencies.create_engine")
-def test_get_engine(create_engine_mock, monkeypatch):
+def test_get_engine(create_engine_mock, monkeypatch, patch_required_env):
     create_engine_mock.return_value = Mock()
 
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
@@ -431,11 +425,11 @@ def test_get_engine(create_engine_mock, monkeypatch):
 
 
 @patch("neuroagent.app.dependencies.create_engine")
-def test_get_engine_no_connection_string(create_engine_mock, monkeypatch):
+def test_get_engine_no_connection_string(
+    create_engine_mock, monkeypatch, patch_required_env
+):
     create_engine_mock.return_value = Mock()
 
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
@@ -459,9 +453,7 @@ def test_get_session_no_engine():
         next(get_session(None))
 
 
-def test_get_kg_token_with_token(monkeypatch):
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
+def test_get_kg_token_with_token(monkeypatch, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
@@ -473,9 +465,9 @@ def test_get_kg_token_with_token(monkeypatch):
     assert result == "Test_Token"
 
 
-def test_get_kg_token_with_settings_knowledge_graph_token(monkeypatch):
-    monkeypatch.setenv("NEUROAGENT_TOOLS__LITERATURE__URL", "http://localhost")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "http://localhost")
+def test_get_kg_token_with_settings_knowledge_graph_token(
+    monkeypatch, patch_required_env
+):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__USERNAME", "fake_username")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "fake_password")
