@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.language_models import GenericFakeChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
-from neuroagent.multi_agents.supervisor_multi_agent import AgentState
 
+from neuroagent.multi_agents.supervisor_multi_agent import AgentState
 from src.neuroagent.multi_agents import SupervisorMultiAgent
 
 
