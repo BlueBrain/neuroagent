@@ -171,7 +171,7 @@ class SettingsTools(BaseModel):
     trace: SettingsTrace = SettingsTrace()
     kg_morpho_features: SettingsKGMorpho = SettingsKGMorpho()
     me_model: SettingsGetMEModel = SettingsGetMEModel()
-    blue_naas: SettingsBlueNaaS = SettingsBlueNaaS()
+    bluenaas: SettingsBlueNaaS = SettingsBlueNaaS()
 
     model_config = ConfigDict(frozen=True)
 
@@ -220,7 +220,6 @@ class Settings(BaseSettings):
     logging: SettingsLogging = SettingsLogging()  # has no required
     keycloak: SettingsKeycloak = SettingsKeycloak()  # has no required
     misc: SettingsMisc = SettingsMisc()  # has no required
-    # langsmith: SettingsLangsmith = SettingsLangsmith()
 
 
     model_config = SettingsConfigDict(

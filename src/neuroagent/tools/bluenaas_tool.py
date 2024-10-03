@@ -133,6 +133,9 @@ class BlueNaaSTool(BasicTool):
             "simulationDuration": 1000
         }
 
+    def _run(self) -> None:
+        pass
+    
     async def _arun(self,
                     me_model_id: Optional[str] = None,
                     currentInjection: Optional[CurrentInjectionConfig] = None,
