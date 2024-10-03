@@ -27,14 +27,14 @@ class HierarchicalTeamAgent(BaseMultiAgent):
     """Hierarchical Team Agent managing multiple teams."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    tools: Dict[str, BasicTool] = Field(default_factory=list)
+    tools: Dict[str, BasicTool] = Field(default_factory=dict)
     memory: BaseCheckpointSaver[Any] | None = None
     top_level_chain: Any = None
     trimmer: Any = None
 
     def __init__(self, 
                  llm: Any,
-                 tools: Dict[str, BasicTool], 
+                 tools: Dict[str, BasicTool] | None = None, 
                  agents: list[tuple[str, list[BasicTool]]] = None,
                  memory: BaseCheckpointSaver[Any] = None):
         super().__init__(llm=llm, agents=agents)
@@ -50,7 +50,8 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         self.top_level_chain = self.create_graph()
 
     @staticmethod
-    def agent_node(self, state, agent, name):
+    def agent_node(state, agent, name):
+        logger.info(f"Agent node called: {name}")
         result = agent.invoke(state)
         return {
             "messages": [AIMessage(content=result["messages"][-1].content, name=name)]
@@ -132,7 +133,13 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         ]  # Add other bluenaas endpoints later on..
 
         # Create agents
-        simulation_agent = create_react_agent(self.llm, tools=simulation_tools, checkpointer=self.memory) 
+        simulation_agent = create_react_agent(self.llm, 
+                                              tools=simulation_tools, 
+                                              checkpointer=self.memory,
+                                              state_modifier="""You are a helpful assistant helping scientists run in-silico neuron simulations.
+                You must always specify in your answers from which brain regions the information is extracted.
+                Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",                                            #   interrupt_before=self.tools["bluenaas_tool"],
+                                              )
 
         simulation_node = functools.partial(
             self.agent_node, agent=simulation_agent, name="SimulationAgent"
@@ -168,10 +175,9 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         # and the state of the research sub-graph
         # this makes it so that the states of each graph don't get intermixed
         def enter_chain(message: str):
-            results = {
+            return {
                 "messages": [HumanMessage(content=message)],
             }
-            return results
         
         simulation_chain = enter_chain | chain
         
@@ -246,7 +252,6 @@ class HierarchicalTeamAgent(BaseMultiAgent):
 
         return analysis_chain
 
-    # @model_validator(mode="before")
     def create_team_supervisor(self, system_prompt: str, members: List[str]):
         """Create main supervisor across teams."""
         logger.info("Creating main supervisor, supervisor and all the agents with tools.")
@@ -289,7 +294,6 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         )
         
         return chain
-
 
     def run(self, query: str, thread_id: str) -> AgentOutput:
         res = self.top_level_chain.invoke(
