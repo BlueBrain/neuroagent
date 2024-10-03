@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add get morphoelectric (me) model tool
+- Filter me model by username
+- Add bluenaas tool
+- Add hierarcichal multi agent for bluenass
 
 ## [0.1.1] - 26.09.2024
 
