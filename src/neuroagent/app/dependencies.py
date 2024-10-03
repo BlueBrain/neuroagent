@@ -498,7 +498,7 @@ def get_chat_agent(
 
     if settings.agent.model == "multi-hierarchical":
         logger.info("Load multi-agent (hierarchical teams) chat")
-        tools = {                 
+        tools = {               
             "br_resolver_tool": br_resolver_tool,
             "morpho_tool": morpho_tool,
             "morphology_feature_tool": morphology_feature_tool,

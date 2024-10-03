@@ -17,7 +17,7 @@ from langgraph.prebuilt import create_react_agent
 from pydantic import ConfigDict, model_validator, Field
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
-from neuroagent.agents import AgentOutput
+from neuroagent.agents import AgentOutput, AgentStep, BaseAgent
 from neuroagent.multi_agents.base_multi_agent import BaseMultiAgent
 from neuroagent.tools.base_tool import BasicTool
 
@@ -50,9 +50,9 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         self.top_level_chain = self.create_graph()
 
     @staticmethod
-    def agent_node(state, agent, name):
+    async def agent_node(state, agent, name):
         logger.info(f"Agent node called: {name}")
-        result = agent.invoke(state)
+        result = await agent.ainvoke(state)
         return {
             "messages": [AIMessage(content=result["messages"][-1].content, name=name)]
         }
@@ -138,7 +138,7 @@ class HierarchicalTeamAgent(BaseMultiAgent):
                                               checkpointer=self.memory,
                                               state_modifier="""You are a helpful assistant helping scientists run in-silico neuron simulations.
                 You must always specify in your answers from which brain regions the information is extracted.
-                You must run 'bluenaas_tool' as a final step then pass the results to your supervisor.
+                When user mentions to run a simulation, you must run 'bluenaas_tool' as a final step then pass the results to your supervisor.
                 You must call me_model tool to get me_model_id to be passed into bluenaas_tool.  
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",                                            #   interrupt_before=self.tools["bluenaas_tool"],
                                               )
@@ -298,11 +298,7 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         return chain
 
     def run(self, query: str, thread_id: str) -> AgentOutput:
-        res = self.top_level_chain.invoke(
-            input={"messages": [HumanMessage(content=query)]},
-            config=RunnableConfig(configurable={"thread_id": thread_id}),
-        )
-        return self._process_output(res)
+        pass
 
     async def arun(self, query: str, thread_id: str) -> AgentOutput:
         res = await self.top_level_chain.ainvoke(
@@ -354,9 +350,15 @@ class HierarchicalTeamAgent(BaseMultiAgent):
 
     @staticmethod
     def _process_output(output: Any) -> AgentOutput:
-        """Format the output."""
+        """Format the output to include tool calls in a structured way."""
         agent_steps = []
-        for message in output["messages"][1:]:
-            if "steps" in message.additional_kwargs:
-                agent_steps.extend(message.additional_kwargs["steps"])
+        for message in output["messages"]:
+            # Assuming AIMessage or a similar mechanism is used to include tool calls
+            if isinstance(message, AIMessage) and "tool_calls" in message.additional_kwargs:
+                for tool_call in message.additional_kwargs["tool_calls"]:
+                    agent_steps.append(AgentStep(
+                        tool_name=tool_call["function"]["name"],
+                        arguments=tool_call["function"]["arguments"],
+                    ))
+        # Assuming the last message contains the response content
         return AgentOutput(response=output["messages"][-1].content, steps=agent_steps)
