@@ -2,18 +2,20 @@ import functools
 import operator
 import logging
 from typing import (Annotated, Any, AsyncIterator, Hashable, List, Sequence,
-                    TypedDict)
+                    TypedDict, Dict)
+from contextlib import AsyncExitStack
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, trim_messages
 from langchain_core.output_parsers.openai_functions import \
     JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables import RunnableConfig, RunnablePassthrough
 from langchain_openai.chat_models import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, model_validator, Field
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from neuroagent.agents import AgentOutput
 from neuroagent.multi_agents.base_multi_agent import BaseMultiAgent
@@ -25,21 +27,27 @@ class HierarchicalTeamAgent(BaseMultiAgent):
     """Hierarchical Team Agent managing multiple teams."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    tools: Dict[str, BasicTool] = Field(default_factory=list)
+    memory: BaseCheckpointSaver[Any] | None = None
+    top_level_chain: Any = None
+    trimmer: Any = None
 
     def __init__(self, 
-                 llm: Any, 
-                 tools: dict[str, Any], 
-                 agents: list[tuple[str, list[BasicTool]]] = None):
+                 llm: Any,
+                 tools: Dict[str, BasicTool], 
+                 agents: list[tuple[str, list[BasicTool]]] = None,
+                 memory: BaseCheckpointSaver[Any] = None):
         super().__init__(llm=llm, agents=agents)
         self.llm = llm
         self.tools = tools
-        self.top_level_chain = self.create_graph()
+        self.memory = memory
         self.trimmer = trim_messages(
             max_tokens=100000,
             strategy="last",
             token_counter=self.llm,
             include_system=True,
         )
+        self.top_level_chain = self.create_graph()
 
     @staticmethod
     def agent_node(self, state, agent, name):
@@ -109,7 +117,6 @@ class HierarchicalTeamAgent(BaseMultiAgent):
             # Used to route work. The supervisor calls a function
             # that will update this every time it makes a decision
             next: str
-
         # Define tools
         simulation_tools = [
             self.tools["br_resolver_tool"],
@@ -125,7 +132,8 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         ]  # Add other bluenaas endpoints later on..
 
         # Create agents
-        simulation_agent = create_react_agent(self.llm, tools=simulation_tools)
+        simulation_agent = create_react_agent(self.llm, tools=simulation_tools, checkpointer=self.memory) 
+
         simulation_node = functools.partial(
             self.agent_node, agent=simulation_agent, name="SimulationAgent"
         ) # might need to rename to SingleCellSimAgent when circuit level tools come
@@ -196,13 +204,13 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         ]  # Replace with your actual tools
 
         # Create agents
-        morphology_agent = create_react_agent(self.llm, tools=morphology_tools)
+        morphology_agent = create_react_agent(self.llm, tools=morphology_tools, checkpointer=self.memory)
         morphology_node = functools.partial(
             self.agent_node, agent=morphology_agent, name="MorphologyAgent"
         )
 
         electrophysiology_agent = create_react_agent(
-            self.llm, tools=electrophysiology_tools
+            self.llm, tools=electrophysiology_tools, checkpointer=self.memory
         )
         electrophysiology_node = functools.partial(
             self.agent_node, agent=electrophysiology_agent, name="ElectrophysiologyAgent"
@@ -271,12 +279,17 @@ class HierarchicalTeamAgent(BaseMultiAgent):
                 ),
             ),
         ]).partial(options=str(options), team_members=", ".join(members))
-        return (
-            prompt
+        
+        chain = (
+            RunnablePassthrough()
+            | prompt
             | self.trimmer
             | self.llm.bind_functions(functions=[function_def], function_call="route")
             | JsonOutputFunctionsParser()
         )
+        
+        return chain
+
 
     def run(self, query: str, thread_id: str) -> AgentOutput:
         res = self.top_level_chain.invoke(
@@ -292,19 +305,37 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         )
         return self._process_output(res)
 
-    async def astream(self, query: str, thread_id: str) -> AsyncIterator[str]:  # type: ignore
-        """Astream method of the service."""
-        graph = self.create_graph()
-        config = RunnableConfig(configurable={"thread_id": thread_id})
-        async for chunk in graph.astream(
-            input={"messages": [HumanMessage(content=query)]}, config=config
+    async def astream(
+        self, thread_id: str, query: str, connection_string: str | None = None
+    ) -> AsyncIterator[str]:
+        """Run the agent against a query in streaming way.
+
+        Parameters
+        ----------
+        thread_id
+            ID of the thread of the chat.
+        query
+            Query of the user.
+        connection_string
+            connection string for the checkpoint database.
+
+        Yields
+        ------
+            Iterator streaming the processed output of the LLM
+        """
+        async with (
+            self.agent.checkpointer.__class__.from_conn_string(connection_string)
+            if connection_string
+            else AsyncExitStack() as memory
         ):
-            if "Supervisor" in chunk.keys() and chunk["Supervisor"]["next"] != "FINISH":
-                yield f'\nCalling agent : {chunk["Supervisor"]["next"]}\n'
-            else:
-                values = [i for i in chunk.values()]  # noqa: C416
-                if "messages" in values[0]:
-                    yield f'\n {values[0]["messages"][0].content}'
+            if isinstance(memory, BaseCheckpointSaver):
+                self.agent.checkpointer = memory
+            config = {"configurable": {"thread_id": thread_id}}
+            streamed_response = self.agent.astream_events(
+                {"messages": query}, version="v2", config=config
+            )
+            async for event in streamed_response:
+                yield event
 
     @staticmethod
     def _process_output(output: Any) -> AgentOutput:

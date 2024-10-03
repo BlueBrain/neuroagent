@@ -498,17 +498,17 @@ def get_chat_agent(
 
     if settings.agent.model == "multi-hierarchical":
         logger.info("Load multi-agent (hierarchical teams) chat")
-        tools = [                 
-                    br_resolver_tool,
-                    morpho_tool,
-                    morphology_feature_tool,
-                    kg_morpho_feature_tool,
-                    literature_tool,
-                    electrophys_feature_tool,
-                    traces_tool,
-                    me_model_tool,
-                    bluenaas_tool,
-                      ]
+        tools = {                 
+            "br_resolver_tool": br_resolver_tool,
+            "morpho_tool": morpho_tool,
+            "morphology_feature_tool": morphology_feature_tool,
+            "kg_morpho_feature_tool": kg_morpho_feature_tool,
+            "literature_tool": literature_tool,
+            "electrophys_feature_tool": electrophys_feature_tool,
+            "traces_tool": traces_tool,
+            "me_model_tool": me_model_tool,
+            "bluenaas_tool": bluenaas_tool,
+        }
         return HierarchicalTeamAgent(llm=llm, tools=tools, memory=memory)  # type: ignore
     elif settings.agent.model == "simple":
         logger.info("Load simple chat")

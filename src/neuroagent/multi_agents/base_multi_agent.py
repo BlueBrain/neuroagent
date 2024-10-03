@@ -14,8 +14,8 @@ class BaseMultiAgent(BaseModel, ABC):
     """Base class for multi agents."""
 
     llm: BaseChatModel
-    main_agent: Any
-    agents: list[tuple[str, list[BasicTool]]]
+    main_agent: Any | None = None 
+    agents: list[tuple[str, list[BasicTool]]] | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
