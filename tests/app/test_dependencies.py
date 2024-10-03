@@ -31,6 +31,7 @@ from neuroagent.app.dependencies import (
     get_traces_tool,
     get_update_kg_hierarchy,
     get_user_id,
+    run_single_cell_sim_tool
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -214,6 +215,9 @@ def test_get_agent(monkeypatch, patch_required_env):
     me_model_tool = get_me_model_tool(
         settings=settings, token=token, httpx_client=httpx_client
     )
+    bluenaas_tool = run_single_cell_sim_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
 
     agent = get_agent(
         llm=language_model,
@@ -226,6 +230,7 @@ def test_get_agent(monkeypatch, patch_required_env):
         traces_tool=traces_tool,
         settings=settings,
         me_model_tool=me_model_tool,
+        bluenaas_tool=bluenaas_tool
     )
 
     assert isinstance(agent, SimpleAgent)
@@ -274,8 +279,11 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
         morphology_feature_tool=morphology_feature_tool,
         kg_morpho_feature_tool=kg_morpho_feature_tool,
         electrophys_feature_tool=electrophys_feature_tool,
+        me_model_tool=get_me_model_tool,
+        bluenaas_tool=run_single_cell_sim_tool,
         traces_tool=traces_tool,
         memory=memory,
+        settings=settings
     )
 
     assert isinstance(agent, SimpleChatAgent)
