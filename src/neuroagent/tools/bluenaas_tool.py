@@ -12,12 +12,6 @@ from neuroagent.utils import get_kg_data
 logger = logging.getLogger(__name__)
 
 #TODO : since bluenaaas has multiple endpoints for synapse generation ,nexus query, simulation, how should we handle those?
-# class SynapseSimulationConfig(BaseModel):
-#     id: str
-#     delay: int
-#     duration: int
-#     frequency: PositiveInt
-#     weightScalar: int
 
 class SimulationStimulusConfig(BaseModel):
     stimulusType: Literal["current_clamp", "voltage_clamp", "conductance"]
@@ -40,9 +34,6 @@ class SimulationConditionsConfig(BaseModel):
     time_step: float # usually 0.025 ms
     seed: int # can be any nubmer
 
-# class SimulationWithSynapseBody(BaseModel):
-#     directCurrentConfig: CurrentInjectionConfig
-#     synapseConfigs: list[SynapseSimulationConfig]
 
 
 class InputBlueNaaS(BaseModel):
@@ -54,12 +45,7 @@ class InputBlueNaaS(BaseModel):
             " fetched using the 'get-me-model-tool'."
         )
     )
-    # synapses: list[SynapseSimulationConfig] = Field(
-    #     description=(
-    #         "List of synapse configurations. Each synapse configuration includes the"
-    #         " synapse ID, delay, duration, frequency, and weight scalar."
-    #     )
-    # )
+
     currentInjection: CurrentInjectionConfig = Field(
         description=(
             "Configuration for current injection. Includes the target section to inject"

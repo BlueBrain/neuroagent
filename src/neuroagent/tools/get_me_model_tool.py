@@ -14,11 +14,6 @@ import urllib.parse  # Add this import at the beginning of your file
 
 logger = logging.getLogger(__name__)
 
-# settings = Settings()
-# langsmith_api_key = settings.langsmith.api_key.get_secret_value()
-# langsmith_project = settings.langsmith.project
-# langsmith_endpoint = settings.langsmith.endpoint
-
 
 class InputGetMEModel(BaseModel):
     """Inputs of the knowledge graph API."""
