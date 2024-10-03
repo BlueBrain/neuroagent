@@ -10,6 +10,7 @@ from neuroagent.cell_types import get_celltypes_descendants
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
 from neuroagent.utils import get_descendants_id
 from neuroagent.app.config import Settings
+import urllib.parse  # Add this import at the beginning of your file
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class InputGetMEModel(BaseModel):
 class MEModelOutput(BaseToolOutput):
     """Output schema for the knowledge graph API."""
 
-    me_model_id: str
+    # me_model_id: str
     me_model_self_link: str
     me_model_name: str | None
     me_model_description: str | None
@@ -73,7 +74,6 @@ class GetMEModelTool(BasicTool):
     Ideally, the user should also provide an 'mtype_id' and/or an 'etype_id' to filter the search results. But in case they are not provided, the search will return all models that match the brain region.
     Output of this can be passed to 'BlueNaaSTool'
     The output is a list of ME models, containing:
-    -me_model_id
     -me_model_self_link: global link to the me model that should be used for reference
     -me_model_name
     -me_model_description
@@ -279,8 +279,8 @@ class GetMEModelTool(BasicTool):
         """
         formatted_output = [
             MEModelOutput(
-                me_model_id=res["_source"]["@id"],
-                me_model_self_link=res["_source"]["_self"],
+                # me_model_id=res["_source"]["@id"],
+                me_model_self_link=urllib.parse.quote(res["_source"]["_self"], safe=''),
                 createdBy=res["_source"]["createdBy"],
                 me_model_name=res["_source"].get("name"),
                 me_model_description=res["_source"].get("description"),

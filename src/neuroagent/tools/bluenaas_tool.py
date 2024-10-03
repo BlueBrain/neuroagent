@@ -135,7 +135,7 @@ class BlueNaaSTool(BasicTool):
 
     def _run(self) -> None:
         pass
-    
+
     async def _arun(self,
                     me_model_id: Optional[str] = None,
                     currentInjection: Optional[CurrentInjectionConfig] = None,
@@ -172,16 +172,16 @@ class BlueNaaSTool(BasicTool):
 
         try:
             response = await self.metadata["httpx_client"].post(
-                url=self.metadata["url"],
+                url=f"{self.metadata['url']}?model_id={me_model_id}",  # Include model_id as query parameter
                 headers={"Authorization": f"Bearer {self.metadata['token']}"},
                 json={
-                    "model_id": me_model_id,
                     "currentInjection": currentInjection.dict(),
                     "recordFrom": [rec.dict() for rec in recordFrom],
                     "conditions": conditions.dict(),
                     "type": simulationType,
                     "simulationDuration": simulationDuration
                 },
+                timeout=180.0
             )
             response_data = response.json()
             return BlueNaaSOutput(status="success", result=response_data)
