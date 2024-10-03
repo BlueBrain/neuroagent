@@ -2,7 +2,6 @@ import logging
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-
 from neuroagent.app.dependencies import get_settings
 from neuroagent.app.main import app
 

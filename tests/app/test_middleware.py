@@ -5,7 +5,6 @@ from unittest.mock import patch
 import pytest
 from fastapi.requests import Request
 from fastapi.responses import Response
-
 from neuroagent.app.config import Settings
 from neuroagent.app.middleware import strip_path_prefix
 
