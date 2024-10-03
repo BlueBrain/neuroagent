@@ -121,13 +121,13 @@ class HierarchicalTeamAgent(BaseMultiAgent):
         # Define tools
         simulation_tools = [
             self.tools["br_resolver_tool"],
-            self.tools["morpho_tool"],
-            self.tools["morphology_feature_tool"],
-            self.tools["kg_morpho_feature_tool"],
-            self.tools["literature_tool"],
+            # self.tools["morpho_tool"],
+            # self.tools["morphology_feature_tool"],
+            # self.tools["kg_morpho_feature_tool"],
+            # self.tools["literature_tool"],
             self.tools["me_model_tool"],
-            self.tools["electrophys_feature_tool"],
-            self.tools["traces_tool"],
+            # self.tools["electrophys_feature_tool"],
+            # self.tools["traces_tool"],
             self.tools["me_model_tool"],
             self.tools["bluenaas_tool"],
         ]  # Add other bluenaas endpoints later on..
@@ -138,35 +138,37 @@ class HierarchicalTeamAgent(BaseMultiAgent):
                                               checkpointer=self.memory,
                                               state_modifier="""You are a helpful assistant helping scientists run in-silico neuron simulations.
                 You must always specify in your answers from which brain regions the information is extracted.
+                You must run 'bluenaas_tool' as a final step then pass the results to your supervisor.
+                You must call me_model tool to get me_model_id to be passed into bluenaas_tool.  
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",                                            #   interrupt_before=self.tools["bluenaas_tool"],
                                               )
 
         simulation_node = functools.partial(
-            self.agent_node, agent=simulation_agent, name="SimulationAgent"
+            self.agent_node, agent=simulation_agent, name="SingleCellSimulationAgent"
         ) # might need to rename to SingleCellSimAgent when circuit level tools come
 
         # Supervisor
         simulation_supervisor_agent = self.create_team_supervisor(
             "You are a supervisor managing the Simulation Team. Members:"
-            " SimulationAgent."  # add synapse generator & literature search agents later on
+            " SingleCellSimulationAgent."  # add synapse generator & literature search agents later on
             " Given the following user request, respond with the worker to act next."
             " Each worker will perform a task and respond with their results and status."
             " When finished, respond with FINISH.",
-            ["SimulationAgent"],
+            ["SingleCellSimulationAgent"],
         )
 
         # Create graph
         simulation_graph = StateGraph(SimulationTeamState)
-        simulation_graph.add_node("SimulationAgent", simulation_node)
+        simulation_graph.add_node("SingleCellSimulationAgent", simulation_node)
         simulation_graph.add_node("supervisor", simulation_supervisor_agent)
         # TODO: add web search and web scraper nodes for best performance
 
         # Define edges
-        simulation_graph.add_edge("SimulationAgent", "supervisor")
+        simulation_graph.add_edge("SingleCellSimulationAgent", "supervisor")
         simulation_graph.add_conditional_edges(
             "supervisor",
             lambda x: x["next"],
-            {"SimulationAgent": "SimulationAgent", "FINISH": END},
+            {"SingleCellSimulationAgent": "SingleCellSimulationAgent", "FINISH": END},
         )  # add other edges as team grows
         simulation_graph.add_edge(START, "supervisor")
         chain = simulation_graph.compile()
