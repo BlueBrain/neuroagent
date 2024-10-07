@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 class SimulationStimulusConfig(BaseModel):
     """Configuration for the stimulus to be used in the simulation."""
 
-    stimulus_type: Literal["current_clamp", "voltage_clamp", "conductance"] = Field(
+    stimulusType: Literal["current_clamp", "voltage_clamp", "conductance"] = Field(
         default="current_clamp", description="Type of stimulus to be used."
     )
-    stimulus_protocol: Literal["ap_waveform", "idrest", "iv", "fire_pattern"] = Field(
+    stimulusProtocol: Literal["ap_waveform", "idrest", "iv", "fire_pattern"] = Field(
         default="ap_waveform", description="Stimulus protocol to be used."
     )
 
@@ -31,7 +31,7 @@ class SimulationStimulusConfig(BaseModel):
 class CurrentInjectionConfig(BaseModel):
     """Configuration for the current injection in the simulation."""
 
-    inject_to: str = Field(
+    injectTo: str = Field(
         default="soma[0]", description="Section to inject the current to."
     )
     stimulus: SimulationStimulusConfig = SimulationStimulusConfig()
@@ -133,7 +133,7 @@ class BlueNaaSTool(BasicTool):
                     "currentInjection": current_injection.model_dump(),
                     "recordFrom": [rec.model_dump() for rec in record_from],
                     "conditions": conditions.model_dump(),
-                    "simulationType": "single-neuron-simulation",
+                    "type": "single-neuron-simulation",
                     "simulationDuration": conditions.max_time,
                 },
                 timeout=5.0,
