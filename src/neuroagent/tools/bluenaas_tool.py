@@ -128,7 +128,7 @@ class BlueNaaSTool(BasicTool):
             _ = await self.metadata["httpx_client"].post(
                 url=self.metadata["url"],
                 params={"model_id": me_model_id},
-                headers={"Authorization": f"Bearer {self.metadata["token"]}"},
+                headers={"Authorization": f'Bearer {self.metadata["token"]}'},
                 json={
                     "currentInjection": current_injection.model_dump(),
                     "recordFrom": [rec.model_dump() for rec in record_from],
