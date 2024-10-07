@@ -27,6 +27,7 @@ from neuroagent.app.config import Settings
 from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
 from neuroagent.tools import (
+    BlueNaaSTool,
     ElectrophysFeatureTool,
     GetMEModelTool,
     GetMorphoTool,
@@ -180,6 +181,22 @@ def get_kg_token(
             )["access_token"]
         else:
             return settings.knowledge_graph.token.get_secret_value()  # type: ignore
+
+
+def get_bluenaas_tool(
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> BlueNaaSTool:
+    """Load BlueNaaS tool."""
+    tool = BlueNaaSTool(
+        metadata={
+            "url": settings.tools.bluenaas.url,
+            "token": token,
+            "httpx_client": httpx_client,
+        }
+    )
+    return tool
 
 
 def get_literature_tool(
@@ -374,6 +391,7 @@ async def get_agent_memory(
 
 def get_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
+    blue_naas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
@@ -411,6 +429,7 @@ def get_agent(
         return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
     else:
         tools = [
+            blue_naas_tool,
             literature_tool,
             br_resolver_tool,
             morpho_tool,
@@ -427,6 +446,7 @@ def get_agent(
 def get_chat_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
+    blue_naas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
@@ -446,6 +466,7 @@ def get_chat_agent(
     """Get the generative question answering service."""
     logger.info("Load simple chat")
     tools = [
+        blue_naas_tool,
         literature_tool,
         br_resolver_tool,
         morpho_tool,
