@@ -1,17 +1,19 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
-from typing import Literal, Annotated
-from pydantic import BaseModel, Field, PositiveInt
-
 import logging
-from pydantic import BaseModel
+from typing import Any, Literal
+
+from langchain_core.tools import ToolException
+from pydantic import BaseModel, Field
+
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
-from neuroagent.utils import get_kg_data
 
 logger = logging.getLogger(__name__)
 
 
 class SimulationStimulusConfig(BaseModel):
+    """Configuration for the stimulus to be used in the simulation."""
+
     stimulus_type: Literal["current_clamp", "voltage_clamp", "conductance"] = Field(
         default="current_clamp", description="Type of stimulus to be used."
     )
@@ -27,6 +29,8 @@ class SimulationStimulusConfig(BaseModel):
 
 
 class CurrentInjectionConfig(BaseModel):
+    """Configuration for the current injection in the simulation."""
+
     inject_to: str = Field(
         default="soma[0]", description="Section to inject the current to."
     )
@@ -34,6 +38,8 @@ class CurrentInjectionConfig(BaseModel):
 
 
 class RecordingLocation(BaseModel):
+    """Configuration for the recording location in the simulation."""
+
     section: str = Field(default="soma[0]", description="Section to record from")
     offset: float = Field(
         default=0.5, ge=0, le=1, description="Offset in the section to record from"
@@ -41,6 +47,8 @@ class RecordingLocation(BaseModel):
 
 
 class SimulationConditionsConfig(BaseModel):
+    """Configuration for the simulation conditions."""
+
     celsius: int = Field(default=34, ge=0, le=50, description="Temperature in celsius")
     vinit: int = Field(default=-73, description="Initial voltage in mV")
     hypamp: int = Field(default=0, description="Holding current in nA")
@@ -88,20 +96,20 @@ class InputBlueNaaS(BaseModel):
 
 
 class BlueNaaSOutput(BaseToolOutput):
-    """Should return a successful POST request"""
+    """Should return a successful POST request."""
 
     status: Literal["success", "pending", "error"]
 
 
 class BlueNaaSTool(BasicTool):
+    """Class defining the BlueNaaS tool."""
+
     name: str = "bluenaas-tool"
     description: str = """Runs a single-neuron simulation using the BlueNaaS service.
     Requires a "me_model_id" which must be fetched by get-me-model-tool.
-
-    The tool 
     """
     metadata: dict[str, Any]
-    args_schema: Type[BaseModel] = InputBlueNaaS
+    args_schema: type[BaseModel] = InputBlueNaaS
 
     def _run(self) -> None:
         pass
@@ -114,16 +122,16 @@ class BlueNaaSTool(BasicTool):
         conditions: SimulationConditionsConfig,
     ) -> BaseToolOutput:
         """Run the BlueNaaS tool."""
-        logger.info(f"Running BlueNaaS tool")
+        logger.info("Running BlueNaaS tool")
 
         try:
-            response = await self.metadata["httpx_client"].post(
+            _ = await self.metadata["httpx_client"].post(
                 url=self.metadata["url"],
                 params={"model_id": me_model_id},
                 headers={"Authorization": f"Bearer {self.metadata["token"]}"},
                 json={
                     "currentInjection": current_injection.model_dump(),
-                    "recordFrom": [rec.model_dump() for rec in recordFrom],
+                    "recordFrom": [rec.model_dump() for rec in record_from],
                     "conditions": conditions.model_dump(),
                     "simulationType": "single-neuron-simulation",
                     "simulationDuration": conditions.max_time,
