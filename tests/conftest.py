@@ -8,13 +8,14 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session
+
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import get_kg_token, get_settings
 from neuroagent.app.main import app
 from neuroagent.tools import GetMorphoTool
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
 
 
 @pytest.fixture(name="app_client")

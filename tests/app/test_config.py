@@ -1,8 +1,9 @@
 """Test config"""
 
 import pytest
-from neuroagent.app.config import Settings
 from pydantic import ValidationError
+
+from neuroagent.app.config import Settings
 
 
 def test_required(monkeypatch, patch_required_env):
