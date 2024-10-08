@@ -158,6 +158,15 @@ class SettingsKnowledgeGraph(BaseModel):
         return "http://bbp.epfl.ch/neurosciencegraph/ontologies/core"
 
 
+class SettingsVlab(BaseModel):
+    """Virtual lab endpoint settings."""
+
+    get_project_url: str = (
+        "https://openbluebrain.com/api/virtual-lab-manager/virtual_lab"
+    )
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsTools(BaseModel):
     """Database settings."""
 
@@ -213,6 +222,7 @@ class Settings(BaseSettings):
     openai: SettingsOpenAI = SettingsOpenAI()  # has no required
     logging: SettingsLogging = SettingsLogging()  # has no required
     keycloak: SettingsKeycloak = SettingsKeycloak()  # has no required
+    virtual_lab: SettingsVlab = SettingsVlab()  # has no required
     misc: SettingsMisc = SettingsMisc()  # has no required
 
     model_config = SettingsConfigDict(

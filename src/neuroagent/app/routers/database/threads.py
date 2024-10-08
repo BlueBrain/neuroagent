@@ -34,6 +34,8 @@ router = APIRouter(prefix="/threads", tags=["Threads' CRUD"])
 def create_thread(
     session: Annotated[Session, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
+    virtual_lab_id: str,
+    project_id: str,
     title: str = "title",
 ) -> ThreadsRead:
     """Create thread.
@@ -53,7 +55,9 @@ def create_thread(
     thread_dict: {'thread_id': 'thread_name'}
         Conversation created.
     """  # noqa: D301, D400, D205
-    new_thread = Threads(user_sub=user_id, title=title)
+    new_thread = Threads(
+        user_sub=user_id, vlab_id=virtual_lab_id, title=title, project_id=project_id
+    )
     session.add(new_thread)
     session.commit()
     session.refresh(new_thread)
