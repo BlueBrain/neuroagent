@@ -60,6 +60,7 @@ def patch_required_env(monkeypatch):
     )
     monkeypatch.setenv("NEUROAGENT_OPENAI__TOKEN", "dummy")
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "False")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "password")
 
 
 @pytest.fixture(params=["sqlite", "postgresql"], name="db_connection")

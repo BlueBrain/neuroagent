@@ -218,8 +218,11 @@ class Settings(BaseSettings):
         model validator is run during instantiation.
 
         """
-        if not self.keycloak.password and self.keycloak.validate_token:
-            raise ValueError("Need an auth method")
+        # If you don't enforce keycloak auth, you need a way to communicate with the APIs the tools leverage
+        if not self.keycloak.password and not self.keycloak.validate_token:
+            raise ValueError(
+                "Need an auth method for subsequent APIs called by the tools."
+            )
 
         return self
 
