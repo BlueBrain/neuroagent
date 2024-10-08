@@ -6,11 +6,13 @@ from pathlib import Path
 import httpx
 import pytest
 from langchain_core.tools import ToolException
+
 from neuroagent.tools import GetTracesTool
 from neuroagent.tools.traces_tool import TracesOutput
 
 
 class TestTracesTool:
+    @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
     @pytest.mark.asyncio
     async def test_arun(self, httpx_mock, brain_region_json_path):
         url = "http://fake_url"

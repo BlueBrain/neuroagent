@@ -6,9 +6,11 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
 from neuroagent.agents import AgentOutput, AgentStep, SimpleChatAgent
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_arun(fake_llm_with_tools, httpx_mock):
     llm, tools, fake_responses = await anext(fake_llm_with_tools)
@@ -64,6 +66,7 @@ async def test_arun(fake_llm_with_tools, httpx_mock):
         assert len(messages_list) == 10
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_astream(fake_llm_with_tools, httpx_mock):
     llm, tools, fake_responses = await anext(fake_llm_with_tools)

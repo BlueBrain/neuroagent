@@ -104,6 +104,14 @@ class SettingsGetMorpho(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SettingsGetMEModel(BaseModel):
+    """Get ME Model settings."""
+
+    search_size: int = 10
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
 
@@ -145,6 +153,7 @@ class SettingsTools(BaseModel):
     morpho: SettingsGetMorpho = SettingsGetMorpho()
     trace: SettingsTrace = SettingsTrace()
     kg_morpho_features: SettingsKGMorpho = SettingsKGMorpho()
+    me_model: SettingsGetMEModel = SettingsGetMEModel()
 
     model_config = ConfigDict(frozen=True)
 

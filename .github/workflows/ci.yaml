@@ -34,7 +34,7 @@ jobs:
       - name: Set up environment
         run: |
           pip install --upgrade pip wheel setuptools
-          pip install bandit[toml]==1.7.4 ruff==0.5.5
+          pip install bandit[toml]==1.7.4 ruff==0.6.7
       - name: Linting check
         run: |
           bandit -qr -c pyproject.toml src/
