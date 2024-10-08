@@ -221,7 +221,7 @@ def test_get_agent(monkeypatch, patch_required_env):
 
     agent = get_agent(
         llm=language_model,
-        blue_naas_tool=bluenaas_tool,
+        bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
@@ -276,7 +276,7 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
 
     agent = get_chat_agent(
         llm=language_model,
-        blue_naas_tool=bluenaas_tool,
+        bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
