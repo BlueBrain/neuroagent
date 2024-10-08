@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 class HTTPBearerDirect(HTTPBearer):
     """HTTPBearer class that returns directly the token in the call."""
 
-    async def __call__(self, request: Request) -> str | None:
+    async def __call__(self, request: Request) -> str | None:  # type: ignore
         """Intercept the bearer token in the headers."""
         auth_credentials = await super().__call__(request)
         return auth_credentials.credentials if auth_credentials else None
