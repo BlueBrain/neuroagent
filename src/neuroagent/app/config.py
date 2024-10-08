@@ -5,7 +5,6 @@ import pathlib
 from typing import Literal, Optional
 
 from dotenv import dotenv_values
-from fastapi.openapi.models import OAuthFlowPassword, OAuthFlows
 from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -60,15 +59,6 @@ class SettingsKeycloak(BaseModel):
             return None
 
     @property
-    def flows(self) -> OAuthFlows:
-        """Define the flow to override Fastapi's one."""
-        return OAuthFlows(
-            password=OAuthFlowPassword(
-                tokenUrl=self.token_endpoint,
-            ),
-        )
-
-    @property
     def server_url(self) -> str:
         """Server url."""
         return self.issuer.split("/auth")[0] + "/auth/"
@@ -118,8 +108,6 @@ class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
 
     base_url: str
-    token: SecretStr | None = None
-    use_token: bool = False
     download_hierarchy: bool = False
     br_saving_path: pathlib.Path | str = str(
         pathlib.Path(__file__).parent / "data" / "brainregion_hierarchy.json"
@@ -221,14 +209,8 @@ class Settings(BaseSettings):
         model validator is run during instantiation.
 
         """
-        if not self.keycloak.password and not self.keycloak.validate_token:
-            if not self.knowledge_graph.use_token:
-                raise ValueError("if no password is provided, please use token auth.")
-            if not self.knowledge_graph.token:
-                raise ValueError(
-                    "No auth method provided for knowledge graph related queries."
-                    " Please set either a password or use a fixed token."
-                )
+        if not self.keycloak.password and self.keycloak.validate_token:
+            raise ValueError("Need an auth method")
 
         return self
 

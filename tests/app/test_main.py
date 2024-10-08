@@ -34,6 +34,7 @@ def test_startup(caplog, monkeypatch, tmp_path, patch_required_env, db_connectio
     with (
         patch("neuroagent.app.main.get_update_kg_hierarchy", new=save_dummy),
         patch("neuroagent.app.main.get_cell_types_kg_hierarchy", new=save_dummy),
+        patch("neuroagent.app.main.get_kg_token", new=lambda *args, **kwargs: "dev"),
     ):
         # The with statement triggers the startup.
         with TestClient(app) as test_client:
