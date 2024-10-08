@@ -112,6 +112,13 @@ class SettingsGetMEModel(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SettingsBlueNaaS(BaseModel):
+    """BlueNaaS settings."""
+
+    url: str = "https://openbluebrain.com/api/bluenaas/simulation/single-neuron/run"
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
 
@@ -150,6 +157,7 @@ class SettingsTools(BaseModel):
     """Database settings."""
 
     literature: SettingsLiterature
+    bluenaas: SettingsBlueNaaS = SettingsBlueNaaS()
     morpho: SettingsGetMorpho = SettingsGetMorpho()
     trace: SettingsTrace = SettingsTrace()
     kg_morpho_features: SettingsKGMorpho = SettingsKGMorpho()
