@@ -15,7 +15,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from neuroagent import __version__
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import (
-    auth,
     get_agent_memory,
     get_cell_types_kg_hierarchy,
     get_connection_string,
@@ -72,9 +71,6 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
     """Read environment (settings of the application)."""
     # hacky but works: https://github.com/tiangolo/fastapi/issues/425
     app_settings = fastapi_app.dependency_overrides.get(get_settings, get_settings)()
-    if app_settings.keycloak.validate_token:
-        auth.model.flows = app_settings.keycloak.flows  # type: ignore
-
     engine = fastapi_app.dependency_overrides.get(get_engine, get_engine)(
         app_settings, get_connection_string(app_settings)
     )

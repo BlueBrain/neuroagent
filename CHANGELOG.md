@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Switched from OAUTH2 security on FASTAPI to HTTPBearer.
+
 ### Added
 - Add get morphoelectric (me) model tool
 

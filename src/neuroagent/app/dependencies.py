@@ -5,7 +5,7 @@ from functools import cache
 from typing import Annotated, Any, AsyncIterator, Iterator
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from langchain_openai import ChatOpenAI
@@ -40,10 +40,17 @@ from neuroagent.utils import RegionMeta, get_file_from_KG
 
 logger = logging.getLogger(__name__)
 
-auth = OAuth2PasswordBearer(
-    tokenUrl="/token",  # Will be overriden
-    auto_error=False,
-)
+
+class HTTPBearerDirect(HTTPBearer):
+    """HTTPBearer class that returns directly the token in the call."""
+
+    async def __call__(self, request: Request) -> str | None:  # type: ignore
+        """Intercept the bearer token in the headers."""
+        auth_credentials = await super().__call__(request)
+        return auth_credentials.credentials if auth_credentials else None
+
+
+auth = HTTPBearerDirect(auto_error=False)
 
 
 @cache
@@ -168,18 +175,15 @@ def get_kg_token(
     if token:
         return token
     else:
-        if not settings.knowledge_graph.use_token:
-            instance = KeycloakOpenID(
-                server_url=settings.keycloak.server_url,
-                realm_name=settings.keycloak.realm,
-                client_id=settings.keycloak.client_id,
-            )
-            return instance.token(
-                username=settings.keycloak.username,
-                password=settings.keycloak.password.get_secret_value(),  # type: ignore
-            )["access_token"]
-        else:
-            return settings.knowledge_graph.token.get_secret_value()  # type: ignore
+        instance = KeycloakOpenID(
+            server_url=settings.keycloak.server_url,
+            realm_name=settings.keycloak.realm,
+            client_id=settings.keycloak.client_id,
+        )
+        return instance.token(
+            username=settings.keycloak.username,
+            password=settings.keycloak.password.get_secret_value(),  # type: ignore
+        )["access_token"]
 
 
 def get_literature_tool(
