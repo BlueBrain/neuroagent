@@ -11,12 +11,12 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
     Settings,
     get_agent,
     get_agent_memory,
+    get_bluenaas_tool,
     get_brain_region_resolver_tool,
     get_cell_types_kg_hierarchy,
     get_chat_agent,
@@ -188,6 +188,9 @@ def test_get_agent(monkeypatch, patch_required_env):
     settings = Settings()
 
     language_model = get_language_model(settings)
+    bluenaas_tool = get_bluenaas_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
     literature_tool = get_literature_tool(
         token=token, settings=settings, httpx_client=httpx_client
     )
@@ -217,6 +220,7 @@ def test_get_agent(monkeypatch, patch_required_env):
 
     agent = get_agent(
         llm=language_model,
+        blue_naas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
@@ -240,6 +244,9 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
     settings = Settings()
 
     language_model = get_language_model(settings)
+    bluenaas_tool = get_bluenaas_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
     literature_tool = get_literature_tool(
         token=token, settings=settings, httpx_client=httpx_client
     )
@@ -268,6 +275,7 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
 
     agent = get_chat_agent(
         llm=language_model,
+        blue_naas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
