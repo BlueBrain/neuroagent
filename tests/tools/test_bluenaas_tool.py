@@ -1,4 +1,4 @@
-"""Tests Get Morpho tool."""
+"""Tests BlueNaaS tool."""
 
 import httpx
 import pytest
