@@ -157,7 +157,7 @@ class SettingsVlab(BaseModel):
     """Virtual lab endpoint settings."""
 
     get_project_url: str = (
-        "https://openbluebrain.com/api/virtual-lab-manager/virtual_lab"
+        "https://openbluebrain.com/api/virtual-lab-manager/virtual-labs"
     )
     model_config = ConfigDict(frozen=True)
 

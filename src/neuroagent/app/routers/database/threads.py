@@ -4,17 +4,23 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from httpx import AsyncClient
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from sqlalchemy import MetaData, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from starlette.status import HTTP_401_UNAUTHORIZED
 
+from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import (
     get_agent_memory,
     get_engine,
+    get_httpx_client,
+    get_kg_token,
     get_session,
+    get_settings,
     get_user_id,
 )
 from neuroagent.app.routers.database.schemas import (
@@ -31,7 +37,10 @@ router = APIRouter(prefix="/threads", tags=["Threads' CRUD"])
 
 
 @router.post("/")
-def create_thread(
+async def create_thread(
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(get_kg_token)],
     session: Annotated[Session, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     virtual_lab_id: str,
@@ -55,6 +64,18 @@ def create_thread(
     thread_dict: {'thread_id': 'thread_name'}
         Conversation created.
     """  # noqa: D301, D400, D205
+    # We first need to check if the combination thread/vlab/project is valid
+    response = await httpx_client.get(
+        f"{settings.virtual_lab.get_project_url}/{virtual_lab_id}/projects/{project_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="User does not belong to the project.",
+        )
+    # We could put that in a function, and is 401 the best error here ?
+
     new_thread = Threads(
         user_sub=user_id, vlab_id=virtual_lab_id, title=title, project_id=project_id
     )

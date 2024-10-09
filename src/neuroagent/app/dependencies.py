@@ -398,7 +398,8 @@ def thread_to_vp(
     user_id: Annotated[str, Depends(get_user_id)],
     session: Annotated[Session, Depends(get_session)],
     request: Request,
-) -> dict[str:str]:
+) -> dict[str, str]:
+    """From the current thread, get the corresponding vlab and project."""
     if "x-project-id" in request.headers:
         return {
             "vlab_id": request.headers["x-virtual-lab-id"],
@@ -412,10 +413,10 @@ def thread_to_vp(
             .where(Threads.thread_id == thread_id)
         )
         result = session.execute(query).all()
-        if len(result) != 1:
-            thread_info = [0][0].__dict__
+        if len(result) == 1:
+            thread_info = result[0][0].__dict__
         else:
-            raise IndexError("thread not found whjen trying to validate project ID.")
+            raise IndexError("thread not found when trying to validate project ID.")
         return {
             "vlab_id": thread_info["vlab_id"],
             "project_id": thread_info["project_id"],
@@ -428,11 +429,16 @@ async def validate_project(
     token: Annotated[str, Depends(get_kg_token)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
+    """Check user appartenance to vlab and project before running agent."""
     response = await httpx_client.get(
         f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
         headers={"Authorization": f"Bearer {token}"},
     )
-    breakpoint()
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="User does not belong to the project.",
+        )
 
 
 def get_agent(
