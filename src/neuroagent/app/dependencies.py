@@ -391,9 +391,9 @@ def thread_to_vp(
             .where(Threads.thread_id == thread_id)
         )
         result = session.execute(query).all()
-        if len(result) != 1: 
+        if len(result) != 1:
             thread_info = [0][0].__dict__
-        else : 
+        else:
             raise IndexError("thread not found whjen trying to validate project ID.")
         return {
             "vlab_id": thread_info["vlab_id"],
@@ -407,7 +407,6 @@ async def validate_project(
     token: Annotated[str, Depends(get_kg_token)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    
     response = await httpx_client.get(
         f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
         headers={"Authorization": f"Bearer {token}"},
