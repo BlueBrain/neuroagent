@@ -400,7 +400,7 @@ def thread_to_vp(
     request: Request,
 ) -> dict[str, str]:
     """From the current thread, get the corresponding vlab and project."""
-    if "x-project-id" in request.headers:
+    if "x-project-id" in request.headers and "x-virtual-lab-id" in request.headers:
         return {
             "vlab_id": request.headers["x-virtual-lab-id"],
             "project_id": request.headers["x-project-id"],
@@ -413,10 +413,13 @@ def thread_to_vp(
             .where(Threads.thread_id == thread_id)
         )
         result = session.execute(query).all()
-        if len(result) == 1:
+        if len(result) != 0:
             thread_info = result[0][0].__dict__
         else:
-            raise IndexError("thread not found when trying to validate project ID.")
+            raise HTTPException(
+                status_code=404,
+                detail="thread not found when trying to validate project ID.",
+            )
         return {
             "vlab_id": thread_info["vlab_id"],
             "project_id": thread_info["project_id"],
@@ -434,6 +437,7 @@ async def validate_project(
         f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
         headers={"Authorization": f"Bearer {token}"},
     )
+    # the project ID and title is in this response.
     if response.status_code != 200:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,

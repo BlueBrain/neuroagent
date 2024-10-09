@@ -32,6 +32,7 @@ from neuroagent.app.dependencies import (
     get_traces_tool,
     get_update_kg_hierarchy,
     get_user_id,
+    validate_project,
 )
 from neuroagent.tools import (
     ElectrophysFeatureTool,
@@ -182,11 +183,24 @@ def test_language_model(monkeypatch, patch_required_env):
     assert language_model.max_tokens == 99
 
 
-def test_get_agent(monkeypatch, patch_required_env):
+@pytest.mark.asyncio
+async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_AGENT__MODEL", "simple")
     token = "fake_token"
     httpx_client = AsyncClient()
     settings = Settings()
+
+    thread_to_vp = {"vlab_id": "test_vlab", "project_id": "test_project"}
+    httpx_mock.add_response(
+        url=f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
+        json="test_project_ID",
+    )
+    valid_project = await validate_project(
+        httpx_client=httpx_client,
+        thread_to_vp=thread_to_vp,
+        token=token,
+        settings=settings,
+    )
 
     language_model = get_language_model(settings)
     bluenaas_tool = get_bluenaas_tool(
@@ -220,6 +234,7 @@ def test_get_agent(monkeypatch, patch_required_env):
     )
 
     agent = get_agent(
+        valid_project,
         llm=language_model,
         bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
@@ -237,12 +252,26 @@ def test_get_agent(monkeypatch, patch_required_env):
 
 
 @pytest.mark.asyncio
-async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
+async def test_get_chat_agent(
+    monkeypatch, db_connection, httpx_mock, patch_required_env
+):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "sqlite://")
 
     token = "fake_token"
     httpx_client = AsyncClient()
     settings = Settings()
+
+    thread_to_vp = {"vlab_id": "test_vlab", "project_id": "test_project"}
+    httpx_mock.add_response(
+        url=f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
+        json="test_project_ID",
+    )
+    valid_project = await validate_project(
+        httpx_client=httpx_client,
+        thread_to_vp=thread_to_vp,
+        token=token,
+        settings=settings,
+    )
 
     language_model = get_language_model(settings)
     bluenaas_tool = get_bluenaas_tool(
@@ -275,6 +304,7 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
     memory = await anext(get_agent_memory(db_connection))
 
     agent = get_chat_agent(
+        valid_project,
         llm=language_model,
         bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
