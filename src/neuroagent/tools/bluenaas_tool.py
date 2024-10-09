@@ -107,11 +107,6 @@ class BlueNaaSTool(BasicTool):
     ) -> BaseToolOutput:
         """Run the BlueNaaS tool."""
         logger.info("Running BlueNaaS tool")
-        if not current_injection__stimulus__amplitudes:
-            current_injection__stimulus__amplitudes = [0.1]
-        if not record_from:
-            record_from = [RecordingLocation()]
-
         json_api = self.create_json_api(
             current_injection__inject_to=current_injection__inject_to,
             current_injection__stimulus__stimulus_type=current_injection__stimulus__stimulus_type,
@@ -156,8 +151,12 @@ class BlueNaaSTool(BasicTool):
         conditions__max_time: int = 100,
         conditions__time_step: float = 0.05,
         conditions__seed: int = 100,
-    ) -> dict[str, str | int | float]:
+    ) -> dict[str, Any]:
         """Based on the simulation config, create a valid JSON for the API."""
+        if not current_injection__stimulus__amplitudes:
+            current_injection__stimulus__amplitudes = [0.1]
+        if not record_from:
+            record_from = [RecordingLocation()]
         json_api = {
             "currentInjection": {
                 "injectTo": current_injection__inject_to,
