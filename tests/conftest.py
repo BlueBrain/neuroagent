@@ -59,8 +59,8 @@ def patch_required_env(monkeypatch):
         "NEUROAGENT_KNOWLEDGE_GRAPH__BASE_URL", "https://fake_url/api/nexus/v1"
     )
     monkeypatch.setenv("NEUROAGENT_OPENAI__TOKEN", "dummy")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__TOKEN", "token")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__USE_TOKEN", "true")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "False")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "password")
 
 
 @pytest.fixture(params=["sqlite", "postgresql"], name="db_connection")
