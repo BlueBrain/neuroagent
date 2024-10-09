@@ -5,7 +5,7 @@ from functools import cache
 from typing import Annotated, Any, AsyncIterator, Iterator
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from langchain_openai import ChatOpenAI
@@ -28,6 +28,7 @@ from neuroagent.app.routers.database.schemas import Threads
 from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
 from neuroagent.tools import (
+    BlueNaaSTool,
     ElectrophysFeatureTool,
     GetMEModelTool,
     GetMorphoTool,
@@ -41,10 +42,17 @@ from neuroagent.utils import RegionMeta, get_file_from_KG
 
 logger = logging.getLogger(__name__)
 
-auth = OAuth2PasswordBearer(
-    tokenUrl="/token",  # Will be overriden
-    auto_error=False,
-)
+
+class HTTPBearerDirect(HTTPBearer):
+    """HTTPBearer class that returns directly the token in the call."""
+
+    async def __call__(self, request: Request) -> str | None:  # type: ignore
+        """Intercept the bearer token in the headers."""
+        auth_credentials = await super().__call__(request)
+        return auth_credentials.credentials if auth_credentials else None
+
+
+auth = HTTPBearerDirect(auto_error=False)
 
 
 @cache
@@ -169,18 +177,31 @@ def get_kg_token(
     if token:
         return token
     else:
-        if not settings.knowledge_graph.use_token:
-            instance = KeycloakOpenID(
-                server_url=settings.keycloak.server_url,
-                realm_name=settings.keycloak.realm,
-                client_id=settings.keycloak.client_id,
-            )
-            return instance.token(
-                username=settings.keycloak.username,
-                password=settings.keycloak.password.get_secret_value(),  # type: ignore
-            )["access_token"]
-        else:
-            return settings.knowledge_graph.token.get_secret_value()  # type: ignore
+        instance = KeycloakOpenID(
+            server_url=settings.keycloak.server_url,
+            realm_name=settings.keycloak.realm,
+            client_id=settings.keycloak.client_id,
+        )
+        return instance.token(
+            username=settings.keycloak.username,
+            password=settings.keycloak.password.get_secret_value(),  # type: ignore
+        )["access_token"]
+
+
+def get_bluenaas_tool(
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> BlueNaaSTool:
+    """Load BlueNaaS tool."""
+    tool = BlueNaaSTool(
+        metadata={
+            "url": settings.tools.bluenaas.url,
+            "token": token,
+            "httpx_client": httpx_client,
+        }
+    )
+    return tool
 
 
 def get_literature_tool(
@@ -417,6 +438,7 @@ async def validate_project(
 def get_agent(
     _: Annotated[None, Depends(validate_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
+    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
@@ -454,6 +476,7 @@ def get_agent(
         return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
     else:
         tools = [
+            bluenaas_tool,
             literature_tool,
             br_resolver_tool,
             morpho_tool,
@@ -471,6 +494,7 @@ def get_chat_agent(
     _: Annotated[None, Depends(validate_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
+    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
@@ -490,6 +514,7 @@ def get_chat_agent(
     """Get the generative question answering service."""
     logger.info("Load simple chat")
     tools = [
+        bluenaas_tool,
         literature_tool,
         br_resolver_tool,
         morpho_tool,
