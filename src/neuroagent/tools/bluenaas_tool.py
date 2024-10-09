@@ -111,6 +111,53 @@ class BlueNaaSTool(BasicTool):
             current_injection__stimulus__amplitudes = [0.1]
         if not record_from:
             record_from = [RecordingLocation()]
+
+        json_api = self.create_json_api(
+            current_injection__inject_to=current_injection__inject_to,
+            current_injection__stimulus__stimulus_type=current_injection__stimulus__stimulus_type,
+            current_injection__stimulus__stimulus_protocol=current_injection__stimulus__stimulus_protocol,
+            current_injection__stimulus__amplitudes=current_injection__stimulus__amplitudes,
+            record_from=record_from,
+            conditions__celsius=conditions__celsius,
+            conditions__vinit=conditions__vinit,
+            conditions__hypamp=conditions__hypamp,
+            conditions__max_time=conditions__max_time,
+            conditions__seed=conditions__seed,
+        )
+
+        try:
+            _ = await self.metadata["httpx_client"].post(
+                url=self.metadata["url"],
+                params={"model_id": me_model_id},
+                headers={"Authorization": f'Bearer {self.metadata["token"]}'},
+                json=json_api,
+                timeout=5.0,
+            )
+
+            return BlueNaaSOutput(status="success")
+
+        except Exception as e:
+            raise ToolException(str(e), self.name)
+
+    @staticmethod
+    def create_json_api(
+        current_injection__inject_to: str = "soma[0]",
+        current_injection__stimulus__stimulus_type: Literal[
+            "current_clamp", "voltage_clamp", "conductance"
+        ] = "current_clamp",
+        current_injection__stimulus__stimulus_protocol: Literal[
+            "ap_waveform", "idrest", "iv", "fire_pattern"
+        ] = "ap_waveform",
+        current_injection__stimulus__amplitudes: list[float] | None = None,
+        record_from: list[RecordingLocation] | None = None,
+        conditions__celsius: int = 34,
+        conditions__vinit: int = -73,
+        conditions__hypamp: int = 0,
+        conditions__max_time: int = 100,
+        conditions__time_step: float = 0.05,
+        conditions__seed: int = 100,
+    ) -> dict[str, str | int | float]:
+        """Based on the simulation config, create a valid JSON for the API."""
         json_api = {
             "currentInjection": {
                 "injectTo": current_injection__inject_to,
@@ -132,16 +179,4 @@ class BlueNaaSTool(BasicTool):
             "type": "single-neuron-simulation",
             "simulationDuration": conditions__max_time,
         }
-        try:
-            _ = await self.metadata["httpx_client"].post(
-                url=self.metadata["url"],
-                params={"model_id": me_model_id},
-                headers={"Authorization": f'Bearer {self.metadata["token"]}'},
-                json=json_api,
-                timeout=5.0,
-            )
-
-            return BlueNaaSOutput(status="success")
-
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        return json_api
