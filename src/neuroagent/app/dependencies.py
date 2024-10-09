@@ -373,7 +373,7 @@ async def get_agent_memory(
         yield None
 
 
-def thread_to_VP(
+def thread_to_vp(
     user_id: Annotated[str, Depends(get_user_id)],
     session: Annotated[Session, Depends(get_session)],
     request: Request,
@@ -390,7 +390,11 @@ def thread_to_VP(
             .where(Threads.user_sub == user_id)
             .where(Threads.thread_id == thread_id)
         )
-        thread_info = session.execute(query).all()[0][0].__dict__
+        result = session.execute(query).all()
+        if len(result) != 1: 
+            thread_info = [0][0].__dict__
+        else : 
+            raise IndexError("thread not found whjen trying to validate project ID.")
         return {
             "vlab_id": thread_info["vlab_id"],
             "project_id": thread_info["project_id"],
@@ -399,10 +403,11 @@ def thread_to_VP(
 
 async def validate_project(
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-    thread_to_vp: Annotated[dict[str, str], Depends(thread_to_VP)],
+    thread_to_vp: Annotated[dict[str, str], Depends(thread_to_vp)],
     token: Annotated[str, Depends(get_kg_token)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
+    
     response = await httpx_client.get(
         f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
         headers={"Authorization": f"Bearer {token}"},
