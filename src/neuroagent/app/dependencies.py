@@ -31,6 +31,7 @@ from neuroagent.tools import (
     ElectrophysFeatureTool,
     GetMEModelTool,
     GetMorphoTool,
+    GetSimulationTool,
     GetTracesTool,
     KGMorphoFeatureTool,
     LiteratureSearchTool,
@@ -344,6 +345,36 @@ def get_me_model_tool(
     return tool
 
 
+# TEMPORARY -> REMOVED WHEN BORIS PR IS MERGED
+def thread_to_vp() -> str:
+    """Temp."""
+    # My personal vlab + project
+    return (
+        "8b58d98b-8ed3-4ce9-bc25-3cb8129eeb81",
+        "acdcb310-4443-4f97-b9ac-fb9d1b21398d",
+    )
+
+
+def get_simulation_tool(
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(get_kg_token)],
+    vlab_project_tuple: Annotated[tuple[str, str], Depends(thread_to_vp)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> GetSimulationTool:
+    """Load get simulation tool."""
+    tool = GetSimulationTool(
+        metadata={
+            "url": settings.knowledge_graph.get_private_project_search_url(
+                *vlab_project_tuple
+            ),
+            "token": token,
+            "httpx_client": httpx_client,
+            "search_size": settings.tools.get_simulation.search_size,
+        }
+    )
+    return tool
+
+
 def get_language_model(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ChatOpenAI:
@@ -411,6 +442,7 @@ def get_agent(
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
     me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
+    simulation_tool: Annotated[GetSimulationTool, Depends(get_simulation_tool)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent | BaseMultiAgent:
     """Get the generative question answering service."""
@@ -441,6 +473,7 @@ def get_agent(
             electrophys_feature_tool,
             traces_tool,
             me_model_tool,
+            simulation_tool,
         ]
         logger.info("Load simple agent")
         return SimpleAgent(llm=llm, tools=tools)  # type: ignore
@@ -454,6 +487,7 @@ def get_chat_agent(
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
     ],
+    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
     morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
     morphology_feature_tool: Annotated[
         MorphologyFeatureTool, Depends(get_morphology_feature_tool)
@@ -464,6 +498,7 @@ def get_chat_agent(
     electrophys_feature_tool: Annotated[
         ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
     ],
+    simulation_tool: Annotated[GetSimulationTool, Depends(get_simulation_tool)],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
 ) -> BaseAgent:
     """Get the generative question answering service."""
@@ -472,10 +507,12 @@ def get_chat_agent(
         bluenaas_tool,
         literature_tool,
         br_resolver_tool,
+        me_model_tool,
         morpho_tool,
         morphology_feature_tool,
         kg_morpho_feature_tool,
         electrophys_feature_tool,
+        simulation_tool,
         traces_tool,
     ]
     return SimpleChatAgent(llm=llm, tools=tools, memory=memory)  # type: ignore

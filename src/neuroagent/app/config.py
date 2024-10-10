@@ -119,6 +119,14 @@ class SettingsBlueNaaS(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SettingsGetSimulation(BaseModel):
+    """GetSimulation settings."""
+
+    search_size: int = 10
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
 
@@ -152,12 +160,17 @@ class SettingsKnowledgeGraph(BaseModel):
         """Knowledge graph url for brainregion/celltype files."""
         return "http://bbp.epfl.ch/neurosciencegraph/ontologies/core"
 
+    def get_private_project_search_url(self, vlab_id: str, proj_id: str) -> str:
+        """Return the url to list project bound resources."""
+        return f"{self.base_url}/views/{vlab_id}/{proj_id}/https%3A%2F%2Fbluebrain.github.io%2Fnexus%2Fvocabulary%2FsearchView/projections/https%3A%2F%2Fbluebrain.github.io%2Fnexus%2Fvocabulary%2FsearchProjection/_search"
+
 
 class SettingsTools(BaseModel):
     """Database settings."""
 
     literature: SettingsLiterature
     bluenaas: SettingsBlueNaaS = SettingsBlueNaaS()
+    get_simulation: SettingsGetSimulation = SettingsGetSimulation()
     morpho: SettingsGetMorpho = SettingsGetMorpho()
     trace: SettingsTrace = SettingsTrace()
     kg_morpho_features: SettingsKGMorpho = SettingsKGMorpho()
