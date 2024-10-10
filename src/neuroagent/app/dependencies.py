@@ -413,7 +413,7 @@ def thread_to_vp(
             .where(Threads.thread_id == thread_id)
         )
         result = session.execute(query).all()
-        if len(result) != 0:
+        if result:
             thread_info = result[0][0].__dict__
         else:
             raise HTTPException(
@@ -437,6 +437,7 @@ async def validate_project(
         f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
         headers={"Authorization": f"Bearer {token}"},
     )
+
     # the project ID and title is in this response.
     if response.status_code != 200:
         raise HTTPException(
