@@ -282,7 +282,8 @@ async def test_validate_project(patch_required_env, httpx_mock):
         url=f'{test_settings.virtual_lab.get_project_url}/{test_vp["vlab_id"]}/projects/{test_vp["project_id"]}',
         json="test_project_ID",
     )
-    _ = await validate_project(httpx_client, test_vp, token, test_settings)
+    project_id = await validate_project(httpx_client, test_vp, token, test_settings)
+    assert project_id == test_vp["project_id"]
 
 
 @pytest.mark.asyncio

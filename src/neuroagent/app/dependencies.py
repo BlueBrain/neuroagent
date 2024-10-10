@@ -431,19 +431,21 @@ async def validate_project(
     thread_to_vp: Annotated[dict[str, str], Depends(thread_to_vp)],
     token: Annotated[str, Depends(get_kg_token)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> None:
+) -> str:
     """Check user appartenance to vlab and project before running agent."""
     response = await httpx_client.get(
         f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # the project ID and title is in this response.
+    # There is a lot of information about the project in this response.
     if response.status_code != 200:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,
             detail="User does not belong to the project.",
         )
+    else:
+        return thread_to_vp["project_id"]
 
 
 def get_agent(
