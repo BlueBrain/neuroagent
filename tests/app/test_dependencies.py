@@ -209,56 +209,60 @@ def test_thread_to_vp(patch_required_env, db_connection):
     session.commit()
     session.refresh(new_thread)
 
-    # Test with info in headers.
-    good_request_headers = Request(
-        scope={
-            "type": "http",
-            "method": "Get",
-            "url": "http://fake_url/thread_id",
-            "headers": [
-                (b"x-virtual-lab-id", b"test_vlab"),
-                (b"x-project-id", b"test_project"),
-            ],
-        },
-    )
-    ids = thread_to_vp(user_id, session, good_request_headers)
-    assert ids == {"vlab_id": "test_vlab", "project_id": "test_project"}
+    try:
+        # Test with info in headers.
+        good_request_headers = Request(
+            scope={
+                "type": "http",
+                "method": "Get",
+                "url": "http://fake_url/thread_id",
+                "headers": [
+                    (b"x-virtual-lab-id", b"test_vlab"),
+                    (b"x-project-id", b"test_project"),
+                ],
+            },
+        )
+        ids = thread_to_vp(user_id, session, good_request_headers, test_settings)
+        assert ids == {"vlab_id": "test_vlab", "project_id": "test_project"}
 
-    # Test with no infos in headers.
-    bad_request = Request(
-        scope={
-            "type": "http",
-            "method": "GET",
-            "scheme": "http",
-            "server": ("example.com", 80),
-            "path": "/test/test_thread_id",
-            "headers": [
-                (b"wong_header", b"wrong value"),
-            ],
-        }
-    )
-    with pytest.raises(HTTPException) as error:
-        _ = thread_to_vp(user_id, session, bad_request)
-    assert error.value.detail == "thread not found when trying to validate project ID."
+        # Test with no infos in headers.
+        bad_request = Request(
+            scope={
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "server": ("example.com", 80),
+                "path": "/test/test_thread_id",
+                "headers": [
+                    (b"wong_header", b"wrong value"),
+                ],
+            }
+        )
+        with pytest.raises(HTTPException) as error:
+            _ = thread_to_vp(user_id, session, bad_request, test_settings)
+        assert (
+            error.value.detail == "thread not found when trying to validate project ID."
+        )
 
-    # Test with no infos in headers, but valid thread_ID.
-    good_request_DB = Request(
-        scope={
-            "type": "http",
-            "method": "GET",
-            "scheme": "http",
-            "server": ("example.com", 80),
-            "path": f"/test/{new_thread.thread_id}",
-            "headers": [
-                (b"wong_header", b"wrong value"),
-            ],
-        }
-    )
-    ids_from_DB = thread_to_vp(user_id, session, good_request_DB)
-    assert ids_from_DB == {"vlab_id": "test_vlab_DB", "project_id": "project_id_DB"}
+        # Test with no infos in headers, but valid thread_ID.
+        good_request_DB = Request(
+            scope={
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "server": ("example.com", 80),
+                "path": f"/test/{new_thread.thread_id}",
+                "headers": [
+                    (b"wong_header", b"wrong value"),
+                ],
+            }
+        )
+        ids_from_DB = thread_to_vp(user_id, session, good_request_DB, test_settings)
+        assert ids_from_DB == {"vlab_id": "test_vlab_DB", "project_id": "project_id_DB"}
 
-    # don't forget to close the session, otherwise the tests hangs.
-    session.close()
+    finally:
+        # don't forget to close the session, otherwise the tests hangs.
+        session.close()
 
 
 @pytest.mark.asyncio

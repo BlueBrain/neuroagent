@@ -398,12 +398,18 @@ def thread_to_vp(
     user_id: Annotated[str, Depends(get_user_id)],
     session: Annotated[Session, Depends(get_session)],
     request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, str]:
     """From the current thread, get the corresponding vlab and project."""
     if "x-project-id" in request.headers and "x-virtual-lab-id" in request.headers:
         return {
             "vlab_id": request.headers["x-virtual-lab-id"],
             "project_id": request.headers["x-project-id"],
+        }
+    elif settings.keycloak.validate_token:
+        return {
+            "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
+            "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
         }
     else:
         thread_id = str(request.url).split("/")[-1]
