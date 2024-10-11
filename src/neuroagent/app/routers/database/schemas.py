@@ -22,9 +22,9 @@ class Threads(Base):
     __tablename__ = "Threads"
     # langgraph's tables work with strings, so we must too
     thread_id = Column(String, primary_key=True, default=uuid_to_str)
-    user_sub = Column(String, default=None, primary_key=True)
-    vlab_id = Column(String, default=None)
-    project_id = Column(String, default=None)
+    user_sub = Column(String, nullable=False, primary_key=True)
+    vlab_id = Column(String, nullable=False)
+    project_id = Column(String, nullable=False)
     title = Column(String, default="title")
     timestamp = Column(DateTime, default=datetime.datetime.now)
 

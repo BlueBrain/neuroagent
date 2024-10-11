@@ -11,8 +11,8 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from sqlalchemy import MetaData, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
-from starlette.status import HTTP_401_UNAUTHORIZED
 
+from neuroagent.app.app_utils import validate_project
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import (
     get_agent_memory,
@@ -65,16 +65,15 @@ async def create_thread(
         Conversation created.
     """  # noqa: D301, D400, D205
     # We first need to check if the combination thread/vlab/project is valid
-    response = await httpx_client.get(
-        f"{settings.virtual_lab.get_project_url}/{virtual_lab_id}/projects/{project_id}",
-        headers={"Authorization": f"Bearer {token}"},
+    await validate_project(
+        httpx_client=httpx_client,
+        vlab_and_project={
+            "vlab_id": virtual_lab_id,
+            "project_id": project_id,
+        },
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
     )
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="User does not belong to the project.",
-        )
-    # We could put that in a function, and is 401 the best error here ?
 
     new_thread = Threads(
         user_sub=user_id, vlab_id=virtual_lab_id, title=title, project_id=project_id

@@ -11,7 +11,7 @@ from keycloak import KeycloakOpenID
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ from neuroagent.agents import (
     SimpleChatAgent,
 )
 from neuroagent.agents.base_agent import AsyncSqliteSaverWithPrefix
+from neuroagent.app.app_utils import validate_project
 from neuroagent.app.config import Settings
 from neuroagent.app.routers.database.schemas import Threads
 from neuroagent.cell_types import CellTypesMeta
@@ -394,68 +395,50 @@ async def get_agent_memory(
         yield None
 
 
-def thread_to_vp(
+async def get_vlab_and_project(
     user_id: Annotated[str, Depends(get_user_id)],
     session: Annotated[Session, Depends(get_session)],
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    token: Annotated[str, Depends(get_kg_token)],
 ) -> dict[str, str]:
-    """From the current thread, get the corresponding vlab and project."""
+    """Get the current vlab and project ID."""
     if "x-project-id" in request.headers and "x-virtual-lab-id" in request.headers:
-        return {
+        vlab_and_project = {
             "vlab_id": request.headers["x-virtual-lab-id"],
             "project_id": request.headers["x-project-id"],
         }
-    elif settings.keycloak.validate_token:
-        return {
+    elif not settings.keycloak.validate_token:
+        vlab_and_project = {
             "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
             "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
         }
     else:
         thread_id = str(request.url).split("/")[-1]
-        query = (
-            select(Threads)
-            .where(Threads.user_sub == user_id)
-            .where(Threads.thread_id == thread_id)
-        )
-        result = session.execute(query).all()
-        if result:
-            thread_info = result[0][0].__dict__
+        thread = session.get(Threads, (thread_id, user_id))
+        if thread and thread.vlab_id and thread.project_id:
+            vlab_and_project = {
+                "vlab_id": thread.vlab_id,
+                "project_id": thread.project_id,
+            }
         else:
             raise HTTPException(
                 status_code=404,
                 detail="thread not found when trying to validate project ID.",
             )
-        return {
-            "vlab_id": thread_info["vlab_id"],
-            "project_id": thread_info["project_id"],
-        }
 
-
-async def validate_project(
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-    thread_to_vp: Annotated[dict[str, str], Depends(thread_to_vp)],
-    token: Annotated[str, Depends(get_kg_token)],
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> str:
-    """Check user appartenance to vlab and project before running agent."""
-    response = await httpx_client.get(
-        f'{settings.virtual_lab.get_project_url}/{thread_to_vp["vlab_id"]}/projects/{thread_to_vp["project_id"]}',
-        headers={"Authorization": f"Bearer {token}"},
+    await validate_project(
+        httpx_client=httpx_client,
+        vlab_and_project=vlab_and_project,
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
     )
-
-    # There is a lot of information about the project in this response.
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="User does not belong to the project.",
-        )
-    else:
-        return thread_to_vp["project_id"]
+    return vlab_and_project
 
 
 def get_agent(
-    _: Annotated[None, Depends(validate_project)],
+    _: Annotated[None, Depends(get_vlab_and_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
@@ -510,7 +493,7 @@ def get_agent(
 
 
 def get_chat_agent(
-    _: Annotated[None, Depends(validate_project)],
+    _: Annotated[None, Depends(get_vlab_and_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
     bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],

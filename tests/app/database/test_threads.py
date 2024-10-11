@@ -28,6 +28,8 @@ def test_create_thread(patch_required_env, httpx_mock, app_client, db_connection
     assert create_output["user_sub"] == "dev"
     assert create_output["title"] == "title"
     assert create_output["timestamp"]
+    assert create_output["vlab_id"] == "test_vlab"
+    assert create_output["project_id"] == "test_project"
 
 
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
