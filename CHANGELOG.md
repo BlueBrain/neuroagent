@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add get morphoelectric (me) model tool
 - BlueNaaS simulation tool.
 - BlueNaaS tool test.
+- Human in the loop for bluenaas.
 
 ## [0.1.1] - 26.09.2024
 

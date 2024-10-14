@@ -1,14 +1,27 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
 import logging
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, Sequence
 
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import ToolException
+from langgraph.graph.message import add_messages
+from langgraph.managed import IsLastStep
+from langgraph.prebuilt import InjectedState
 from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
 
 logger = logging.getLogger(__name__)
+
+
+class AgentState(TypedDict):
+    """The state of the agent."""
+
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+
+    is_last_step: IsLastStep
 
 
 class RecordingLocation(BaseModel):
@@ -29,7 +42,6 @@ class InputBlueNaaS(BaseModel):
             " fetched using the 'get-me-model-tool'."
         )
     )
-
     current_injection__inject_to: str = Field(
         default="soma[0]", description="Section to inject the current to."
     )
@@ -64,12 +76,23 @@ class InputBlueNaaS(BaseModel):
         default=0.05, ge=0.001, le=10, description="Time step in ms"
     )
     conditions__seed: int = Field(default=100, description="Random seed")
+    messages: Annotated[list[BaseMessage], InjectedState("messages")]
 
 
-class BlueNaaSOutput(BaseToolOutput):
+class BlueNaaSValidatedOutput(BaseToolOutput):
     """Should return a successful POST request."""
 
     status: Literal["success", "pending", "error"]
+
+
+class BlueNaaSInvalidatedOutput(BaseModel):
+    """Response to the user if the simulation has not been validated yet."""
+
+    inputs: dict[str, Any]
+
+    def __str__(self) -> str:
+        """Format the response passed to the LLM."""
+        return f"A simulation will be ran with the following inputs {self.inputs}. \n Please confirm that you are satisfied by the simulation parameters, or correct them accordingly."
 
 
 class BlueNaaSTool(BasicTool):
@@ -82,6 +105,7 @@ class BlueNaaSTool(BasicTool):
     """
     metadata: dict[str, Any]
     args_schema: type[BaseModel] = InputBlueNaaS
+    response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
     def _run(self) -> None:
         pass
@@ -89,6 +113,7 @@ class BlueNaaSTool(BasicTool):
     async def _arun(
         self,
         me_model_id: str,
+        messages: Annotated[list[BaseMessage], InjectedState("messages")],
         current_injection__inject_to: str = "soma[0]",
         current_injection__stimulus__stimulus_type: Literal[
             "current_clamp", "voltage_clamp", "conductance"
@@ -104,9 +129,37 @@ class BlueNaaSTool(BasicTool):
         conditions__max_time: int = 100,
         conditions__time_step: float = 0.05,
         conditions__seed: int = 100,
-    ) -> BaseToolOutput:
+    ) -> tuple[BaseToolOutput | BaseModel, dict[str, bool]]:
         """Run the BlueNaaS tool."""
         logger.info("Running BlueNaaS tool")
+        try:
+            # Get the last bluenaas call
+            last_bluenaas_call = next(
+                (
+                    message
+                    for message in reversed(messages)
+                    if isinstance(message, ToolMessage)
+                    and message.name == "bluenaas-tool"
+                )
+            )
+        except StopIteration:
+            last_bluenaas_call = None
+
+        last_messages = messages[-4:-1] if len(messages) > 3 else None
+        if last_messages is not None:
+            recently_validated = (
+                isinstance(last_messages[-1], HumanMessage)  # Approval from the human
+                and isinstance(
+                    last_messages[-2], AIMessage
+                )  # AI sending the second validated tool call
+                and isinstance(
+                    last_messages[-3], ToolMessage
+                )  # First tool call not validated
+                and last_messages[-3].name == "bluenaas-tool"
+            )
+        else:
+            recently_validated = False
+
         json_api = self.create_json_api(
             current_injection__inject_to=current_injection__inject_to,
             current_injection__stimulus__stimulus_type=current_injection__stimulus__stimulus_type,
@@ -117,22 +170,36 @@ class BlueNaaSTool(BasicTool):
             conditions__vinit=conditions__vinit,
             conditions__hypamp=conditions__hypamp,
             conditions__max_time=conditions__max_time,
+            conditions__time_step=conditions__time_step,
             conditions__seed=conditions__seed,
         )
+        # The tool is called for the first time -> need validation
+        if last_bluenaas_call is None:
+            # We send the config for validation. We assume validated from now on
+            return BlueNaaSInvalidatedOutput(inputs=json_api), {"is_validated": True}
 
-        try:
-            _ = await self.metadata["httpx_client"].post(
-                url=self.metadata["url"],
-                params={"model_id": me_model_id},
-                headers={"Authorization": f'Bearer {self.metadata["token"]}'},
-                json=json_api,
-                timeout=5.0,
-            )
+        else:
+            # The tool is not called for the first time -> check if already validated
+            if last_bluenaas_call.artifact.get("is_validated") and recently_validated:
+                try:
+                    await self.metadata["httpx_client"].post(
+                        url=self.metadata["url"],
+                        params={"model_id": me_model_id},
+                        headers={"Authorization": f'Bearer {self.metadata["token"]}'},
+                        json=json_api,
+                        timeout=5.0,
+                    )
 
-            return BlueNaaSOutput(status="success")
+                    return BlueNaaSValidatedOutput(status="success"), {
+                        "is_validated": False
+                    }
 
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+                except Exception as e:
+                    raise ToolException(str(e), self.name)
+            else:
+                return BlueNaaSInvalidatedOutput(inputs=json_api), {
+                    "is_validated": True
+                }
 
     @staticmethod
     def create_json_api(

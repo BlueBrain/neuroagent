@@ -356,7 +356,7 @@ def get_language_model(
         openai_api_key=settings.openai.token.get_secret_value(),  # type: ignore
         max_tokens=settings.openai.max_tokens,
         seed=78,
-        streaming=True,
+        streaming=False,
     )
 
 
@@ -395,7 +395,6 @@ async def get_agent_memory(
 
 def get_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
         ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
@@ -433,7 +432,6 @@ def get_agent(
         return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
     else:
         tools = [
-            bluenaas_tool,
             literature_tool,
             br_resolver_tool,
             morpho_tool,
@@ -459,6 +457,7 @@ def get_chat_agent(
     morphology_feature_tool: Annotated[
         MorphologyFeatureTool, Depends(get_morphology_feature_tool)
     ],
+    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
     kg_morpho_feature_tool: Annotated[
         KGMorphoFeatureTool, Depends(get_kg_morpho_feature_tool)
     ],
@@ -473,6 +472,7 @@ def get_chat_agent(
         bluenaas_tool,
         literature_tool,
         br_resolver_tool,
+        me_model_tool,
         morpho_tool,
         morphology_feature_tool,
         kg_morpho_feature_tool,
