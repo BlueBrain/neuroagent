@@ -67,10 +67,8 @@ async def create_thread(
     # We first need to check if the combination thread/vlab/project is valid
     await validate_project(
         httpx_client=httpx_client,
-        vlab_and_project={
-            "vlab_id": virtual_lab_id,
-            "project_id": project_id,
-        },
+        vlab_id=virtual_lab_id,
+        project_id=project_id,
         token=token,
         vlab_project_url=settings.virtual_lab.get_project_url,
     )

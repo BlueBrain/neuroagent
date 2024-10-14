@@ -7,13 +7,14 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 
 async def validate_project(
     httpx_client: AsyncClient,
-    vlab_and_project: dict[str, str],
+    vlab_id: str,
+    project_id: str,
     token: str,
     vlab_project_url: str,
 ) -> None:
     """Check user appartenance to vlab and project before running agent."""
     response = await httpx_client.get(
-        f'{vlab_project_url}/{vlab_and_project["vlab_id"]}/projects/{vlab_and_project["project_id"]}',
+        f"{vlab_project_url}/{vlab_id}/projects/{project_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     if response.status_code != 200:

@@ -21,7 +21,13 @@ async def test_validate_project(patch_required_env, httpx_mock, monkeypatch):
         status_code=404,
     )
     with pytest.raises(HTTPException) as error:
-        await validate_project(httpx_client, test_vp, token, vlab_url)
+        await validate_project(
+            httpx_client=httpx_client,
+            vlab_id=test_vp["vlab_id"],
+            project_id=test_vp["project_id"],
+            token=token,
+            vlab_project_url=vlab_url,
+        )
     assert error.value.status_code == 401
 
     # test with good config
@@ -29,5 +35,11 @@ async def test_validate_project(patch_required_env, httpx_mock, monkeypatch):
         url=f'{vlab_url}/{test_vp["vlab_id"]}/projects/{test_vp["project_id"]}',
         json="test_project_ID",
     )
-    await validate_project(httpx_client, test_vp, token, vlab_url)
+    await validate_project(
+        httpx_client=httpx_client,
+        vlab_id=test_vp["vlab_id"],
+        project_id=test_vp["project_id"],
+        token=token,
+        vlab_project_url=vlab_url,
+    )
     # we jsut want to assert that the httpx_mock was called.

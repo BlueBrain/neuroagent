@@ -415,7 +415,7 @@ async def get_vlab_and_project(
             "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
         }
     else:
-        thread_id = str(request.url).split("/")[-1]
+        thread_id = request.path_params.get("thread_id")
         thread = session.get(Threads, (thread_id, user_id))
         if thread and thread.vlab_id and thread.project_id:
             vlab_and_project = {
@@ -430,7 +430,8 @@ async def get_vlab_and_project(
 
     await validate_project(
         httpx_client=httpx_client,
-        vlab_and_project=vlab_and_project,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
         token=token,
         vlab_project_url=settings.virtual_lab.get_project_url,
     )

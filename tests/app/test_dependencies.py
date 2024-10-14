@@ -255,14 +255,14 @@ async def test_get_vlab_and_project(
                 "method": "GET",
                 "scheme": "http",
                 "server": ("example.com", 80),
-                "path": "/test/test_thread_id",
+                "path_params": {"dummy_patram": "fake_thread_id"},
                 "headers": [
                     (b"wong_header", b"wrong value"),
                 ],
             }
         )
         with pytest.raises(HTTPException) as error:
-            _ = await get_vlab_and_project(
+            await get_vlab_and_project(
                 user_id=user_id,
                 session=session,
                 request=bad_request,
@@ -281,7 +281,7 @@ async def test_get_vlab_and_project(
                 "method": "GET",
                 "scheme": "http",
                 "server": ("example.com", 80),
-                "path": f"/test/{new_thread.thread_id}",
+                "path_params": {"thread_id": new_thread.thread_id},
                 "headers": [
                     (b"wong_header", b"wrong value"),
                 ],
@@ -317,7 +317,8 @@ async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     )
     valid_project = await validate_project(
         httpx_client=httpx_client,
-        vlab_and_project=vlab_and_project,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
         token=token,
         vlab_project_url=settings.virtual_lab.get_project_url,
     )
@@ -389,7 +390,8 @@ async def test_get_chat_agent(
     )
     valid_project = await validate_project(
         httpx_client=httpx_client,
-        vlab_and_project=vlab_and_project,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
         token=token,
         vlab_project_url=settings.virtual_lab.get_project_url,
     )
