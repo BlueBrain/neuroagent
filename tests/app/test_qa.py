@@ -30,7 +30,7 @@ def test_run_agent(app_client):
     assert response.status_code == 422
 
 
-def test_run_chat_agent(app_client, tmp_path, patch_required_env):
+def test_run_chat_agent(app_client, tmp_path, httpx_mock, patch_required_env):
     agent_output = AgentOutput(
         response="This is my response",
         steps=[
@@ -49,8 +49,13 @@ def test_run_chat_agent(app_client, tmp_path, patch_required_env):
     agent_mock = AsyncMock()
     agent_mock.arun.return_value = agent_output
     app.dependency_overrides[get_chat_agent] = lambda: agent_mock
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
     with app_client as app_client:
-        create_output = app_client.post("/threads/").json()
+        create_output = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
         response = app_client.post(
             f"/qa/chat/{create_output['thread_id']}",
             json={"query": "This is my query"},
@@ -100,7 +105,7 @@ async def streamed_response():
         yield word
 
 
-def test_chat_streamed(app_client, tmp_path, patch_required_env):
+def test_chat_streamed(app_client, tmp_path, httpx_mock, patch_required_env):
     """Test the generative QA endpoint with a fake LLM."""
     agent_mock = Mock()
     agent_mock.astream.return_value = streamed_response()
@@ -115,8 +120,13 @@ def test_chat_streamed(app_client, tmp_path, patch_required_env):
         b" thalamus}\n This is an amazingly well streamed response. I can't believe how"
         b" good it is!"
     )
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
     with app_client as app_client:
-        create_output = app_client.post("/threads/").json()
+        create_output = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
         response = app_client.post(
             f"/qa/chat_streamed/{create_output['thread_id']}",
             json={"query": "This is my query"},
