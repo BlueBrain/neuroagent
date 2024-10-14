@@ -1,27 +1,16 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
 import logging
-from typing import Annotated, Any, Literal, Sequence
+from typing import Annotated, Any, Literal
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import ToolException
-from langgraph.graph.message import add_messages
-from langgraph.managed import IsLastStep
 from langgraph.prebuilt import InjectedState
 from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
 
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
 
 logger = logging.getLogger(__name__)
-
-
-class AgentState(TypedDict):
-    """The state of the agent."""
-
-    messages: Annotated[Sequence[BaseMessage], add_messages]
-
-    is_last_step: IsLastStep
 
 
 class RecordingLocation(BaseModel):
