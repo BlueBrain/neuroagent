@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
-from langchain_core.language_models import GenericFakeChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from neuroagent.multi_agents.supervisor_multi_agent import AgentState
@@ -46,14 +45,7 @@ async def test_agent_node():
 
 
 @pytest.mark.asyncio
-async def test_summarizer_node():
-    class FakeChatModel(GenericFakeChatModel):
-        def bind_tools(self, functions: list):
-            return self
-
-        def bind_functions(self, **kwargs):
-            return self
-
+async def test_summarizer_node(fake_llm_with_tools):
     fake_state = AgentState(
         messages=[
             HumanMessage(
@@ -63,7 +55,7 @@ async def test_summarizer_node():
         ]
     )
 
-    mock_llm = FakeChatModel(messages=iter([]))
+    mock_llm, _, _ = await anext(fake_llm_with_tools)
     agent = SupervisorMultiAgent(agents=[("agent1", [])], llm=mock_llm)
 
     mock_message = SystemMessage(
@@ -79,15 +71,9 @@ async def test_summarizer_node():
     assert result["messages"][0].content == "hello"
 
 
-def test_create_graph():
-    class FakeChatModel(GenericFakeChatModel):
-        def bind_tools(self, functions: list):
-            return self
-
-        def bind_functions(self, **kwargs):
-            return self
-
-    mock_llm = FakeChatModel(messages=iter([]))
+@pytest.mark.asyncio
+async def test_create_graph(fake_llm_with_tools):
+    mock_llm, _, _ = await anext(fake_llm_with_tools)
     agent = SupervisorMultiAgent(agents=[("agent1", [])], llm=mock_llm)
     result = agent.create_graph()
     nodes = result.nodes
