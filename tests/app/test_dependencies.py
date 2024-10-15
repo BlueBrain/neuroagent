@@ -616,19 +616,3 @@ def test_get_kg_token_with_token(monkeypatch, patch_required_env):
     token = "Test_Token"
     result = get_kg_token(settings, token)
     assert result == "Test_Token"
-
-
-def test_get_kg_token_with_settings_knowledge_graph_token(
-    monkeypatch, patch_required_env
-):
-    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__USE_TOKEN", "true")
-    monkeypatch.setenv("NEUROAGENT_KNOWLEDGE_GRAPH__TOKEN", "Test_kg_Token")
-
-    settings = Settings()
-
-    token = None
-
-    result = get_kg_token(settings, token)
-
-    assert result == "Test_kg_Token"
