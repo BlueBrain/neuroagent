@@ -23,7 +23,9 @@ from neuroagent.agents import (
     SimpleChatAgent,
 )
 from neuroagent.agents.base_agent import AsyncSqliteSaverWithPrefix
+from neuroagent.app.app_utils import validate_project
 from neuroagent.app.config import Settings
+from neuroagent.app.routers.database.schemas import Threads
 from neuroagent.cell_types import CellTypesMeta
 from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
 from neuroagent.tools import (
@@ -110,7 +112,6 @@ def get_engine(
         if "sqlite" in settings.db.prefix:  # type: ignore
             # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-the-sqlalchemy-engine
             engine_kwargs["connect_args"] = {"check_same_thread": False}
-
         engine = create_engine(**engine_kwargs)
     else:
         logger.warning("The SQL db_prefix needs to be set to use the SQL DB.")
@@ -393,7 +394,51 @@ async def get_agent_memory(
         yield None
 
 
+async def get_vlab_and_project(
+    user_id: Annotated[str, Depends(get_user_id)],
+    session: Annotated[Session, Depends(get_session)],
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    token: Annotated[str, Depends(get_kg_token)],
+) -> dict[str, str]:
+    """Get the current vlab and project ID."""
+    if "x-project-id" in request.headers and "x-virtual-lab-id" in request.headers:
+        vlab_and_project = {
+            "vlab_id": request.headers["x-virtual-lab-id"],
+            "project_id": request.headers["x-project-id"],
+        }
+    elif not settings.keycloak.validate_token:
+        vlab_and_project = {
+            "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
+            "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
+        }
+    else:
+        thread_id = request.path_params.get("thread_id")
+        thread = session.get(Threads, (thread_id, user_id))
+        if thread and thread.vlab_id and thread.project_id:
+            vlab_and_project = {
+                "vlab_id": thread.vlab_id,
+                "project_id": thread.project_id,
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="thread not found when trying to validate project ID.",
+            )
+
+    await validate_project(
+        httpx_client=httpx_client,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
+    )
+    return vlab_and_project
+
+
 def get_agent(
+    _: Annotated[None, Depends(get_vlab_and_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     br_resolver_tool: Annotated[
@@ -446,6 +491,7 @@ def get_agent(
 
 
 def get_chat_agent(
+    _: Annotated[None, Depends(get_vlab_and_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
     bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],

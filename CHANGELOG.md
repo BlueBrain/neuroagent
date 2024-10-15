@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add get morphoelectric (me) model tool
 - BlueNaaS simulation tool.
+- Validation of the project ID.
 - BlueNaaS tool test.
 - Human in the loop for bluenaas.
 
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Update readme
+- Extra unit tests for dependencies.py
 
 ### Removed
 - Github action to create the docs.
