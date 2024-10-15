@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from typing import AsyncIterator
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import Request
@@ -13,6 +13,8 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
 from neuroagent.app.dependencies import (
@@ -23,16 +25,19 @@ from neuroagent.app.dependencies import (
     get_brain_region_resolver_tool,
     get_cell_types_kg_hierarchy,
     get_chat_agent,
+    get_connection_string,
     get_electrophys_feature_tool,
     get_engine,
     get_httpx_client,
     get_kg_morpho_feature_tool,
+    get_kg_token,
     get_language_model,
     get_literature_tool,
     get_me_model_tool,
     get_morpho_tool,
     get_morphology_feature_tool,
     get_session,
+    get_settings,
     get_traces_tool,
     get_update_kg_hierarchy,
     get_user_id,
@@ -49,6 +54,12 @@ from neuroagent.tools import (
     LiteratureSearchTool,
     MorphologyFeatureTool,
 )
+
+
+def test_get_settings(patch_required_env):
+    settings = get_settings()
+    assert settings.tools.literature.url == "https://fake_url"
+    assert settings.knowledge_graph.url == "https://fake_url/api/nexus/v1/search/query/"
 
 
 @pytest.mark.asyncio
@@ -531,3 +542,75 @@ async def test_get_cell_types_kg_hierarchy(
     )
 
     assert os.path.exists(settings.knowledge_graph.ct_saving_path)
+
+
+def test_get_connection_string_full(monkeypatch, patch_required_env):
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "http://")
+    monkeypatch.setenv("NEUROAGENT_DB__USER", "John")
+    monkeypatch.setenv("NEUROAGENT_DB__PASSWORD", "Doe")
+    monkeypatch.setenv("NEUROAGENT_DB__HOST", "localhost")
+    monkeypatch.setenv("NEUROAGENT_DB__PORT", "5000")
+    monkeypatch.setenv("NEUROAGENT_DB__NAME", "test")
+
+    settings = Settings()
+    result = get_connection_string(settings)
+    assert (
+        result == "http://John:Doe@localhost:5000/test"
+    ), "must return fully formed connection string"
+
+
+def test_get_connection_string_no_prefix(monkeypatch, patch_required_env):
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "")
+
+    settings = Settings()
+
+    result = get_connection_string(settings)
+    assert result is None, "should return None when prefix is not set"
+
+
+@patch("neuroagent.app.dependencies.create_engine")
+def test_get_engine(create_engine_mock, monkeypatch, patch_required_env):
+    create_engine_mock.return_value = Mock()
+
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
+
+    settings = Settings()
+
+    connection_string = "https://localhost"
+    retval = get_engine(settings=settings, connection_string=connection_string)
+    assert retval is not None
+
+
+@patch("neuroagent.app.dependencies.create_engine")
+def test_get_engine_no_connection_string(
+    create_engine_mock, monkeypatch, patch_required_env
+):
+    create_engine_mock.return_value = Mock()
+
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
+
+    settings = Settings()
+
+    retval = get_engine(settings=settings, connection_string=None)
+    assert retval is None
+
+
+@patch("sqlalchemy.orm.Session")
+def test_get_session_success(_):
+    database_url = "sqlite:///:memory:"
+    engine = create_engine(database_url)
+    result = next(get_session(engine))
+    assert isinstance(result, Session)
+
+
+def test_get_session_no_engine():
+    with pytest.raises(HTTPException):
+        next(get_session(None))
+
+
+def test_get_kg_token_with_token(patch_required_env):
+    settings = Settings()
+
+    token = "Test_Token"
+    result = get_kg_token(settings, token)
+    assert result == "Test_Token"
