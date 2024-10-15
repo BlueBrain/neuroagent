@@ -109,6 +109,9 @@ async def fake_llm_with_tools(brain_region_json_path):
         def bind_tools(self, functions: list):
             return self
 
+        def bind_functions(self, **kwargs):
+            return self
+
     # If you need another fake response to use different tools,
     # you can do in your test
     # ```python
