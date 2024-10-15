@@ -104,7 +104,7 @@ filterwarnings = [
     "ignore:Degrees of freedom:RuntimeWarning",
     "ignore:Exception ignored in:pytest.PytestUnraisableExceptionWarning",
     "ignore:This API is in beta:langchain_core._api.beta_decorator.LangChainBetaWarning",
-    "ignore:The configuration option 'asyncio_default_fixture_loop_scope' is unset.:PytestDeprecationWarning"
+    "ignore:The configuration option 'asyncio_default_fixture_loop_scope' is unset."
 ]
 
 addopts = "--cov=src/ --cov=tests/ -v --cov-report=term-missing --durations=20 --no-cov-on-fail"
