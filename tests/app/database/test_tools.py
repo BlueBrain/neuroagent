@@ -8,9 +8,10 @@ from neuroagent.app.main import app
 from neuroagent.app.routers.database.schemas import ToolCallSchema
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_get_tool_calls(
-    patch_required_env, fake_llm_with_tools, app_client, db_connection
+    patch_required_env, fake_llm_with_tools, httpx_mock, app_client, db_connection
 ):
     # Put data in the db
     llm, _, _ = await anext(fake_llm_with_tools)
@@ -19,13 +20,20 @@ async def test_get_tool_calls(
         db={"prefix": db_connection},
     )
     app.dependency_overrides[get_settings] = lambda: test_settings
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
+    httpx_mock.add_response(url="https://fake_url/api/nexus/v1/search/query/")
+
     with app_client as app_client:
         wrong_response = app_client.get("/tools/test/1234")
         assert wrong_response.status_code == 404
         assert wrong_response.json() == {"detail": {"detail": "Thread not found."}}
 
         # Create a thread
-        create_output = app_client.post("/threads/").json()
+        create_output = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
         thread_id = create_output["thread_id"]
 
         # Fill the thread
@@ -33,6 +41,7 @@ async def test_get_tool_calls(
             f"/qa/chat/{thread_id}",
             json={"query": "This is my query"},
             params={"thread_id": thread_id},
+            headers={"x-virtual-lab-id": "test_vlab", "x-project-id": "test_project"},
         )
 
         tool_calls = app_client.get(f"/tools/{thread_id}/wrong_id")
@@ -56,6 +65,7 @@ async def test_get_tool_calls(
     )
 
 
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_get_tool_output(
     patch_required_env,
@@ -72,7 +82,9 @@ async def test_get_tool_output(
         db={"prefix": db_connection},
     )
     app.dependency_overrides[get_settings] = lambda: test_settings
-
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
     httpx_mock.add_response(
         url="https://fake_url/api/nexus/v1/search/query/",
         json={
@@ -116,7 +128,9 @@ async def test_get_tool_output(
         assert wrong_response.json() == {"detail": {"detail": "Thread not found."}}
 
         # Create a thread
-        create_output = app_client.post("/threads/").json()
+        create_output = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
         thread_id = create_output["thread_id"]
 
         # Fill the thread
@@ -124,6 +138,7 @@ async def test_get_tool_output(
             f"/qa/chat/{thread_id}",
             json={"query": "This is my query"},
             params={"thread_id": thread_id},
+            headers={"x-virtual-lab-id": "test_vlab", "x-project-id": "test_project"},
         )
 
         tool_output = app_client.get(f"/tools/output/{thread_id}/123")

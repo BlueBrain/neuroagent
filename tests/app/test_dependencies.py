@@ -7,7 +7,8 @@ from typing import AsyncIterator
 from unittest.mock import Mock, patch
 
 import pytest
-from fastapi import HTTPException
+from fastapi import Request
+from fastapi.exceptions import HTTPException
 from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -20,6 +21,7 @@ from neuroagent.app.dependencies import (
     Settings,
     get_agent,
     get_agent_memory,
+    get_bluenaas_tool,
     get_brain_region_resolver_tool,
     get_cell_types_kg_hierarchy,
     get_chat_agent,
@@ -39,7 +41,10 @@ from neuroagent.app.dependencies import (
     get_traces_tool,
     get_update_kg_hierarchy,
     get_user_id,
+    get_vlab_and_project,
+    validate_project,
 )
+from neuroagent.app.routers.database.schemas import Base, Threads
 from neuroagent.tools import (
     ElectrophysFeatureTool,
     GetMEModelTool,
@@ -195,13 +200,144 @@ def test_language_model(monkeypatch, patch_required_env):
     assert language_model.max_tokens == 99
 
 
-def test_get_agent(monkeypatch, patch_required_env):
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+async def test_get_vlab_and_project(
+    patch_required_env, httpx_mock, db_connection, monkeypatch
+):
+    # Setup DB with one thread to do the tests
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    engine = get_engine(test_settings, db_connection)
+    session = next(get_session(engine))
+    user_id = "Super_user"
+    token = "fake_token"
+    httpx_client = AsyncClient()
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project",
+        json="test_project_ID",
+    )
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab_DB/projects/project_id_DB",
+        json="test_project_ID",
+    )
+
+    # create test thread
+    Base.metadata.create_all(bind=engine)
+    new_thread = Threads(
+        user_sub=user_id,
+        vlab_id="test_vlab_DB",
+        project_id="project_id_DB",
+        title="test_title",
+    )
+    session.add(new_thread)
+    session.commit()
+    session.refresh(new_thread)
+
+    try:
+        # Test with info in headers.
+        good_request_headers = Request(
+            scope={
+                "type": "http",
+                "method": "Get",
+                "url": "http://fake_url/thread_id",
+                "headers": [
+                    (b"x-virtual-lab-id", b"test_vlab"),
+                    (b"x-project-id", b"test_project"),
+                ],
+            },
+        )
+        ids = await get_vlab_and_project(
+            user_id=user_id,
+            session=session,
+            request=good_request_headers,
+            settings=test_settings,
+            token=token,
+            httpx_client=httpx_client,
+        )
+        assert ids == {"vlab_id": "test_vlab", "project_id": "test_project"}
+
+        # Test with no infos in headers.
+        bad_request = Request(
+            scope={
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "server": ("example.com", 80),
+                "path_params": {"dummy_patram": "fake_thread_id"},
+                "headers": [
+                    (b"wong_header", b"wrong value"),
+                ],
+            }
+        )
+        with pytest.raises(HTTPException) as error:
+            await get_vlab_and_project(
+                user_id=user_id,
+                session=session,
+                request=bad_request,
+                settings=test_settings,
+                token=token,
+                httpx_client=httpx_client,
+            )
+        assert (
+            error.value.detail == "thread not found when trying to validate project ID."
+        )
+
+        # Test with no infos in headers, but valid thread_ID.
+        good_request_DB = Request(
+            scope={
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "server": ("example.com", 80),
+                "path_params": {"thread_id": new_thread.thread_id},
+                "headers": [
+                    (b"wong_header", b"wrong value"),
+                ],
+            }
+        )
+        ids_from_DB = await get_vlab_and_project(
+            user_id=user_id,
+            session=session,
+            request=good_request_DB,
+            settings=test_settings,
+            token=token,
+            httpx_client=httpx_client,
+        )
+        assert ids_from_DB == {"vlab_id": "test_vlab_DB", "project_id": "project_id_DB"}
+
+    finally:
+        # don't forget to close the session, otherwise the tests hangs.
+        session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     monkeypatch.setenv("NEUROAGENT_AGENT__MODEL", "simple")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
     token = "fake_token"
     httpx_client = AsyncClient()
     settings = Settings()
 
+    vlab_and_project = {"vlab_id": "test_vlab", "project_id": "test_project"}
+    httpx_mock.add_response(
+        url=f'{settings.virtual_lab.get_project_url}/{vlab_and_project["vlab_id"]}/projects/{vlab_and_project["project_id"]}',
+        json="test_project_ID",
+    )
+    valid_project = await validate_project(
+        httpx_client=httpx_client,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
+    )
+
     language_model = get_language_model(settings)
+    bluenaas_tool = get_bluenaas_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
     literature_tool = get_literature_tool(
         token=token, settings=settings, httpx_client=httpx_client
     )
@@ -230,7 +366,9 @@ def test_get_agent(monkeypatch, patch_required_env):
     )
 
     agent = get_agent(
+        valid_project,
         llm=language_model,
+        bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
@@ -246,14 +384,33 @@ def test_get_agent(monkeypatch, patch_required_env):
 
 
 @pytest.mark.asyncio
-async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
+async def test_get_chat_agent(
+    monkeypatch, db_connection, httpx_mock, patch_required_env
+):
     monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "sqlite://")
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
 
     token = "fake_token"
     httpx_client = AsyncClient()
     settings = Settings()
 
+    vlab_and_project = {"vlab_id": "test_vlab", "project_id": "test_project"}
+    httpx_mock.add_response(
+        url=f'{settings.virtual_lab.get_project_url}/{vlab_and_project["vlab_id"]}/projects/{vlab_and_project["project_id"]}',
+        json="test_project_ID",
+    )
+    valid_project = await validate_project(
+        httpx_client=httpx_client,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
+    )
+
     language_model = get_language_model(settings)
+    bluenaas_tool = get_bluenaas_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
     literature_tool = get_literature_tool(
         token=token, settings=settings, httpx_client=httpx_client
     )
@@ -281,7 +438,9 @@ async def test_get_chat_agent(monkeypatch, db_connection, patch_required_env):
     memory = await anext(get_agent_memory(db_connection))
 
     agent = get_chat_agent(
+        valid_project,
         llm=language_model,
+        bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
