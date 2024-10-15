@@ -235,7 +235,7 @@ class GetMEModelTool(BasicTool):
         """
         formatted_output = [
             MEModelOutput(
-                me_model_id=res["_source"]["@id"],
+                me_model_id=res["_source"]["_self"],
                 me_model_name=res["_source"].get("name"),
                 me_model_description=res["_source"].get("description"),
                 mtype=(

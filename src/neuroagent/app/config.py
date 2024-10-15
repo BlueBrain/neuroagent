@@ -5,7 +5,6 @@ import pathlib
 from typing import Literal, Optional
 
 from dotenv import dotenv_values
-from fastapi.openapi.models import OAuthFlowPassword, OAuthFlows
 from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -58,15 +57,6 @@ class SettingsKeycloak(BaseModel):
             return f"{self.issuer}/protocol/openid-connect/userinfo"
         else:
             return None
-
-    @property
-    def flows(self) -> OAuthFlows:
-        """Define the flow to override Fastapi's one."""
-        return OAuthFlows(
-            password=OAuthFlowPassword(
-                tokenUrl=self.token_endpoint,
-            ),
-        )
 
     @property
     def server_url(self) -> str:
@@ -122,12 +112,17 @@ class SettingsGetMEModel(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SettingsBlueNaaS(BaseModel):
+    """BlueNaaS settings."""
+
+    url: str = "https://openbluebrain.com/api/bluenaas/simulation/single-neuron/run"
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsKnowledgeGraph(BaseModel):
     """Knowledge graph API settings."""
 
     base_url: str
-    token: SecretStr | None = None
-    use_token: bool = False
     download_hierarchy: bool = False
     br_saving_path: pathlib.Path | str = str(
         pathlib.Path(__file__).parent / "data" / "brainregion_hierarchy.json"
@@ -158,10 +153,20 @@ class SettingsKnowledgeGraph(BaseModel):
         return "http://bbp.epfl.ch/neurosciencegraph/ontologies/core"
 
 
+class SettingsVlab(BaseModel):
+    """Virtual lab endpoint settings."""
+
+    get_project_url: str = (
+        "https://openbluebrain.com/api/virtual-lab-manager/virtual-labs"
+    )
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsTools(BaseModel):
     """Database settings."""
 
     literature: SettingsLiterature
+    bluenaas: SettingsBlueNaaS = SettingsBlueNaaS()
     morpho: SettingsGetMorpho = SettingsGetMorpho()
     trace: SettingsTrace = SettingsTrace()
     kg_morpho_features: SettingsKGMorpho = SettingsKGMorpho()
@@ -213,6 +218,7 @@ class Settings(BaseSettings):
     openai: SettingsOpenAI = SettingsOpenAI()  # has no required
     logging: SettingsLogging = SettingsLogging()  # has no required
     keycloak: SettingsKeycloak = SettingsKeycloak()  # has no required
+    virtual_lab: SettingsVlab = SettingsVlab()  # has no required
     misc: SettingsMisc = SettingsMisc()  # has no required
 
     model_config = SettingsConfigDict(
@@ -230,14 +236,11 @@ class Settings(BaseSettings):
         model validator is run during instantiation.
 
         """
+        # If you don't enforce keycloak auth, you need a way to communicate with the APIs the tools leverage
         if not self.keycloak.password and not self.keycloak.validate_token:
-            if not self.knowledge_graph.use_token:
-                raise ValueError("if no password is provided, please use token auth.")
-            if not self.knowledge_graph.token:
-                raise ValueError(
-                    "No auth method provided for knowledge graph related queries."
-                    " Please set either a password or use a fixed token."
-                )
+            raise ValueError(
+                "Need an auth method for subsequent APIs called by the tools."
+            )
 
         return self
 
