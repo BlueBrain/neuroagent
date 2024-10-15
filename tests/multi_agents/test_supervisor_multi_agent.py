@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from langchain_core.language_models import GenericFakeChatModel
@@ -9,7 +9,7 @@ from src.neuroagent.multi_agents import SupervisorMultiAgent
 
 
 def test_create_main_agent_initialization():
-    mock_llm = MagicMock()
+    mock_llm = Mock()
     bind_function_result = MagicMock()
     bind_function_result.__ror__.return_value = {}
     mock_llm.bind_functions.return_value = bind_function_result
@@ -30,8 +30,8 @@ async def test_agent_node():
     async def mock_ainvoke(_):
         return {"messages": [mock_message]}
 
-    agent_state = MagicMock()
-    agent = MagicMock()
+    agent_state = Mock()
+    agent = Mock()
     agent.ainvoke = mock_ainvoke
 
     agent_node_test = await SupervisorMultiAgent.agent_node(
@@ -45,7 +45,6 @@ async def test_agent_node():
     assert agent_node_test["messages"][0].name == "test_agent"
 
 
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 @pytest.mark.asyncio
 async def test_summarizer_node():
     class FakeChatModel(GenericFakeChatModel):
@@ -72,7 +71,7 @@ async def test_summarizer_node():
         name="test_agent",
     )
 
-    mock_summarizer = MagicMock()
+    mock_summarizer = Mock()
     mock_summarizer.ainvoke = AsyncMock()
     mock_summarizer.ainvoke.return_value = mock_message
     agent.summarizer = mock_summarizer
