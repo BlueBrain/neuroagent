@@ -56,7 +56,7 @@ from neuroagent.tools import (
 )
 
 
-def test_get_settings(monkeypatch, patch_required_env):
+def test_get_settings(patch_required_env):
     settings = get_settings()
     assert settings.tools.literature.url == "https://fake_url"
     assert settings.knowledge_graph.url == "https://fake_url/api/nexus/v1/search/query/"
@@ -608,9 +608,7 @@ def test_get_session_no_engine():
         next(get_session(None))
 
 
-def test_get_kg_token_with_token(monkeypatch, patch_required_env):
-    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-
+def test_get_kg_token_with_token(patch_required_env):
     settings = Settings()
 
     token = "Test_Token"
