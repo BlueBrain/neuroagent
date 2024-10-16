@@ -90,14 +90,14 @@ class AsyncPostgresSaverWithPrefix(AsyncPostgresSaver):
         """Create a new AsyncPostgresSaver instance from a connection string.
 
         Args:
-            conn_string (str): The async Postgres connection string. It can have the 'postgresql+asyncpg:///' prefix.
+            conn_string (str): The async Postgres connection string. It can have the 'postgresql+asyncpg://' prefix.
 
         Yields
         ------
             AsyncPostgresSaverWithPrefix: A new connected AsyncPostgresSaverWithPrefix instance.
         """
         prefix, body = conn_string.split("://", maxsplit=1)
-        currated_prefix = prefix.split("+", maxsplit=1)[0]
+        currated_prefix = prefix.split("+", maxsplit=1)[0]  # Still works if + not there
         conn_string = currated_prefix + "://" + body
         async with super().from_conn_string(
             conn_string, pipeline=pipeline, serde=serde
