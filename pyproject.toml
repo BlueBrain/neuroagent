@@ -107,4 +107,4 @@ filterwarnings = [
     "ignore:The configuration option 'asyncio_default_fixture_loop_scope' is unset."
 ]
 
-addopts = "--cov=src/ --cov=tests/ -v --cov-report=term-missing --durations=20 --no-cov-on-fail"
+addopts = "--cov=src/ -v --cov-report=term-missing --durations=20 --no-cov-on-fail"
