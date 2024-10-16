@@ -95,7 +95,7 @@ async def test_arun(httpx_mock):
     messages.extend(
         [
             ToolMessage(
-                content="A simulation will be ran with the following inputs...",
+                content="A simulation will be ran with the following inputs <json>{'currentInjection': {'injectTo': 'soma[0]', 'stimulus': {'stimulusType': 'current_clamp', 'stimulusProtocol': 'ap_waveform', 'amplitudes': [0.1]}}, 'recordFrom': [{'section': 'soma[0]', 'offset': 0.5}], 'conditions': {'celsius': 34, 'vinit': -73, 'hypamp': 0, 'max_time': 100, 'time_step': 0.05, 'seed': 100}, 'type': 'single-neuron-simulation', 'simulationDuration': 100}</json>. \n Please confirm that you are satisfied by the simulation parameters, or correct them accordingly.",
                 name="bluenaas-tool",
                 id="95a70cb3-8afc-4e51-8868-29ea9cf5c8bd",
                 tool_call_id="call_IScHmOF8TsJEjqmZ9yL5ehRY",
@@ -185,8 +185,6 @@ async def test_arun(httpx_mock):
     response = await tool._arun(
         me_model_id=me_model_id,
         messages=messages_2,
-        conditions__celsius=7,
-        current_injection__inject_to="axon[1]",
     )
     assert isinstance(response[0], BlueNaaSValidatedOutput)
     assert response[0] == BlueNaaSValidatedOutput(status="success")

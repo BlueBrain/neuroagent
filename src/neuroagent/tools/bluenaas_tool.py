@@ -125,6 +125,7 @@ class BlueNaaSTool(BasicTool):
     ) -> tuple[BaseToolOutput | BaseModel, dict[str, bool]]:
         """Run the BlueNaaS tool."""
         logger.info("Running BlueNaaS tool")
+
         json_api = self.create_json_api(
             current_injection__inject_to=current_injection__inject_to,
             current_injection__stimulus__stimulus_type=current_injection__stimulus__stimulus_type,
@@ -242,7 +243,7 @@ class BlueNaaSTool(BasicTool):
                 isinstance(last_messages[-1], HumanMessage)  # Approval from the human
                 and isinstance(
                     last_messages[-2], AIMessage
-                )  # AI sending the second validated tool call
+                )  # AI answering the human and asking for validation
                 and isinstance(
                     last_messages[-3], ToolMessage
                 )  # First tool call not validated
@@ -255,7 +256,7 @@ class BlueNaaSTool(BasicTool):
         else:
             return False
 
-        # If the previous simulation was started, ask for validation again
+        # If the previous simulation was started, ask for validation on the new one
         if not last_bluenaas_call.artifact.get("is_validated"):
             return False
 
