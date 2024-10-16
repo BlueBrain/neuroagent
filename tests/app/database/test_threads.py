@@ -1,8 +1,8 @@
 """Test of the thread router."""
 
 import pytest
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.sql.expression import Select
 
 from neuroagent.app.config import Settings
@@ -66,9 +66,11 @@ async def test_get_thread(
     # Put data in the db
     llm, _, _ = await anext(fake_llm_with_tools)
     app.dependency_overrides[get_language_model] = lambda: llm
+
     test_settings = Settings(
         db={"prefix": db_connection},
     )
+
     app.dependency_overrides[get_settings] = lambda: test_settings
     httpx_mock.add_response(
         url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
@@ -149,9 +151,11 @@ async def test_delete_thread(
     # Put data in the db
     llm, _, _ = await anext(fake_llm_with_tools)
     app.dependency_overrides[get_language_model] = lambda: llm
+
     test_settings = Settings(
         db={"prefix": db_connection},
     )
+
     app.dependency_overrides[get_settings] = lambda: test_settings
     httpx_mock.add_response(
         url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
@@ -189,14 +193,17 @@ async def test_delete_thread(
 
     # Double check with pure sqlalchemy
     metadata = MetaData()
-    engine = create_engine(test_settings.db.prefix)
-    metadata.reflect(engine)
+    engine = create_async_engine(test_settings.db.prefix)
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.reflect)
 
-    with Session(engine) as session:
+    async with AsyncSession(engine) as session:
         for table in metadata.tables.values():
             if "thread_id" in table.c.keys():
                 query = Select(table).where(  # type: ignore
                     table.c.thread_id == thread_id
                 )
-                row = session.execute(query).one_or_none()
+                results = await session.execute(query)
+                row = results.one_or_none()
                 assert row is None
+    await engine.dispose()
