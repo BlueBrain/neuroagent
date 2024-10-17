@@ -1,9 +1,12 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
+import json
 import logging
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import ToolException
+from langgraph.prebuilt import InjectedState
 from pydantic import BaseModel, Field
 
 from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
@@ -29,7 +32,6 @@ class InputBlueNaaS(BaseModel):
             " fetched using the 'get-me-model-tool'."
         )
     )
-
     current_injection__inject_to: str = Field(
         default="soma[0]", description="Section to inject the current to."
     )
@@ -64,12 +66,23 @@ class InputBlueNaaS(BaseModel):
         default=0.05, ge=0.001, le=10, description="Time step in ms"
     )
     conditions__seed: int = Field(default=100, description="Random seed")
+    messages: Annotated[list[BaseMessage], InjectedState("messages")]
 
 
-class BlueNaaSOutput(BaseToolOutput):
+class BlueNaaSValidatedOutput(BaseToolOutput):
     """Should return a successful POST request."""
 
     status: Literal["success", "pending", "error"]
+
+
+class BlueNaaSInvalidatedOutput(BaseModel):
+    """Response to the user if the simulation has not been validated yet."""
+
+    inputs: dict[str, Any]
+
+    def __str__(self) -> str:
+        """Format the response passed to the LLM."""
+        return f"A simulation will be ran with the following inputs <json>{self.inputs}</json>. \n Please confirm that you are satisfied by the simulation parameters, or correct them accordingly."
 
 
 class BlueNaaSTool(BasicTool):
@@ -79,9 +92,13 @@ class BlueNaaSTool(BasicTool):
     description: str = """Runs a single-neuron simulation using the BlueNaaS service.
     Requires a "me_model_id" which must be fetched by get-me-model-tool.
     Optionally, the user can specify simulation parameters.
+    The tool will always ask for config validation from the user before running.
+    If the user mentions an existing configuration, it must always be passed in the tool first to get user's approval.
+    Specify ALL of the parameters everytime you enter this tool.
     """
     metadata: dict[str, Any]
     args_schema: type[BaseModel] = InputBlueNaaS
+    response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
     def _run(self) -> None:
         pass
@@ -89,6 +106,7 @@ class BlueNaaSTool(BasicTool):
     async def _arun(
         self,
         me_model_id: str,
+        messages: Annotated[list[BaseMessage], InjectedState("messages")],
         current_injection__inject_to: str = "soma[0]",
         current_injection__stimulus__stimulus_type: Literal[
             "current_clamp", "voltage_clamp", "conductance"
@@ -104,9 +122,10 @@ class BlueNaaSTool(BasicTool):
         conditions__max_time: int = 100,
         conditions__time_step: float = 0.05,
         conditions__seed: int = 100,
-    ) -> BaseToolOutput:
+    ) -> tuple[BaseToolOutput | BaseModel, dict[str, bool]]:
         """Run the BlueNaaS tool."""
         logger.info("Running BlueNaaS tool")
+
         json_api = self.create_json_api(
             current_injection__inject_to=current_injection__inject_to,
             current_injection__stimulus__stimulus_type=current_injection__stimulus__stimulus_type,
@@ -117,22 +136,28 @@ class BlueNaaSTool(BasicTool):
             conditions__vinit=conditions__vinit,
             conditions__hypamp=conditions__hypamp,
             conditions__max_time=conditions__max_time,
+            conditions__time_step=conditions__time_step,
             conditions__seed=conditions__seed,
         )
 
-        try:
-            _ = await self.metadata["httpx_client"].post(
-                url=self.metadata["url"],
-                params={"model_id": me_model_id},
-                headers={"Authorization": f'Bearer {self.metadata["token"]}'},
-                json=json_api,
-                timeout=5.0,
-            )
+        if self.is_validated(messages, json_api):
+            try:
+                await self.metadata["httpx_client"].post(
+                    url=self.metadata["url"],
+                    params={"model_id": me_model_id},
+                    headers={"Authorization": f'Bearer {self.metadata["token"]}'},
+                    json=json_api,
+                    timeout=5.0,
+                )
 
-            return BlueNaaSOutput(status="success")
+                return BlueNaaSValidatedOutput(status="success"), {
+                    "is_validated": False
+                }
 
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+            except Exception as e:
+                raise ToolException(str(e), self.name)
+        else:
+            return BlueNaaSInvalidatedOutput(inputs=json_api), {"is_validated": True}
 
     @staticmethod
     def create_json_api(
@@ -179,3 +204,66 @@ class BlueNaaSTool(BasicTool):
             "simulationDuration": conditions__max_time,
         }
         return json_api
+
+    @staticmethod
+    def is_validated(messages: list[BaseMessage], json_api: dict[str, Any]) -> bool:
+        """Decide whether the current configuration has been validated by the user.
+
+        Parameters
+        ----------
+        messages
+            List of Langgraph messages extracted from the graph state.
+        json_api
+            Simulation configuration that the tool will run if it has been validated.
+
+        Returns
+        -------
+        is_validated
+            Boolean stating wether or not the configuration has been validated by the user.
+        """
+        # If it is the first time the tool is called in the conversation, need validation
+        try:
+            # Get the last bluenaas call
+            last_bluenaas_call = next(
+                (
+                    message
+                    for message in reversed(messages)
+                    if isinstance(message, ToolMessage)
+                    and message.name == "bluenaas-tool"
+                )
+            )
+        except StopIteration:
+            return False
+
+        # Verify if the tool has been recently called to ask for validation
+        # There has to be at least 3 messages in the state otherwise cannot be validated
+        if len(messages) > 3:
+            last_messages = messages[-4:-1]
+            recently_validated = (
+                isinstance(last_messages[-1], HumanMessage)  # Approval from the human
+                and isinstance(
+                    last_messages[-2], AIMessage
+                )  # AI answering the human and asking for validation
+                and isinstance(
+                    last_messages[-3], ToolMessage
+                )  # First tool call not validated
+                and last_messages[-3].name == "bluenaas-tool"
+            )
+            # If it hasn't been recently validated, we need more validation
+            if not recently_validated:
+                return False
+        # If there is not enough messages in the state to have a potential validation
+        else:
+            return False
+
+        # If the previous simulation was started, ask for validation on the new one
+        if not last_bluenaas_call.artifact.get("is_validated"):
+            return False
+
+        # Verify if the config has changed since previous call. Validate again if so
+        old_config = json.loads(
+            last_bluenaas_call.content.split("<json>")[-1]  # type: ignore
+            .split("</json>")[0]
+            .replace("'", '"')
+        )
+        return old_config == json_api
