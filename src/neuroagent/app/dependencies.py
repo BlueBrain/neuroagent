@@ -2,7 +2,7 @@
 
 import logging
 from functools import cache
-from typing import Annotated, Any, AsyncIterator, Iterator
+from typing import Annotated, Any, AsyncIterator
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
@@ -10,11 +10,7 @@ from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from neuroagent.agents import (
@@ -22,7 +18,10 @@ from neuroagent.agents import (
     SimpleAgent,
     SimpleChatAgent,
 )
-from neuroagent.agents.base_agent import AsyncSqliteSaverWithPrefix
+from neuroagent.agents.base_agent import (
+    AsyncPostgresSaverWithPrefix,
+    AsyncSqliteSaverWithPrefix,
+)
 from neuroagent.app.app_utils import validate_project
 from neuroagent.app.config import Settings
 from neuroagent.app.routers.database.schemas import Threads
@@ -101,39 +100,14 @@ def get_connection_string(
         return None
 
 
-@cache
-def get_engine(
-    settings: Annotated[Settings, Depends(get_settings)],
-    connection_string: Annotated[str | None, Depends(get_connection_string)],
-) -> Engine | None:
+def get_engine(request: Request) -> AsyncEngine | None:
     """Get the SQL engine."""
-    if connection_string:
-        engine_kwargs: dict[str, Any] = {"url": connection_string}
-        if "sqlite" in settings.db.prefix:  # type: ignore
-            # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-the-sqlalchemy-engine
-            engine_kwargs["connect_args"] = {"check_same_thread": False}
-        engine = create_engine(**engine_kwargs)
-    else:
-        logger.warning("The SQL db_prefix needs to be set to use the SQL DB.")
-        return None
-    try:
-        engine.connect()
-        logger.info(
-            "Successfully connected to the SQL database"
-            f" {connection_string if not settings.db.password else connection_string.replace(settings.db.password.get_secret_value(), '*****')}."
-        )
-        return engine
-    except SQLAlchemyError:
-        logger.warning(
-            "Failed connection to SQL database"
-            f" {connection_string if not settings.db.password else connection_string.replace(settings.db.password.get_secret_value(), '*****')}."
-        )
-        return None
+    return request.app.state.engine
 
 
-def get_session(
-    engine: Annotated[Engine | None, Depends(get_engine)],
-) -> Iterator[Session]:
+async def get_session(
+    engine: Annotated[AsyncEngine | None, Depends(get_engine)],
+) -> AsyncIterator[AsyncSession]:
     """Yield a session per request."""
     if not engine:
         raise HTTPException(
@@ -142,7 +116,7 @@ def get_session(
                 "detail": "Couldn't connect to the SQL DB.",
             },
         )
-    with Session(engine) as session:
+    async with AsyncSession(engine) as session:
         yield session
 
 
@@ -375,7 +349,9 @@ async def get_agent_memory(
                 await memory.conn.close()
 
         elif connection_string.startswith("postgresql"):
-            async with AsyncPostgresSaver.from_conn_string(connection_string) as memory:
+            async with AsyncPostgresSaverWithPrefix.from_conn_string(
+                connection_string
+            ) as memory:
                 await memory.setup()
                 yield memory
                 await memory.conn.close()
@@ -396,7 +372,7 @@ async def get_agent_memory(
 
 async def get_vlab_and_project(
     user_id: Annotated[str, Depends(get_user_id)],
-    session: Annotated[Session, Depends(get_session)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
@@ -415,7 +391,7 @@ async def get_vlab_and_project(
         }
     else:
         thread_id = request.path_params.get("thread_id")
-        thread = session.get(Threads, (thread_id, user_id))
+        thread = await session.get(Threads, (thread_id, user_id))
         if thread and thread.vlab_id and thread.project_id:
             vlab_and_project = {
                 "vlab_id": thread.vlab_id,

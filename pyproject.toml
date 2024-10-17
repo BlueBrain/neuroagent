@@ -13,6 +13,7 @@ dynamic = ["version"]
 dependencies = [
     "aiosqlite",
     "asgi-correlation-id",
+    "asyncpg",
     "bluepyefe",
     "efel",
     "fastapi",
@@ -24,11 +25,10 @@ dependencies = [
     "langgraph-checkpoint-sqlite",
     "neurom",
     "psycopg-binary",
-    "psycopg2-binary",
     "pydantic-settings",
     "python-dotenv",
     "python-keycloak",
-    "sqlalchemy",
+    "sqlalchemy[asyncio]",
     "uvicorn",
     ]
 

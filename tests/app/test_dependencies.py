@@ -13,10 +13,10 @@ from httpx import AsyncClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from neuroagent.agents import SimpleAgent, SimpleChatAgent
+from neuroagent.app.app_utils import setup_engine
 from neuroagent.app.dependencies import (
     Settings,
     get_agent,
@@ -27,7 +27,6 @@ from neuroagent.app.dependencies import (
     get_chat_agent,
     get_connection_string,
     get_electrophys_feature_tool,
-    get_engine,
     get_httpx_client,
     get_kg_morpho_feature_tool,
     get_kg_token,
@@ -210,8 +209,8 @@ async def test_get_vlab_and_project(
     test_settings = Settings(
         db={"prefix": db_connection},
     )
-    engine = get_engine(test_settings, db_connection)
-    session = next(get_session(engine))
+    engine = setup_engine(test_settings, db_connection)
+    session = await anext(get_session(engine))
     user_id = "Super_user"
     token = "fake_token"
     httpx_client = AsyncClient()
@@ -224,8 +223,10 @@ async def test_get_vlab_and_project(
         json="test_project_ID",
     )
 
-    # create test thread
-    Base.metadata.create_all(bind=engine)
+    # create test thread table
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     new_thread = Threads(
         user_sub=user_id,
         vlab_id="test_vlab_DB",
@@ -233,8 +234,8 @@ async def test_get_vlab_and_project(
         title="test_title",
     )
     session.add(new_thread)
-    session.commit()
-    session.refresh(new_thread)
+    await session.commit()
+    await session.refresh(new_thread)
 
     try:
         # Test with info in headers.
@@ -310,7 +311,8 @@ async def test_get_vlab_and_project(
 
     finally:
         # don't forget to close the session, otherwise the tests hangs.
-        session.close()
+        await session.close()
+        await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -568,44 +570,20 @@ def test_get_connection_string_no_prefix(monkeypatch, patch_required_env):
     assert result is None, "should return None when prefix is not set"
 
 
-@patch("neuroagent.app.dependencies.create_engine")
-def test_get_engine(create_engine_mock, monkeypatch, patch_required_env):
-    create_engine_mock.return_value = Mock()
-
-    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-
-    settings = Settings()
-
-    connection_string = "https://localhost"
-    retval = get_engine(settings=settings, connection_string=connection_string)
-    assert retval is not None
-
-
-@patch("neuroagent.app.dependencies.create_engine")
-def test_get_engine_no_connection_string(
-    create_engine_mock, monkeypatch, patch_required_env
-):
-    create_engine_mock.return_value = Mock()
-
-    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
-
-    settings = Settings()
-
-    retval = get_engine(settings=settings, connection_string=None)
-    assert retval is None
-
-
 @patch("sqlalchemy.orm.Session")
-def test_get_session_success(_):
-    database_url = "sqlite:///:memory:"
-    engine = create_engine(database_url)
-    result = next(get_session(engine))
-    assert isinstance(result, Session)
+@pytest.mark.asyncio
+async def test_get_session_success(_):
+    database_url = "sqlite+aiosqlite:///:memory:"
+    engine = create_async_engine(database_url)
+    result = await anext(get_session(engine))
+    assert isinstance(result, AsyncSession)
+    await engine.dispose()
 
 
-def test_get_session_no_engine():
+@pytest.mark.asyncio
+async def test_get_session_no_engine():
     with pytest.raises(HTTPException):
-        next(get_session(None))
+        await anext(get_session(None))
 
 
 def test_get_kg_token_with_token(patch_required_env):

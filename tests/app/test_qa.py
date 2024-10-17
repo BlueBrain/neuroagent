@@ -30,7 +30,7 @@ def test_run_agent(app_client):
     assert response.status_code == 422
 
 
-def test_run_chat_agent(app_client, tmp_path, httpx_mock, patch_required_env):
+def test_run_chat_agent(app_client, httpx_mock, patch_required_env, db_connection):
     agent_output = AgentOutput(
         response="This is my response",
         steps=[
@@ -41,9 +41,8 @@ def test_run_chat_agent(app_client, tmp_path, httpx_mock, patch_required_env):
             ),
         ],
     )
-    p = tmp_path / "test_db.db"
     test_settings = Settings(
-        db={"prefix": f"sqlite:///{p}"},
+        db={"prefix": db_connection},
     )
     app.dependency_overrides[get_settings] = lambda: test_settings
     agent_mock = AsyncMock()
@@ -105,14 +104,14 @@ async def streamed_response():
         yield word
 
 
-def test_chat_streamed(app_client, tmp_path, httpx_mock, patch_required_env):
+def test_chat_streamed(app_client, httpx_mock, patch_required_env, db_connection):
     """Test the generative QA endpoint with a fake LLM."""
     agent_mock = Mock()
     agent_mock.astream.return_value = streamed_response()
     app.dependency_overrides[get_chat_agent] = lambda: agent_mock
-    p = tmp_path / "test_db.db"
+
     test_settings = Settings(
-        db={"prefix": f"sqlite:///{p}"},
+        db={"prefix": db_connection},
     )
     app.dependency_overrides[get_settings] = lambda: test_settings
     expected_tokens = (
