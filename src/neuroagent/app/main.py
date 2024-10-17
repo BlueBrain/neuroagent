@@ -13,12 +13,12 @@ from httpx import AsyncClient
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from neuroagent import __version__
+from neuroagent.app.app_utils import setup_engine
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import (
     get_agent_memory,
     get_cell_types_kg_hierarchy,
     get_connection_string,
-    get_engine,
     get_kg_token,
     get_settings,
     get_update_kg_hierarchy,
@@ -71,17 +71,23 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
     """Read environment (settings of the application)."""
     # hacky but works: https://github.com/tiangolo/fastapi/issues/425
     app_settings = fastapi_app.dependency_overrides.get(get_settings, get_settings)()
-    engine = fastapi_app.dependency_overrides.get(get_engine, get_engine)(
-        app_settings, get_connection_string(app_settings)
-    )
-    # This creates the checkpoints and writes tables.
+
+    # Get the sqlalchemy engine
+    conn_string = get_connection_string(app_settings)
+    engine = setup_engine(app_settings, conn_string)
+
+    # Store it in the state
+    fastapi_app.state.engine = engine
+
+    # Create the checkpoints and writes tables.
     await anext(
         fastapi_app.dependency_overrides.get(get_agent_memory, get_agent_memory)(
             get_connection_string(app_settings)
         )
     )
     if engine:
-        Base.metadata.create_all(bind=engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     prefix = app_settings.misc.application_prefix
     fastapi_app.openapi_url = f"{prefix}/openapi.json"
@@ -115,6 +121,8 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
         )
 
     yield
+    if engine:
+        await engine.dispose()
 
 
 app = FastAPI(

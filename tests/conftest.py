@@ -4,13 +4,14 @@ import json
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import MetaData
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from neuroagent.app.config import Settings
 from neuroagent.app.dependencies import get_kg_token, get_settings
@@ -63,31 +64,34 @@ def patch_required_env(monkeypatch):
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__PASSWORD", "password")
 
 
-@pytest.fixture(params=["sqlite", "postgresql"], name="db_connection")
-def setup_sql_db(request, tmp_path):
+@pytest_asyncio.fixture(params=["sqlite", "postgresql"], name="db_connection")
+async def setup_sql_db(request, tmp_path):
     db_type = request.param
 
     # To start the postgresql database:
     # docker run -it --rm -p 5432:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=password postgres:latest
     path = (
-        f"sqlite:///{tmp_path / 'test_db.db'}"
+        f"sqlite+aiosqlite:///{tmp_path / 'test_db.db'}"
         if db_type == "sqlite"
-        else "postgresql://test:password@localhost:5432"
+        else "postgresql+asyncpg://test:password@localhost:5432"
     )
     if db_type == "postgresql":
         try:
-            engine = create_engine(path).connect()
+            engine = create_async_engine(path).connect()
         except OperationalError:
             pytest.skip("Postgres database not connected")
     yield path
     if db_type == "postgresql":
         metadata = MetaData()
-        engine = create_engine(path)
-        session = Session(bind=engine)
+        engine = create_async_engine(path)
+        session = AsyncSession(bind=engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(metadata.reflect)
+            await conn.run_sync(metadata.drop_all)
 
-        metadata.reflect(engine)
-        metadata.drop_all(bind=engine)
-        session.commit()
+        await session.commit()
+        await engine.dispose()
+        await session.aclose()
 
 
 @pytest.fixture
@@ -107,6 +111,9 @@ def brain_region_json_path():
 async def fake_llm_with_tools(brain_region_json_path):
     class FakeFuntionChatModel(GenericFakeChatModel):
         def bind_tools(self, functions: list):
+            return self
+
+        def bind_functions(self, **kwargs):
             return self
 
     # If you need another fake response to use different tools,

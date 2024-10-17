@@ -9,8 +9,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from sqlalchemy import MetaData, select
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from neuroagent.app.app_utils import validate_project
 from neuroagent.app.config import Settings
@@ -41,7 +40,7 @@ async def create_thread(
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
     settings: Annotated[Settings, Depends(get_settings)],
     token: Annotated[str, Depends(get_kg_token)],
-    session: Annotated[Session, Depends(get_session)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     virtual_lab_id: str,
     project_id: str,
@@ -77,14 +76,14 @@ async def create_thread(
         user_sub=user_id, vlab_id=virtual_lab_id, title=title, project_id=project_id
     )
     session.add(new_thread)
-    session.commit()
-    session.refresh(new_thread)
+    await session.commit()
+    await session.refresh(new_thread)
     return ThreadsRead(**new_thread.__dict__)
 
 
 @router.get("/")
-def get_threads(
-    session: Annotated[Session, Depends(get_session)],
+async def get_threads(
+    session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
 ) -> list[ThreadsRead]:
     """Get threads for a user.
@@ -103,7 +102,8 @@ def get_threads(
         List the threads from the given user id.
     """  # noqa: D205, D301, D400
     query = select(Threads).where(Threads.user_sub == user_id)
-    threads = session.execute(query).all()
+    results = await session.execute(query)
+    threads = results.all()
     return [ThreadsRead(**thread[0].__dict__) for thread in threads]
 
 
@@ -170,9 +170,9 @@ async def get_thread(
 
 
 @router.patch("/{thread_id}")
-def update_thread_title(
+async def update_thread_title(
     thread: Annotated[Threads, Depends(get_object)],
-    session: Annotated[Session, Depends(get_session)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     thread_update: ThreadsUpdate,
 ) -> ThreadsRead:
     """Update thread.
@@ -196,17 +196,17 @@ def update_thread_title(
     for key, value in thread_data.items():
         setattr(thread, key, value)
     session.add(thread)
-    session.commit()
-    session.refresh(thread)
+    await session.commit()
+    await session.refresh(thread)
     thread_return = ThreadsRead(**thread.__dict__)  # For mypy.
     return thread_return
 
 
 @router.delete("/{thread_id}")
-def delete_thread(
+async def delete_thread(
     _: Annotated[Threads, Depends(get_object)],
-    session: Annotated[Session, Depends(get_session)],
-    engine: Annotated[Engine, Depends(get_engine)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    engine: Annotated[AsyncEngine, Depends(get_engine)],
     thread_id: str,
 ) -> dict[str, str]:
     """Delete the specified thread.
@@ -228,13 +228,14 @@ def delete_thread(
     Acknowledgement of the deletion
     """  # noqa: D205, D301, D400
     metadata = MetaData()
-    metadata.reflect(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.reflect)
     for table in metadata.tables.values():
         if "thread_id" not in table.c.keys():
             continue
         # Delete from the checkpoint table
         query = table.delete().where(table.c.thread_id == thread_id)
-        session.execute(query)
+        await session.execute(query)
 
-    session.commit()
+    await session.commit()
     return {"Acknowledged": "true"}

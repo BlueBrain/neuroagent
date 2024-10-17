@@ -1,10 +1,13 @@
 """Test app utils."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi.exceptions import HTTPException
 from httpx import AsyncClient
 
-from neuroagent.app.app_utils import validate_project
+from neuroagent.app.app_utils import setup_engine, validate_project
+from neuroagent.app.config import Settings
 
 
 @pytest.mark.asyncio
@@ -43,3 +46,30 @@ async def test_validate_project(patch_required_env, httpx_mock, monkeypatch):
         vlab_project_url=vlab_url,
     )
     # we jsut want to assert that the httpx_mock was called.
+
+
+@patch("neuroagent.app.app_utils.create_async_engine")
+def test_setup_engine(create_engine_mock, monkeypatch, patch_required_env):
+    create_engine_mock.return_value = AsyncMock()
+
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
+
+    settings = Settings()
+
+    connection_string = "https://localhost"
+    retval = setup_engine(settings=settings, connection_string=connection_string)
+    assert retval is not None
+
+
+@patch("neuroagent.app.app_utils.create_async_engine")
+def test_setup_engine_no_connection_string(
+    create_engine_mock, monkeypatch, patch_required_env
+):
+    create_engine_mock.return_value = AsyncMock()
+
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
+
+    settings = Settings()
+
+    retval = setup_engine(settings=settings, connection_string=None)
+    assert retval is None
