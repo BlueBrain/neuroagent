@@ -88,4 +88,6 @@ jobs:
       - name: Running mypy and tests
         run: |
           mypy src/
+          # Include src/ directory in Python path to prioritize local files in pytest
+          export PYTHONPATH=$(pwd)/src:$PYTHONPATH
           pytest --color=yes
