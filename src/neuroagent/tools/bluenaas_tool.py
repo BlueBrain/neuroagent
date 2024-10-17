@@ -212,7 +212,7 @@ class BlueNaaSTool(BasicTool):
         Parameters
         ----------
         messages
-            List of Langgrapg messages extracted from the graph state.
+            List of Langgraph messages extracted from the graph state.
         json_api
             Simulation configuration that the tool will run if it has been validated.
 
