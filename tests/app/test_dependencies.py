@@ -337,9 +337,6 @@ async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     )
 
     language_model = get_language_model(settings)
-    bluenaas_tool = get_bluenaas_tool(
-        settings=settings, token=token, httpx_client=httpx_client
-    )
     literature_tool = get_literature_tool(
         token=token, settings=settings, httpx_client=httpx_client
     )
@@ -370,7 +367,6 @@ async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     agent = get_agent(
         valid_project,
         llm=language_model,
-        bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
@@ -416,6 +412,9 @@ async def test_get_chat_agent(
     literature_tool = get_literature_tool(
         token=token, settings=settings, httpx_client=httpx_client
     )
+    me_model_tool = get_me_model_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
     morpho_tool = get_morpho_tool(
         settings=settings, token=token, httpx_client=httpx_client
     )
@@ -447,6 +446,7 @@ async def test_get_chat_agent(
         br_resolver_tool=br_resolver_tool,
         morpho_tool=morpho_tool,
         morphology_feature_tool=morphology_feature_tool,
+        me_model_tool=me_model_tool,
         kg_morpho_feature_tool=kg_morpho_feature_tool,
         electrophys_feature_tool=electrophys_feature_tool,
         traces_tool=traces_tool,

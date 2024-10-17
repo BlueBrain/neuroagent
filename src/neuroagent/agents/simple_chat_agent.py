@@ -26,6 +26,7 @@ class SimpleChatAgent(BaseAgent):
         data["agent"] = create_react_agent(
             model=data["llm"],
             tools=data["tools"],
+            interrupt_before=["tools"],
             checkpointer=data["memory"],
             state_modifier="""You are a helpful assistant helping scientists with neuro-scientific questions.
                 You must always specify in your answers from which brain regions the information is extracted.
@@ -41,7 +42,24 @@ class SimpleChatAgent(BaseAgent):
         """Run the agent against a query."""
         config = {"configurable": {"thread_id": thread_id}}
         input_message = HumanMessage(content=query)
-        result = await self.agent.ainvoke({"messages": [input_message]}, config=config)
+
+        input = {"messages": [input_message]}
+        should_continue = True
+
+        while should_continue:
+            result = await self.agent.ainvoke(input, config=config)
+            input = None
+
+            last_message = result["messages"][-1]
+
+            # pseudocode
+            if last_message.tool_calls["name"] == "bluenaas":
+                return None
+
+            logger.info(f"Last message: {last_message}")
+            if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
+                should_continue = False
+
         return self._process_output(result)
 
     async def astream(
