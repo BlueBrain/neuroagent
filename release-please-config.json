@@ -1,0 +1,7 @@
+{
+  "includeUnreleased": true,
+  "release-type": "python",
+  "bump-minor-pre-major": true,
+  "include-v-in-tag": false,
+  "version-file": "src/neuroagent/__init__.py"
+}
