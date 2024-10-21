@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BlueNaaS simulation tool.
 - Validation of the project ID.
 - BlueNaaS tool test.
+- Human in the loop for bluenaas.
 
 ### Fixed
 - Fixed 0% unittest coverage bug.
