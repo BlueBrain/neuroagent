@@ -22,11 +22,11 @@ from neuroagent.app.dependencies import (
     get_agent,
     get_agent_memory,
     get_bluenaas_tool,
-    get_brain_region_resolver_tool,
     get_cell_types_kg_hierarchy,
     get_chat_agent,
     get_connection_string,
     get_electrophys_feature_tool,
+    get_entities_resolver_tool,
     get_httpx_client,
     get_kg_morpho_feature_tool,
     get_kg_token,
@@ -355,7 +355,7 @@ async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     traces_tool = get_traces_tool(
         settings=settings, token=token, httpx_client=httpx_client
     )
-    entities_resolver_tool = get_brain_region_resolver_tool(
+    entities_resolver_tool = get_entities_resolver_tool(
         token=token,
         httpx_client=httpx_client,
         settings=settings,
@@ -430,7 +430,7 @@ async def test_get_chat_agent(
     traces_tool = get_traces_tool(
         settings=settings, token=token, httpx_client=httpx_client
     )
-    entities_resolver_tool = get_brain_region_resolver_tool(
+    entities_resolver_tool = get_entities_resolver_tool(
         token=token,
         httpx_client=httpx_client,
         settings=settings,

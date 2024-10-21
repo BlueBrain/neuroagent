@@ -197,7 +197,7 @@ def get_literature_tool(
     return tool
 
 
-def get_brain_region_resolver_tool(
+def get_entities_resolver_tool(
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -418,7 +418,7 @@ def get_agent(
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     entities_resolver_tool: Annotated[
-        ResolveEntitiesTool, Depends(get_brain_region_resolver_tool)
+        ResolveEntitiesTool, Depends(get_entities_resolver_tool)
     ],
     morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
     morphology_feature_tool: Annotated[
@@ -473,7 +473,7 @@ def get_chat_agent(
     bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
     entities_resolver_tool: Annotated[
-        ResolveEntitiesTool, Depends(get_brain_region_resolver_tool)
+        ResolveEntitiesTool, Depends(get_entities_resolver_tool)
     ],
     morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
     morphology_feature_tool: Annotated[
