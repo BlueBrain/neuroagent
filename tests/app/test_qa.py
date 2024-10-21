@@ -72,7 +72,7 @@ async def streamed_response():
         "Calling ",
         "tool ",
         ": ",
-        "resolve_brain_region_tool ",
+        "resolve_entities_tool ",
         "with ",
         "arguments ",
         ": ",
@@ -115,7 +115,7 @@ def test_chat_streamed(app_client, httpx_mock, patch_required_env, db_connection
     )
     app.dependency_overrides[get_settings] = lambda: test_settings
     expected_tokens = (
-        b"Calling tool : resolve_brain_region_tool with arguments : {brain_region:"
+        b"Calling tool : resolve_entities_tool with arguments : {brain_region:"
         b" thalamus}\n This is an amazingly well streamed response. I can't believe how"
         b" good it is!"
     )
