@@ -10,7 +10,6 @@ from httpx import AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 from sqlalchemy import MetaData
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from neuroagent.app.config import Settings
@@ -77,8 +76,9 @@ async def setup_sql_db(request, tmp_path):
     )
     if db_type == "postgresql":
         try:
-            engine = create_async_engine(path).connect()
-        except OperationalError:
+            async with create_async_engine(path).connect() as conn:
+                pass
+        except Exception:
             pytest.skip("Postgres database not connected")
     yield path
     if db_type == "postgresql":

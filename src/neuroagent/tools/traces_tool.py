@@ -1,48 +1,27 @@
 """Traces tool."""
 
 import logging
-from typing import Any, Literal, Optional, Type
+from typing import Any, Type
 
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
-from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
+from neuroagent.tools.base_tool import (
+    ETYPE_IDS,
+    BaseToolOutput,
+    BasicTool,
+    EtypesLiteral,
+)
 from neuroagent.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
-
-ETYPE_IDS = {
-    "bAC": "http://uri.interlex.org/base/ilx_0738199",
-    "bIR": "http://uri.interlex.org/base/ilx_0738206",
-    "bNAC": "http://uri.interlex.org/base/ilx_0738203",
-    "bSTUT": "http://uri.interlex.org/base/ilx_0738200",
-    "cAC": "http://uri.interlex.org/base/ilx_0738197",
-    "cIR": "http://uri.interlex.org/base/ilx_0738204",
-    "cNAC": "http://uri.interlex.org/base/ilx_0738201",
-    "cSTUT": "http://uri.interlex.org/base/ilx_0738198",
-    "dNAC": "http://uri.interlex.org/base/ilx_0738205",
-    "dSTUT": "http://uri.interlex.org/base/ilx_0738202",
-}
 
 
 class InputGetTraces(BaseModel):
     """Inputs of the knowledge graph API."""
 
     brain_region_id: str = Field(description="ID of the brain region of interest.")
-    etype: Optional[
-        Literal[
-            "bAC",
-            "bIR",
-            "bNAC",
-            "bSTUT",
-            "cAC",
-            "cIR",
-            "cNAC",
-            "cSTUT",
-            "dNAC",
-            "dSTUT",
-        ]
-    ] = Field(
+    etype: EtypesLiteral | None = Field(
         default=None,
         description=(
             "E-type of interest specified by the user. Possible values:"
@@ -92,23 +71,7 @@ class GetTracesTool(BasicTool):
     async def _arun(
         self,
         brain_region_id: str,
-        etype: (
-            Literal[
-                "bAC",
-                "bIR",
-                "bNAC",
-                "bSTUT",
-                "cAC",
-                "cIR",
-                "cNAC",
-                "cSTUT",
-                "dAC",
-                "dIR",
-                "dNAC",
-                "dSTUT",
-            ]
-            | None
-        ) = None,
+        etype: EtypesLiteral | None = None,
     ) -> list[TracesOutput] | dict[str, str]:
         """From a brain region ID, extract traces.
 
@@ -151,23 +114,7 @@ class GetTracesTool(BasicTool):
     def create_query(
         self,
         brain_region_ids: set[str],
-        etype: (
-            Literal[
-                "bAC",
-                "bIR",
-                "bNAC",
-                "bSTUT",
-                "cAC",
-                "cIR",
-                "cNAC",
-                "cSTUT",
-                "dAC",
-                "dIR",
-                "dNAC",
-                "dSTUT",
-            ]
-            | None
-        ) = None,
+        etype: EtypesLiteral | None = None,
     ) -> dict[str, Any]:
         """Create ES query.
 

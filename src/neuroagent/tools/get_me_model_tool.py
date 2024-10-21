@@ -1,13 +1,13 @@
 """Module defining the Get ME Model tool."""
 
 import logging
-from typing import Any, Literal, Optional, Type
+from typing import Any, Optional, Type
 
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from neuroagent.cell_types import get_celltypes_descendants
-from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
+from neuroagent.tools.base_tool import BaseToolOutput, BasicTool, EtypesLiteral
 from neuroagent.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
@@ -20,20 +20,9 @@ class InputGetMEModel(BaseModel):
     mtype_id: Optional[str] = Field(
         default=None, description="ID of the M-type of interest."
     )
-    etype_id: Optional[
-        Literal[
-            "bAC",
-            "bIR",
-            "bNAC",
-            "bSTUT",
-            "cAC",
-            "cIR",
-            "cNAC",
-            "cSTUT",
-            "dNAC",
-            "dSTUT",
-        ]
-    ] = Field(default=None, description="ID of the E-type of interest.")
+    etype_id: Optional[EtypesLiteral] = Field(
+        default=None, description="ID of the E-type of interest."
+    )
 
 
 class MEModelOutput(BaseToolOutput):
