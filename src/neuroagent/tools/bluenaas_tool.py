@@ -257,7 +257,9 @@ class BlueNaaSTool(BasicTool):
             return False
 
         # If the previous simulation was started, ask for validation on the new one
-        if not last_bluenaas_call.artifact.get("is_validated"):
+        if last_bluenaas_call.artifact is None or not last_bluenaas_call.artifact.get(
+            "is_validated"
+        ):
             return False
 
         # Verify if the config has changed since previous call. Validate again if so

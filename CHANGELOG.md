@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Not returning artifact when erroring out.
+
 ## [0.2.0] - 22.10.2024
 
 ### Changed
