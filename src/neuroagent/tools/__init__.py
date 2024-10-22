@@ -16,9 +16,9 @@ from neuroagent.tools.morphology_features_tool import (
     MorphologyFeatureOutput,
     MorphologyFeatureTool,
 )
-from neuroagent.tools.resolve_brain_region_tool import (
+from neuroagent.tools.resolve_entities_tool import (
     BRResolveOutput,
-    ResolveBrainRegionTool,
+    ResolveEntitiesTool,
 )
 from neuroagent.tools.traces_tool import GetTracesTool, TracesOutput
 
@@ -36,7 +36,7 @@ __all__ = [
     "MorphologyFeatureOutput",
     "MorphologyFeatureTool",
     "ParagraphMetadata",
-    "ResolveBrainRegionTool",
+    "ResolveEntitiesTool",
     "TracesOutput",
     "GetMEModelTool",
 ]

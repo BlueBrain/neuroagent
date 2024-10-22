@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed 0% unittest coverage bug.
+- Get ME model tool querying logic
 
 ## [0.1.1] - 26.09.2024
 

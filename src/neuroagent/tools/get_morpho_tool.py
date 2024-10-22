@@ -16,9 +16,12 @@ logger = logging.getLogger(__name__)
 class InputGetMorpho(BaseModel):
     """Inputs of the knowledge graph API."""
 
-    brain_region_id: str = Field(description="ID of the brain region of interest.")
+    brain_region_id: str = Field(
+        description="ID of the brain region of interest. To get this ID, please use the `resolve-entities-tool` first."
+    )
     mtype_id: Optional[str] = Field(
-        default=None, description="ID of the M-type of interest."
+        default=None,
+        description="ID of the M-type of interest. To get this ID, please use the `resolve-entities-tool` first.",
     )
 
 
@@ -42,7 +45,8 @@ class GetMorphoTool(BasicTool):
 
     name: str = "get-morpho-tool"
     description: str = """Searches a neuroscience based knowledge graph to retrieve neuron morphology names, IDs and descriptions.
-    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph. To get this ID, please use the `resolve-brain-region-tool` first.
+    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph.
+    Optionally accepts an mtype_id.
     The output is a list of morphologies, containing:
     - The brain region ID.
     - The brain region name.

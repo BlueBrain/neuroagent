@@ -42,7 +42,7 @@ class TestTracesTool:
 
         # With specific etype
         response = await tool._arun(
-            brain_region_id="brain_region_id_link/549", etype="bAC"
+            brain_region_id="brain_region_id_link/549", etype_id="bAC_id/123"
         )
         assert isinstance(response, list)
         assert len(response) == 2
@@ -50,10 +50,12 @@ class TestTracesTool:
 
     def test_create_query(self):
         brain_region_ids = {"brain_region_id1"}
-        etype = "bAC"
+        etype_id = "bAC_id/123"
 
         tool = GetTracesTool(metadata={"search_size": 2})
-        entire_query = tool.create_query(brain_region_ids=brain_region_ids, etype=etype)
+        entire_query = tool.create_query(
+            brain_region_ids=brain_region_ids, etype_id=etype_id
+        )
         expected_query = {
             "size": 2,
             "track_total_hits": True,
@@ -73,13 +75,7 @@ class TestTracesTool:
                                 ]
                             }
                         },
-                        {
-                            "term": {
-                                "eType.@id.keyword": (
-                                    "http://uri.interlex.org/base/ilx_0738199"
-                                )
-                            }
-                        },
+                        {"term": {"eType.@id.keyword": ("bAC_id/123")}},
                         {
                             "term": {
                                 "@type.keyword": "https://bbp.epfl.ch/ontologies/core/bmo/ExperimentalTrace"
