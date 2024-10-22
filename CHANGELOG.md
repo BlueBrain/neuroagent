@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 22.10.2024
+
 ### Changed
 - Switched from OAUTH2 security on FASTAPI to HTTPBearer.
 - Switched to async sqlalchemy.
