@@ -1,14 +1,22 @@
+import asyncio
+from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
 from openai.lib._tools import pydantic_function_tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class BaseTool(BaseModel):
-    name: str
-    description: str
-    input_schema: type[BaseModel]
-    metadata: dict[str, Any]
+class BaseMetadata(BaseModel):
+    """Base class for metadata"""
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class BaseTool(BaseModel, ABC):
+    name: ClassVar[str]
+    description: ClassVar[str]
+    metadata: BaseModel
+    input_schema: BaseModel
 
     @classmethod
     def pydantic_to_openai_schema(cls):
@@ -18,9 +26,9 @@ class BaseTool(BaseModel):
             description=cls.description,
         )
 
+    @abstractmethod
     def run(self) -> Any:
         """Run the tool"""
-        pass
 
 
 class AccountDetailInput(BaseModel):
@@ -31,12 +39,20 @@ class AccountDetailInput(BaseModel):
     )
 
 
+class AccountDetailMetadata(BaseModel):
+    """Metadata class for the account detail tool"""
+
+    user_id: int
+
+
 class PrintAccountDetailsTool(BaseTool):
     name: ClassVar[str] = "print-account-details-tool"
     description: ClassVar[str] = "Print the account details"
     input_schema: AccountDetailInput
+    metadata: AccountDetailMetadata
 
-    def run(self):
-        user_id = self.metadata.get("user_id", None)
+    async def arun(self):
+        user_id = self.metadata.user_id
+        await asyncio.sleep(0.5)
         print(f"Account Details: {self.input_schema.account_name} {user_id}")
         return "Success"

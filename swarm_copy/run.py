@@ -112,9 +112,9 @@ class Swarm:
             debug_print(debug, f"Processing tool call: {name} with arguments {kwargs}")
 
             tool = tool_map[name]
-            breakpoint()
             input_schema = tool.__annotations__.get("input_schema")(**kwargs)
-            tool_instance = tool(input_schema=input_schema, metadata=context_variables)
+            tool_metadata = tool.__annotations__.get("metadata")(**context_variables)
+            tool_instance = tool(input_schema=input_schema, metadata=tool_metadata)
             # pass context_variables to agent functions
             raw_result = tool_instance.run()
 

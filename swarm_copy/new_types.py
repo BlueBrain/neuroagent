@@ -1,14 +1,16 @@
-from typing import Any, Callable, List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 # Third-party imports
 from pydantic import BaseModel, ConfigDict
+
+from swarm_copy.tools import BaseTool
 
 
 class Agent(BaseModel):
     name: str = "Agent"
     model: str = "gpt-4o-mini"
     instructions: Union[str, Callable[[], str]] = "You are a helpful agent."
-    functions: List[Any] = []
+    functions: List[type[BaseTool]] = []
     tool_choice: str = None
     parallel_tool_calls: bool = True
 
