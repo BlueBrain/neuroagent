@@ -39,7 +39,7 @@ class AccountDetailInput(BaseModel):
     )
 
 
-class AccountDetailMetadata(BaseModel):
+class AccountDetailMetadata(BaseMetadata):
     """Metadata class for the account detail tool"""
 
     user_id: int

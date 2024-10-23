@@ -7,6 +7,11 @@ from typing import List
 
 # Package/library imports
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessage
+from openai.types.chat.chat_completion_message_tool_call import (
+    ChatCompletionMessageToolCall,
+)
+from pydantic import ValidationError
 
 from swarm_copy.new_types import (
     Agent,
@@ -110,7 +115,6 @@ class Swarm:
             agent = next((agent for agent in reversed(agents) if agent is not None))
         except StopIteration:
             agent = None
-        breakpoint()
         response = Response(
             messages=messages, agent=agent, context_variables=context_variables
         )
@@ -139,11 +143,30 @@ class Swarm:
         debug_print(debug, f"Processing tool call: {name} with arguments {kwargs}")
 
         tool = tool_map[name]
-        input_schema = tool.__annotations__.get("input_schema")(**kwargs)
+        try:
+            input_schema = tool.__annotations__.get("input_schema")(**kwargs)
+        except ValidationError as err:
+            response = {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "tool_name": name,
+                "content": str(err),
+            }
+            return response, None
+
         tool_metadata = tool.__annotations__.get("metadata")(**context_variables)
         tool_instance = tool(input_schema=input_schema, metadata=tool_metadata)
         # pass context_variables to agent functions
-        raw_result = await tool_instance.arun()
+        try:
+            raw_result = await tool_instance.arun()
+        except Exception as err:
+            response = {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "tool_name": name,
+                "content": str(err),
+            }
+            return response, None
 
         result: Result = self.handle_function_result(raw_result, debug)
         response = {
@@ -203,7 +226,7 @@ class Swarm:
                 active_agent = partial_response.agent
 
         return Response(
-            messages=history[init_len:],
+            messages=history,
             agent=active_agent,
             context_variables=context_variables,
         )
