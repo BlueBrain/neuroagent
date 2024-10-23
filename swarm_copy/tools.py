@@ -27,7 +27,7 @@ class BaseTool(BaseModel, ABC):
         )
 
     @abstractmethod
-    def run(self) -> Any:
+    async def arun(self) -> Any:
         """Run the tool"""
 
 
