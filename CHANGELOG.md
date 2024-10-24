@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-* Added release please ([dd11700](https://github.com/BlueBrain/neuroagent/commit/dd1170095a92b086d264e09d6ba417b506f2d3e4))
 * Added release please to automate changelogs and releases. ([5b9d30b](https://github.com/BlueBrain/neuroagent/commit/5b9d30b1d304a4a16761939625db31ed581bc57b))
 
 ## [Unreleased]
