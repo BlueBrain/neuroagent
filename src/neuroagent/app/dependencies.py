@@ -36,7 +36,7 @@ from neuroagent.tools import (
     KGMorphoFeatureTool,
     LiteratureSearchTool,
     MorphologyFeatureTool,
-    ResolveBrainRegionTool,
+    ResolveEntitiesTool,
 )
 from neuroagent.utils import RegionMeta, get_file_from_KG
 
@@ -197,13 +197,13 @@ def get_literature_tool(
     return tool
 
 
-def get_brain_region_resolver_tool(
+def get_entities_resolver_tool(
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> ResolveBrainRegionTool:
+) -> ResolveEntitiesTool:
     """Load resolve brain region tool."""
-    tool = ResolveBrainRegionTool(
+    tool = ResolveEntitiesTool(
         metadata={
             "token": token,
             "httpx_client": httpx_client,
@@ -416,10 +416,9 @@ async def get_vlab_and_project(
 def get_agent(
     _: Annotated[None, Depends(get_vlab_and_project)],
     llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
-    br_resolver_tool: Annotated[
-        ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
+    entities_resolver_tool: Annotated[
+        ResolveEntitiesTool, Depends(get_entities_resolver_tool)
     ],
     morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
     morphology_feature_tool: Annotated[
@@ -443,20 +442,19 @@ def get_agent(
             (
                 "morphologies",
                 [
-                    br_resolver_tool,
+                    entities_resolver_tool,
                     morpho_tool,
                     morphology_feature_tool,
                     kg_morpho_feature_tool,
                 ],
             ),
-            ("traces", [br_resolver_tool, electrophys_feature_tool, traces_tool]),
+            ("traces", [entities_resolver_tool, electrophys_feature_tool, traces_tool]),
         ]
         return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
     else:
         tools = [
-            bluenaas_tool,
             literature_tool,
-            br_resolver_tool,
+            entities_resolver_tool,
             morpho_tool,
             morphology_feature_tool,
             kg_morpho_feature_tool,
@@ -474,13 +472,14 @@ def get_chat_agent(
     memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
     bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
-    br_resolver_tool: Annotated[
-        ResolveBrainRegionTool, Depends(get_brain_region_resolver_tool)
+    entities_resolver_tool: Annotated[
+        ResolveEntitiesTool, Depends(get_entities_resolver_tool)
     ],
     morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
     morphology_feature_tool: Annotated[
         MorphologyFeatureTool, Depends(get_morphology_feature_tool)
     ],
+    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
     kg_morpho_feature_tool: Annotated[
         KGMorphoFeatureTool, Depends(get_kg_morpho_feature_tool)
     ],
@@ -494,7 +493,8 @@ def get_chat_agent(
     tools = [
         bluenaas_tool,
         literature_tool,
-        br_resolver_tool,
+        entities_resolver_tool,
+        me_model_tool,
         morpho_tool,
         morphology_feature_tool,
         kg_morpho_feature_tool,

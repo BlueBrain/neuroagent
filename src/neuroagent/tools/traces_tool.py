@@ -1,54 +1,30 @@
 """Traces tool."""
 
 import logging
-from typing import Any, Literal, Optional, Type
+from typing import Any, Type
 
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
-from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
+from neuroagent.tools.base_tool import (
+    BaseToolOutput,
+    BasicTool,
+)
 from neuroagent.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
-
-ETYPE_IDS = {
-    "bAC": "http://uri.interlex.org/base/ilx_0738199",
-    "bIR": "http://uri.interlex.org/base/ilx_0738206",
-    "bNAC": "http://uri.interlex.org/base/ilx_0738203",
-    "bSTUT": "http://uri.interlex.org/base/ilx_0738200",
-    "cAC": "http://uri.interlex.org/base/ilx_0738197",
-    "cIR": "http://uri.interlex.org/base/ilx_0738204",
-    "cNAC": "http://uri.interlex.org/base/ilx_0738201",
-    "cSTUT": "http://uri.interlex.org/base/ilx_0738198",
-    "dNAC": "http://uri.interlex.org/base/ilx_0738205",
-    "dSTUT": "http://uri.interlex.org/base/ilx_0738202",
-}
 
 
 class InputGetTraces(BaseModel):
     """Inputs of the knowledge graph API."""
 
-    brain_region_id: str = Field(description="ID of the brain region of interest.")
-    etype: Optional[
-        Literal[
-            "bAC",
-            "bIR",
-            "bNAC",
-            "bSTUT",
-            "cAC",
-            "cIR",
-            "cNAC",
-            "cSTUT",
-            "dNAC",
-            "dSTUT",
-        ]
-    ] = Field(
+    brain_region_id: str = Field(
+        description="ID of the brain region of interest. Can be obtained from 'resolve-entities-tool'."
+    )
+    etype_id: str | None = Field(
         default=None,
         description=(
-            "E-type of interest specified by the user. Possible values:"
-            f" {', '.join(list(ETYPE_IDS.keys()))}. The first letter meaning classical,"
-            " bursting or delayed, The other letters in capital meaning accomodating,"
-            " non-accomodating, stuttering or irregular spiking."
+            "ID of the electrical type of the cell. Can be obtained through the 'resolve-entities-tool'."
         ),
     )
 
@@ -73,7 +49,8 @@ class GetTracesTool(BasicTool):
 
     name: str = "get-traces-tool"
     description: str = """Searches a neuroscience based knowledge graph to retrieve traces names, IDs and descriptions.
-    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph. To get this ID, please use the `resolve-brain-region-tool` first.
+    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph.
+    Optionally accepts an e-type id.
     The output is a list of traces, containing:
     - The trace id.
     - The brain region ID.
@@ -92,23 +69,7 @@ class GetTracesTool(BasicTool):
     async def _arun(
         self,
         brain_region_id: str,
-        etype: (
-            Literal[
-                "bAC",
-                "bIR",
-                "bNAC",
-                "bSTUT",
-                "cAC",
-                "cIR",
-                "cNAC",
-                "cSTUT",
-                "dAC",
-                "dIR",
-                "dNAC",
-                "dSTUT",
-            ]
-            | None
-        ) = None,
+        etype_id: str | None = None,
     ) -> list[TracesOutput] | dict[str, str]:
         """From a brain region ID, extract traces.
 
@@ -123,7 +84,7 @@ class GetTracesTool(BasicTool):
         -------
             list of TracesOutput to describe the trace and its metadata, or an error dict.
         """
-        logger.info(f"Entering get trace tool. Inputs: {brain_region_id=}, {etype=}")
+        logger.info(f"Entering get trace tool. Inputs: {brain_region_id=}, {etype_id=}")
         try:
             # Get descendants of the brain region specified as input
             hierarchy_ids = get_descendants_id(
@@ -135,7 +96,7 @@ class GetTracesTool(BasicTool):
 
             # Create the ES query to query the KG with resolved descendants
             entire_query = self.create_query(
-                brain_region_ids=hierarchy_ids, etype=etype
+                brain_region_ids=hierarchy_ids, etype_id=etype_id
             )
 
             # Send the query to the KG
@@ -151,23 +112,7 @@ class GetTracesTool(BasicTool):
     def create_query(
         self,
         brain_region_ids: set[str],
-        etype: (
-            Literal[
-                "bAC",
-                "bIR",
-                "bNAC",
-                "bSTUT",
-                "cAC",
-                "cIR",
-                "cNAC",
-                "cSTUT",
-                "dAC",
-                "dIR",
-                "dNAC",
-                "dSTUT",
-            ]
-            | None
-        ) = None,
+        etype_id: str | None = None,
     ) -> dict[str, Any]:
         """Create ES query.
 
@@ -195,8 +140,7 @@ class GetTracesTool(BasicTool):
         ]
 
         # Optionally constraint the output on the etype of the cell
-        if etype is not None:
-            etype_id = ETYPE_IDS[etype]
+        if etype_id is not None:
             logger.info(f"etype selected: {etype_id}")
             conditions.append({"term": {"eType.@id.keyword": etype_id}})  # type: ignore
 

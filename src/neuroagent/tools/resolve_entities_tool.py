@@ -1,13 +1,18 @@
 """Tool to resolve the brain region from natural english to a KG ID."""
 
 import logging
-from typing import Any, Optional, Type
+from typing import Any, Type
 
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from neuroagent.resolving import resolve_query
-from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
+from neuroagent.tools.base_tool import (
+    ETYPE_IDS,
+    BaseToolOutput,
+    BasicTool,
+    EtypesLiteral,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +23,18 @@ class InputResolveBR(BaseModel):
     brain_region: str = Field(
         description="Brain region of interest specified by the user in natural english."
     )
-    mtype: Optional[str] = Field(
+    mtype: str | None = Field(
         default=None,
         description="M-type of interest specified by the user in natural english.",
+    )
+    etype: EtypesLiteral | None = Field(
+        default=None,
+        description=(
+            "E-type of interest specified by the user in natural english. Possible values:"
+            f" {', '.join(list(ETYPE_IDS.keys()))}. The first letter meaning classical,"
+            " bursting or delayed, The other letters in capital meaning accomodating,"
+            " non-accomodating, stuttering or irregular spiking."
+        ),
     )
 
 
@@ -38,10 +52,17 @@ class MTypeResolveOutput(BaseToolOutput):
     mtype_id: str
 
 
-class ResolveBrainRegionTool(BasicTool):
+class EtypeResolveOutput(BaseToolOutput):
+    """Output schema for the Mtype resolver."""
+
+    etype_name: str
+    etype_id: str
+
+
+class ResolveEntitiesTool(BasicTool):
     """Class defining the Brain Region Resolving logic."""
 
-    name: str = "resolve-brain-region-tool"
+    name: str = "resolve-entities-tool"
     description: str = """From a brain region name written in natural english, search a knowledge graph to retrieve its corresponding ID.
     Optionaly resolve the mtype name from natural english to its corresponding ID too.
     You MUST use this tool when a brain region is specified in natural english because in that case the output of this tool is essential to other tools.
@@ -55,8 +76,8 @@ class ResolveBrainRegionTool(BasicTool):
         pass
 
     async def _arun(
-        self, brain_region: str, mtype: str | None = None
-    ) -> list[BRResolveOutput | MTypeResolveOutput]:
+        self, brain_region: str, mtype: str | None = None, etype: str | None = None
+    ) -> list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput]:
         """Given a brain region in natural language, resolve its ID.
 
         Parameters
@@ -71,11 +92,11 @@ class ResolveBrainRegionTool(BasicTool):
             Mapping from BR/mtype name to ID.
         """
         logger.info(
-            f"Entering Brain Region resolver tool. Inputs: {brain_region=}, {mtype=}"
+            f"Entering Brain Region resolver tool. Inputs: {brain_region=}, {mtype=}, {etype=}"
         )
         try:
             # Prepare the output list.
-            output: list[BRResolveOutput | MTypeResolveOutput] = []
+            output: list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput] = []
 
             # First resolve the brain regions.
             brain_regions = await resolve_query(
@@ -116,6 +137,12 @@ class ResolveBrainRegionTool(BasicTool):
                         )
                         for mtype in mtypes
                     ]
+                )
+
+            # Optionally resolve the etype
+            if etype is not None:
+                output.append(
+                    EtypeResolveOutput(etype_name=etype, etype_id=ETYPE_IDS[etype])
                 )
 
             return output

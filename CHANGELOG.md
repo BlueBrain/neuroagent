@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 22.10.2024
+
 ### Changed
 - Switched from OAUTH2 security on FASTAPI to HTTPBearer.
 - Switched to async sqlalchemy.
+- Expanded list of etypes.
 
 ### Added
 - Add get morphoelectric (me) model tool
@@ -17,9 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validation of the project ID.
 - BlueNaaS tool test.
 - Added release please for automatic changelog creation and releases.
+- Human in the loop for bluenaas.
+
 
 ### Fixed
 - Fixed 0% unittest coverage bug.
+- Get ME model tool querying logic
 
 ## [0.1.1] - 26.09.2024
 

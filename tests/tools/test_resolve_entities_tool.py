@@ -3,16 +3,17 @@
 import pytest
 from httpx import AsyncClient
 
-from neuroagent.tools import ResolveBrainRegionTool
-from neuroagent.tools.resolve_brain_region_tool import (
+from neuroagent.tools import ResolveEntitiesTool
+from neuroagent.tools.resolve_entities_tool import (
     BRResolveOutput,
+    EtypeResolveOutput,
     MTypeResolveOutput,
 )
 
 
 @pytest.mark.asyncio
 async def test_arun(httpx_mock, get_resolve_query_output):
-    tool = ResolveBrainRegionTool(
+    tool = ResolveEntitiesTool(
         metadata={
             "search_size": 3,
             "token": "greattokenpleasedontexpire",
@@ -61,7 +62,7 @@ async def test_arun(httpx_mock, get_resolve_query_output):
     httpx_mock.add_response(
         url="http://fake_class_url.com/78", json=get_resolve_query_output[5]
     )
-    response = await tool._arun(brain_region="Field", mtype="Interneu")
+    response = await tool._arun(brain_region="Field", mtype="Interneu", etype="bAC")
     assert response == [
         BRResolveOutput(
             brain_region_name="Field CA1",
@@ -85,5 +86,8 @@ async def test_arun(httpx_mock, get_resolve_query_output):
         MTypeResolveOutput(
             mtype_name="Spinal Cord Ventral Horn Interneuron IA",
             mtype_id="http://uri.interlex.org/base/ilx_0110929",
+        ),
+        EtypeResolveOutput(
+            etype_name="bAC", etype_id="http://uri.interlex.org/base/ilx_0738199"
         ),
     ]

@@ -1,7 +1,7 @@
 """Module defining the Get ME Model tool."""
 
 import logging
-from typing import Any, Literal, Optional, Type
+from typing import Any, Type
 
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
@@ -16,24 +16,17 @@ logger = logging.getLogger(__name__)
 class InputGetMEModel(BaseModel):
     """Inputs of the knowledge graph API."""
 
-    brain_region_id: str = Field(description="ID of the brain region of interest.")
-    mtype_id: Optional[str] = Field(
-        default=None, description="ID of the M-type of interest."
+    brain_region_id: str = Field(
+        description="ID of the brain region of interest. To get this ID, please use the `resolve-entities-tool` first."
     )
-    etype_id: Optional[
-        Literal[
-            "bAC",
-            "bIR",
-            "bNAC",
-            "bSTUT",
-            "cAC",
-            "cIR",
-            "cNAC",
-            "cSTUT",
-            "dNAC",
-            "dSTUT",
-        ]
-    ] = Field(default=None, description="ID of the E-type of interest.")
+    mtype_id: str | None = Field(
+        default=None,
+        description="ID of the M-type of interest. To get this ID, please use the `resolve-entities-tool` first.",
+    )
+    etype_id: str | None = Field(
+        default=None,
+        description="ID of the electrical type of the cell. Can be obtained through the 'resolve-entities-tool'.",
+    )
 
 
 class MEModelOutput(BaseToolOutput):
@@ -56,9 +49,9 @@ class GetMEModelTool(BasicTool):
     """Class defining the Get ME Model logic."""
 
     name: str = "get-me-model-tool"
-    description: str = """Searches a neuroscience based knowledge graph to retrieve neuron morpho-electric model names, IDs and descriptions.
-    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph. To get this ID, please use the `resolve-brain-region-tool` first.
-    Ideally, the user should also provide an 'mtype_id' and/or an 'etype_id' to filter the search results. But in case they are not provided, the search will return all models that match the brain region.
+    description: str = """Searches a neuroscience based knowledge graph to retrieve neuron morpho-electric model (ME models) names, IDs and descriptions.
+    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph.
+    Optionally accepts an mtype_id and/or an etype_id.
     The output is a list of ME models, containing:
     - The brain region ID.
     - The brain region name.
@@ -85,11 +78,11 @@ class GetMEModelTool(BasicTool):
         Parameters
         ----------
         brain_region_id
-            ID of the brain region of interest (of the form http://api.brain-map.org/api/v2/data/Structure/...)
+            ID of the brain region of interest (of the form http://api.brain-map.org/api/v2/data/Structure/...).
         mtype_id
-            ID of the mtype of the model
+            ID of the mtype of the model.
         etype_id
-            ID of the etype of the model
+            ID of the etype of the model.
 
         Returns
         -------
@@ -108,8 +101,8 @@ class GetMEModelTool(BasicTool):
             )
 
             if mtype_id:
-                mtype_ids = set(
-                    get_celltypes_descendants(mtype_id, self.metadata["celltypes_path"])
+                mtype_ids = get_celltypes_descendants(
+                    mtype_id, self.metadata["celltypes_path"]
                 )
                 logger.info(
                     f"Found {len(list(mtype_ids))} children of the cell types ontology for mtype."
@@ -117,21 +110,11 @@ class GetMEModelTool(BasicTool):
             else:
                 mtype_ids = None
 
-            if etype_id:
-                etype_ids = set(
-                    get_celltypes_descendants(etype_id, self.metadata["celltypes_path"])
-                )
-                logger.info(
-                    f"Found {len(list(etype_ids))} children of the cell types ontology for etype."
-                )
-            else:
-                etype_ids = None
-
             # Create the ES query to query the KG.
             entire_query = self.create_query(
                 brain_regions_ids=hierarchy_ids,
                 mtype_ids=mtype_ids,
-                etype_ids=etype_ids,
+                etype_id=etype_id,
             )
 
             # Send the query to get ME models.
@@ -151,7 +134,7 @@ class GetMEModelTool(BasicTool):
         self,
         brain_regions_ids: set[str],
         mtype_ids: set[str] | None = None,
-        etype_ids: set[str] | None = None,
+        etype_id: str | None = None,
     ) -> dict[str, Any]:
         """Create ES query out of the BR, mtype, and etype IDs.
 
@@ -191,32 +174,22 @@ class GetMEModelTool(BasicTool):
                 {
                     "bool": {
                         "should": [
-                            {"match": {"mType.label": mtype_id}}
+                            {"term": {"mType.@id.keyword": mtype_id}}
                             for mtype_id in mtype_ids
                         ]
                     }
                 }
             )
 
-        if etype_ids:
+        if etype_id:
             # The correct etype should match.
-            conditions.append(
-                {
-                    "bool": {
-                        "should": [
-                            {"match": {"eType.label": etype_id}}
-                            for etype_id in etype_ids
-                        ]
-                    }
-                }
-            )
+            conditions.append({"term": {"eType.@id.keyword": etype_id}})
 
         # Assemble the query to return ME models.
         entire_query = {
             "size": self.metadata["search_size"],
             "track_total_hits": True,
             "query": {"bool": {"must": conditions}},
-            "sort": {"createdAt": {"order": "desc", "unmapped_type": "keyword"}},
         }
         return entire_query
 

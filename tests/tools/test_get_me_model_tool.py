@@ -89,7 +89,7 @@ def test_create_query():
     etype_id = "etype-id/1234"
 
     entire_query = tool.create_query(
-        brain_regions_ids=brain_regions_ids, mtype_ids={mtype_id}, etype_ids={etype_id}
+        brain_regions_ids=brain_regions_ids, mtype_ids={mtype_id}, etype_id=etype_id
     )
     expected_query = {
         "size": 2,
@@ -115,12 +115,15 @@ def test_create_query():
                     },
                     {"term": {"@type.keyword": ("https://neuroshapes.org/MEModel")}},
                     {"term": {"deprecated": False}},
-                    {"bool": {"should": [{"match": {"mType.label": "mtype-id/1234"}}]}},
-                    {"bool": {"should": [{"match": {"eType.label": "etype-id/1234"}}]}},
+                    {
+                        "bool": {
+                            "should": [{"term": {"mType.@id.keyword": "mtype-id/1234"}}]
+                        }
+                    },
+                    {"term": {"eType.@id.keyword": "etype-id/1234"}},
                 ]
             }
         },
-        "sort": {"createdAt": {"order": "desc", "unmapped_type": "keyword"}},
     }
     assert isinstance(entire_query, dict)
     assert entire_query == expected_query
@@ -154,6 +157,5 @@ def test_create_query():
                 ]
             }
         },
-        "sort": {"createdAt": {"order": "desc", "unmapped_type": "keyword"}},
     }
     assert entire_query1 == expected_query1
