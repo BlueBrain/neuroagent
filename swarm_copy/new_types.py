@@ -1,25 +1,29 @@
-from typing import Callable, List, Optional, Union
+"""New types."""
+
+from typing import Callable
 
 # Third-party imports
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from swarm_copy.tools import BaseTool
 
 
 class Agent(BaseModel):
+    """Agent class."""
+
     name: str = "Agent"
     model: str = "gpt-4o-mini"
-    instructions: Union[str, Callable[[], str]] = "You are a helpful agent."
-    functions: List[type[BaseTool]] = []
-    tool_choice: str = None
+    instructions: str | Callable[[], str] = "You are a helpful agent."
+    functions: list[type[BaseTool]] = []
+    tool_choice: str | None = None
     parallel_tool_calls: bool = True
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class Response(BaseModel):
-    messages: List = []
-    agent: Optional[Agent] = None
+    """Agent response."""
+
+    messages: list = []
+    agent: Agent | None = None
     context_variables: dict = {}
 
 
@@ -35,5 +39,5 @@ class Result(BaseModel):
     """
 
     value: str = ""
-    agent: Optional[Agent] = None
+    agent: Agent | None = None
     context_variables: dict = {}

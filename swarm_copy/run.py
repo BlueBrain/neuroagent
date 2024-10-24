@@ -1,11 +1,10 @@
-# Standard library imports
+"""Run the agent routine."""
+
 import asyncio
 import copy
 import json
 from collections import defaultdict
-from typing import List
 
-# Package/library imports
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import (
@@ -15,20 +14,15 @@ from pydantic import ValidationError
 
 from swarm_copy.new_types import (
     Agent,
-    ChatCompletionMessage,
-    ChatCompletionMessageToolCall,
     Response,
     Result,
 )
-from swarm_copy.tools import BaseTool, PrintAccountDetailsTool
-
-# Local imports
-from swarm_copy.util import debug_print
-
-__CTX_VARS_NAME__ = "context_variables"
+from swarm_copy.tools import BaseTool
 
 
-class Swarm:
+class AgentsRoutine:
+    """Agents routine class. Wrapper for all the functions running the agent."""
+
     def __init__(self, client=None):
         if not client:
             client = AsyncOpenAI()
@@ -37,11 +31,12 @@ class Swarm:
     async def get_chat_completion(
         self,
         agent: Agent,
-        history: List,
+        history: list,
         context_variables: dict,
         model_override: str,
         debug: bool,
     ) -> ChatCompletionMessage:
+        """Send the OpenAI request."""
         context_variables = defaultdict(str, context_variables)
         instructions = (
             agent.instructions(context_variables)
@@ -49,15 +44,8 @@ class Swarm:
             else agent.instructions
         )
         messages = [{"role": "system", "content": instructions}] + history
-        debug_print(debug, "Getting chat completion for...:", messages)
 
         tools = [tool.pydantic_to_openai_schema() for tool in agent.functions]
-        # hide context_variables from model
-        # for tool in tools:
-        #     params = tool["function"]["parameters"]
-        #     params["properties"].pop(__CTX_VARS_NAME__, None)
-        #     if __CTX_VARS_NAME__ in params["required"]:
-        #         params["required"].remove(__CTX_VARS_NAME__)
 
         create_params = {
             "model": model_override or agent.model,
@@ -73,6 +61,7 @@ class Swarm:
         return await self.client.chat.completions.create(**create_params)
 
     def handle_function_result(self, result, debug) -> Result:
+        """Check if agent handoff or regular tool call."""
         match result:
             case Result() as result:
                 return result
@@ -87,7 +76,6 @@ class Swarm:
                     return Result(value=str(result))
                 except Exception as e:
                     error_message = f"Failed to cast response to string: {result}. Make sure agent functions return a string or Result object. Error: {str(e)}"
-                    debug_print(debug, error_message)
                     raise TypeError(error_message)
 
     async def execute_tool_calls(
@@ -97,7 +85,7 @@ class Swarm:
         context_variables: dict,
         debug: bool,
     ) -> Response:
-        """Run async tool calls"""
+        """Run async tool calls."""
         tasks = [
             asyncio.create_task(
                 self.handle_tool_call(
@@ -123,16 +111,16 @@ class Swarm:
     async def handle_tool_call(
         self,
         tool_call: ChatCompletionMessageToolCall,
-        tools: List[type[BaseTool]],
+        tools: list[type[BaseTool]],
         context_variables: dict,
         debug: bool,
     ) -> dict[str, str]:
+        """Run individual tools."""
         tool_map = {tool.name: tool for tool in tools}
 
         name = tool_call.function.name
         # handle missing tool case, skip to next tool
         if name not in tool_map:
-            debug_print(debug, f"Tool {name} not found in function map.")
             return {
                 "role": "tool",
                 "tool_call_id": tool_call.id,
@@ -140,7 +128,6 @@ class Swarm:
                 "content": f"Error: Tool {name} not found.",
             }
         kwargs = json.loads(tool_call.function.arguments)
-        debug_print(debug, f"Processing tool call: {name} with arguments {kwargs}")
 
         tool = tool_map[name]
         try:
@@ -184,13 +171,14 @@ class Swarm:
     async def arun(
         self,
         agent: Agent,
-        messages: List,
+        messages: list,
         context_variables: dict = {},
         model_override: str = None,
         debug: bool = False,
         max_turns: int = float("inf"),
         execute_tools: bool = True,
     ) -> Response:
+        """Run the agent main loop."""
         active_agent = agent
         context_variables = copy.deepcopy(context_variables)
         history = copy.deepcopy(messages)
@@ -206,14 +194,12 @@ class Swarm:
                 debug=debug,
             )
             message = completion.choices[0].message
-            debug_print(debug, "Received completion:", message)
             message.sender = active_agent.name
             history.append(
                 json.loads(message.model_dump_json())
             )  # to avoid OpenAI types (?)
 
             if not message.tool_calls or not execute_tools:
-                debug_print(debug, "Ending turn.")
                 break
 
             # handle function calls, updating context_variables, and switching agents
@@ -230,72 +216,3 @@ class Swarm:
             agent=active_agent,
             context_variables=context_variables,
         )
-
-
-def pretty_print_messages(messages) -> None:
-    for message in messages:
-        if message["role"] != "assistant":
-            continue
-
-        # print agent name in blue
-        print(f"\033[94m{message['sender']}\033[0m:", end=" ")
-
-        # print response, if any
-        if message["content"]:
-            print(message["content"])
-
-        # print tool calls in purple, if any
-        tool_calls = message.get("tool_calls") or []
-        if len(tool_calls) > 1:
-            print()
-        for tool_call in tool_calls:
-            f = tool_call["function"]
-            name, args = f["name"], f["arguments"]
-            arg_str = json.dumps(json.loads(args)).replace(":", "=")
-            print(f"\033[95m{name}\033[0m({arg_str[1:-1]})")
-
-
-async def run_demo_loop(starting_agent, context_variables=None, debug=False) -> None:
-    client = Swarm()
-    print("Starting Swarm CLI 🐝")
-
-    messages = []
-    agent = starting_agent
-
-    while True:
-        user_input = input("\033[90mUser\033[0m: ")
-        messages.append({"role": "user", "content": user_input})
-
-        response = await client.arun(
-            agent=agent,
-            messages=messages,
-            context_variables=context_variables or {},
-            debug=debug,
-        )
-        pretty_print_messages(response.messages)
-
-        messages.extend(response.messages)
-        agent = response.agent
-
-
-def instructions(context_variables):
-    name = context_variables.get("name", "User")
-    return f"You are a helpful agent. Greet the user by name ({name})."
-
-
-def print_account_details(context_variables: dict):
-    user_id = context_variables.get("user_id", None)
-    name = context_variables.get("name", None)
-    print(f"Account Details: {name} {user_id}")
-    return "Success"
-
-
-if __name__ == "__main__":
-    agent = Agent(
-        name="Agent",
-        instructions=instructions,
-        functions=[PrintAccountDetailsTool],
-    )
-
-    context_variables = {"name": "James", "user_id": 123}
-    asyncio.run(run_demo_loop(agent, context_variables, False))
