@@ -22,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added release please for automatic changelog creation and releases.
 - Human in the loop for bluenaas.
 
-
 ### Fixed
 - Fixed 0% unittest coverage bug.
 - Get ME model tool querying logic
