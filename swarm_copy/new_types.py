@@ -1,6 +1,6 @@
 """New types."""
 
-from typing import Callable
+from typing import Any, Callable
 
 # Third-party imports
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ class Agent(BaseModel):
     name: str = "Agent"
     model: str = "gpt-4o-mini"
     instructions: str | Callable[[], str] = "You are a helpful agent."
-    functions: list[type[BaseTool]] = []
+    tools: list[type[BaseTool]] = []
     tool_choice: str | None = None
     parallel_tool_calls: bool = True
 
@@ -22,9 +22,9 @@ class Agent(BaseModel):
 class Response(BaseModel):
     """Agent response."""
 
-    messages: list = []
+    messages: list[dict[str, str]] = []
     agent: Agent | None = None
-    context_variables: dict = {}
+    context_variables: dict[str, Any] = {}
 
 
 class Result(BaseModel):
@@ -40,4 +40,4 @@ class Result(BaseModel):
 
     value: str = ""
     agent: Agent | None = None
-    context_variables: dict = {}
+    context_variables: dict[str, Any] = {}

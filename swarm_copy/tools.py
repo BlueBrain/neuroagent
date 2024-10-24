@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
 from openai.lib._tools import pydantic_function_tool
+from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -23,10 +24,10 @@ class BaseTool(BaseModel, ABC):
     input_schema: BaseModel
 
     @classmethod
-    def pydantic_to_openai_schema(cls):
+    def pydantic_to_openai_schema(cls) -> ChatCompletionToolParam:
         """Convert pydantic schema to OpenAI json."""
         return pydantic_function_tool(
-            model=cls.__annotations__.get("input_schema"),
+            model=cls.__annotations__["input_schema"],
             name=cls.name,
             description=cls.description,
         )
@@ -58,7 +59,7 @@ class PrintAccountDetailsTool(BaseTool):
     input_schema: AccountDetailInput
     metadata: AccountDetailMetadata
 
-    async def arun(self):
+    async def arun(self) -> str:
         """Run the tool."""
         user_id = self.metadata.user_id
         await asyncio.sleep(0.5)

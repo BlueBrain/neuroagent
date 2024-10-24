@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @cache
-def get_settings():
+def get_settings() -> Settings:
     """Get the global settings."""
     logger.info("Reading the environment and instantiating settings")
     return Settings()
@@ -24,9 +24,12 @@ def get_settings():
 
 def get_openai_client(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> AsyncOpenAI:
+) -> AsyncOpenAI | None:
     """Get the OpenAi Async client."""
-    return AsyncOpenAI(api_key=settings.openai.token.get_secret_value())
+    if settings.openai.token:
+        return AsyncOpenAI(api_key=settings.openai.token.get_secret_value())
+    else:
+        return None
 
 
 def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> Agent:
@@ -37,7 +40,7 @@ def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> 
         instructions="""You are a helpful assistant helping scientists with neuro-scientific questions.
                 You must always specify in your answers from which brain regions the information is extracted.
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
-        functions=[PrintAccountDetailsTool],
+        tools=[PrintAccountDetailsTool],
         model=settings.openai.model,
     )
     return agent
@@ -54,5 +57,5 @@ def get_context_variables(
 def get_agents_routine(
     openai: Annotated[AsyncOpenAI, Depends(get_openai_client)],
 ) -> AgentsRoutine:
-    """Get the swarm client."""
+    """Get the AgentRoutine client."""
     return AgentsRoutine(openai)

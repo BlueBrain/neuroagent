@@ -106,12 +106,12 @@ class AgentRequest(BaseModel):
 @app.post("/run/qa")
 async def run_simple_agent(
     user_request: AgentRequest,
-    swarm: Annotated[AgentsRoutine, Depends(get_agents_routine)],
+    agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
 ) -> list[Any]:
     """Run a single agent query."""
-    response = await swarm.arun(
+    response = await agent_routine.arun(
         agent, [{"role": "user", "content": user_request.query}], context_variables
     )
     return response.messages
