@@ -37,9 +37,9 @@ jobs:
           pip install bandit[toml]==1.7.4 ruff==0.6.7
       - name: Linting check
         run: |
-          bandit -qr -c pyproject.toml src/
-          ruff check src/ tests/
-          ruff format --check src/ tests
+          bandit -qr -c pyproject.toml src/ swarm_copy/
+          ruff check src/ tests/ swarm_copy/
+          ruff format --check src/ tests/ swarm_copy/
   unit-tests:
     runs-on: ${{ matrix.os }}
     services:
@@ -87,7 +87,7 @@ jobs:
           pip install ".[dev]"
       - name: Running mypy and tests
         run: |
-          mypy src/
+          mypy src/ swarm_copy/
           # Include src/ directory in Python path to prioritize local files in pytest
           export PYTHONPATH=$(pwd)/src:$PYTHONPATH
           pytest --color=yes
