@@ -22,7 +22,7 @@ class Agent(BaseModel):
 class Response(BaseModel):
     """Agent response."""
 
-    messages: list[dict[str, str]] = []
+    messages: list[dict[str, Any]] = []
     agent: Agent | None = None
     context_variables: dict[str, Any] = {}
 
