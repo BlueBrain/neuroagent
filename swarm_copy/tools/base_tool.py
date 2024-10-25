@@ -31,6 +31,14 @@ class BaseTool(BaseModel, ABC):
         """Run the tool"""
 
 
+class BaseToolOutput(BaseModel):
+    """Base class for tool outputs."""
+
+    def __repr__(self) -> str:
+        """Representation method."""
+        return self.model_dump_json()
+
+
 class AccountDetailInput(BaseModel):
     """Inputs for the account detail tool"""
 
