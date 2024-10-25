@@ -13,7 +13,6 @@ from pydantic import BaseModel
 
 from swarm_copy.app.app_utils import setup_engine
 from swarm_copy.app.database.sql_schemas import Base
-
 from swarm_copy.app.dependencies import (
     get_agents_routine,
     get_connection_string,
@@ -76,7 +75,6 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
     logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
     logging.getLogger("bluepyefe").setLevel("CRITICAL")
@@ -84,7 +82,6 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
     yield
     if engine:
         await engine.dispose()
-
 
 
 app = FastAPI(
@@ -126,9 +123,9 @@ async def run_simple_agent(
     agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-) -> list[Any]:
+) -> str:
     """Run a single agent query."""
     response = await agent_routine.arun(
         agent, [{"role": "user", "content": user_request.query}], context_variables
     )
-    return response.messages
+    return response.message

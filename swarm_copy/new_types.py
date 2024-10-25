@@ -4,9 +4,7 @@ from typing import Any, Callable
 
 # Third-party imports
 from pydantic import BaseModel, ConfigDict
-
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 from swarm_copy.tools import BaseTool
 
@@ -20,7 +18,7 @@ class Agent(BaseModel):
     tools: list[type[BaseTool]] = []
     tool_choice: str | None = None
     parallel_tool_calls: bool = True
-    database_session: AsyncSession | None = None 
+    database_session: AsyncSession | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -31,6 +29,12 @@ class Response(BaseModel):
     messages: list[dict[str, str]] = []
     agent: Agent | None = None
     context_variables: dict[str, Any] = {}
+
+
+class AgentResponse(BaseModel):
+    """Final agent response."""
+
+    message: str = ""
 
 
 class Result(BaseModel):

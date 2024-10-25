@@ -12,11 +12,12 @@ from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
 )
 from pydantic import ValidationError
+from sqlalchemy import select
 
-from swarm_copy.app.database.sql_schemas import Test_DB
-
+from swarm_copy.app.database.sql_schemas import Messages
 from swarm_copy.new_types import (
     Agent,
+    AgentResponse,
     Response,
     Result,
 )
@@ -175,16 +176,22 @@ class AgentsRoutine:
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
         execute_tools: bool = True,
-    ) -> Response:
+    ) -> AgentResponse:
         """Run the agent main loop."""
         active_agent = agent
 
-        messages = await agent.database_session.get(Test_DB, "dour")
-        if messages: 
-            messages = json.loads(messages.messages)
-        else:
-            messages=[]
-        messages.extend(query)
+        # get messages from history.
+        message_query = await agent.database_session.execute(
+            select(Messages).where(Messages.thread_id == context_variables["thread_id"])
+        )
+        db_messages = message_query.scalars().all()
+
+        messages = []
+        if db_messages:
+            for msg in db_messages:
+                messages.append(json.loads(msg.message_content))
+
+        messages.extend(query)  # add new query message.
 
         history = copy.deepcopy(messages)
         init_len = len(messages)
@@ -213,15 +220,19 @@ class AgentsRoutine:
             if partial_response.agent:
                 active_agent = partial_response.agent
 
-        breakpoint()
-        new_hist = Test_DB(thread_id="dour", messages= json.dumps(history))
+        # Add messages to DB.
+        for i, messages in enumerate(history):
+            new_msg = Messages(
+                message_order=i,
+                thread_id=context_variables["thread_id"],
+                message_content=json.dumps(messages),
+            )
+            agent.database_session.add(new_msg)
+            await agent.database_session.commit()
+            await agent.database_session.refresh(new_msg)
 
-        agent.database_session.add(new_hist)
-        await agent.database_session.commit()
-        await agent.database_session.refresh(new_hist)
-
-        return Response(
-            messages=history,
-            agent=active_agent,
-            context_variables=context_variables,
+        return AgentResponse(
+            message=history[-1]["content"],
+            # agent=active_agent,
+            # context_variables=context_variables,
         )
