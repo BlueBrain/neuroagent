@@ -4,7 +4,7 @@ import asyncio
 import copy
 import json
 from collections import defaultdict
-from typing import Any
+from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
@@ -217,10 +217,10 @@ class AgentsRoutine:
         self,
         agent: Agent,
         messages: list[dict[str, str]],
-        context_variables: dict = {},
+        context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
-    ):
+    ) -> AsyncIterator[str | Response]:
         """Stream the agent response."""
         active_agent = agent
         context_variables = copy.deepcopy(context_variables)
@@ -229,7 +229,7 @@ class AgentsRoutine:
         is_streaming = False
 
         while len(history) - init_len < max_turns:
-            message = {
+            message: dict[str, Any] = {
                 "content": "",
                 "sender": agent.name,
                 "role": "assistant",
@@ -251,7 +251,7 @@ class AgentsRoutine:
                 model_override=model_override,
                 stream=True,
             )
-            async for chunk in completion:
+            async for chunk in completion:  # type: ignore
                 delta = json.loads(chunk.choices[0].delta.json())
                 if delta["role"] == "assistant":
                     delta["sender"] = active_agent.name
