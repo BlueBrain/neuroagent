@@ -31,9 +31,13 @@ class InputResolveBR(BaseModel):
         default=None,
         description=(
             "E-type of interest specified by the user in natural english. Possible values:"
-            f" {', '.join(list(ETYPE_IDS.keys()))}. The first letter meaning classical,"
-            " bursting or delayed, The other letters in capital meaning accomodating,"
-            " non-accomodating, stuttering or irregular spiking."
+            f" {', '.join(list(ETYPE_IDS.keys()))}. The first letter meaning c: continuous,"
+            "b: bursting or d: delayed, The other letters in capital meaning AC: accomodating,"
+            "NAC: non-accomodating, AD: adapting, NAD: non-adapting, STUT: stuttering,"
+            "IR: irregular spiking. Optional suffixes in lowercase can exist:"
+            "pyr: pyramidal, int: interneuron, _ltb: low threshold bursting,"
+            "_noscltb: non-oscillatory low-threshold bursting. Examples: "
+            "cADpyr: continuous adapting pyramidal. dAD_ltb: delayed adapting low-threshold bursting"
         ),
     )
 
