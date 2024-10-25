@@ -23,7 +23,7 @@ repos:
     rev: v1.8.0
     hooks:
     - id: mypy
-      files: ^src/, ^swarm_copy/
+      files: ^src/ ^swarm_copy/
       additional_dependencies: ['pydantic', 'types-requests']
 
   - repo: https://github.com/PyCQA/bandit
@@ -31,5 +31,5 @@ repos:
     hooks:
     - id: bandit
       args: [-c, pyproject.toml, -qr]
-      files: ^src/, ^swarm_copy/
+      files: ^src/
       additional_dependencies: ["bandit[toml]"]
