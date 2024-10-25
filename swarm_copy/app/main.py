@@ -11,8 +11,12 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from swarm_copy.app.app_utils import setup_engine
+from swarm_copy.app.database.sql_schemas import Base
+
 from swarm_copy.app.dependencies import (
     get_agents_routine,
+    get_connection_string,
     get_context_variables,
     get_settings,
     get_starting_agent,
@@ -63,11 +67,24 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
     """Read environment (settings of the application)."""
     app_settings = fastapi_app.dependency_overrides.get(get_settings, get_settings)()
 
+    # Get the sqlalchemy engine and store it in app state.
+    engine = setup_engine(app_settings, get_connection_string(app_settings))
+    fastapi_app.state.engine = engine
+
+    # Create the tables for the agent memory.
+    if engine:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
     logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
     logging.getLogger("bluepyefe").setLevel("CRITICAL")
 
     yield
+    if engine:
+        await engine.dispose()
+
 
 
 app = FastAPI(

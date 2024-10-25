@@ -13,6 +13,8 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 from pydantic import ValidationError
 
+from swarm_copy.app.database.sql_schemas import Test_DB
+
 from swarm_copy.new_types import (
     Agent,
     Response,
@@ -168,7 +170,7 @@ class AgentsRoutine:
     async def arun(
         self,
         agent: Agent,
-        messages: list[dict[str, str]],
+        query: list[dict[str, str]],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
@@ -176,7 +178,14 @@ class AgentsRoutine:
     ) -> Response:
         """Run the agent main loop."""
         active_agent = agent
-        context_variables = copy.deepcopy(context_variables)
+
+        messages = await agent.database_session.get(Test_DB, "dour")
+        if messages: 
+            messages = json.loads(messages.messages)
+        else:
+            messages=[]
+        messages.extend(query)
+
         history = copy.deepcopy(messages)
         init_len = len(messages)
 
@@ -203,6 +212,13 @@ class AgentsRoutine:
             context_variables.update(partial_response.context_variables)
             if partial_response.agent:
                 active_agent = partial_response.agent
+
+        breakpoint()
+        new_hist = Test_DB(thread_id="dour", messages= json.dumps(history))
+
+        agent.database_session.add(new_hist)
+        await agent.database_session.commit()
+        await agent.database_session.refresh(new_hist)
 
         return Response(
             messages=history,

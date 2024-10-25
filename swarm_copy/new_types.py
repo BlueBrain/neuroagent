@@ -3,7 +3,10 @@
 from typing import Any, Callable
 
 # Third-party imports
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 from swarm_copy.tools import BaseTool
 
@@ -17,6 +20,9 @@ class Agent(BaseModel):
     tools: list[type[BaseTool]] = []
     tool_choice: str | None = None
     parallel_tool_calls: bool = True
+    database_session: AsyncSession | None = None 
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class Response(BaseModel):
