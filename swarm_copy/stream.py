@@ -30,7 +30,5 @@ async def stream_agent_response(
         # Final chunk that contains the whole response
         else:
             to_db = chunk  # noqa: F841
-            # Safety but should never be needed as last chunk only is response
-            break
 
     # Put in db logic...
