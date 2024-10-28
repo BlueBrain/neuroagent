@@ -126,7 +126,7 @@ async def stream_simple_agent(
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
 ) -> StreamingResponse:
-    """Run a single agent query."""
+    """Run a single agent query in a streamed fashion."""
     stream_generator = stream_agent_response(
         agents_routine,
         agent,
