@@ -253,8 +253,6 @@ class AgentsRoutine:
             )
             async for chunk in completion:  # type: ignore
                 delta = json.loads(chunk.choices[0].delta.json())
-                if delta["role"] == "assistant":
-                    delta["sender"] = active_agent.name
 
                 # Check for tool calls
                 if delta["tool_calls"]:
@@ -272,7 +270,6 @@ class AgentsRoutine:
                     yield delta["content"]
 
                 delta.pop("role", None)
-                delta.pop("sender", None)
                 merge_chunk(message, delta)
 
             message["tool_calls"] = list(message.get("tool_calls", {}).values())
