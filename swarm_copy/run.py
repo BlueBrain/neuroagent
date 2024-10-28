@@ -260,7 +260,7 @@ class AgentsRoutine:
                 if delta["tool_calls"]:
                     tool = delta["tool_calls"][0]["function"]
                     if tool["name"]:
-                        yield (f'\nCalling tool : {tool["name"]} with' " arguments : ")
+                        yield f"\nCalling tool : {tool['name']} with arguments : "
                     if tool["arguments"]:
                         yield tool["arguments"]
 
