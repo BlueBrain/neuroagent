@@ -1,19 +1,23 @@
-import logging
-from typing import Literal, Annotated, ClassVar, Any
+"""BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
-from langchain_core.messages import BaseMessage
+import json
+import logging
+from typing import Annotated, Any, ClassVar, Literal
+
+from httpx import AsyncClient
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import ToolException
 from langgraph.prebuilt import InjectedState
-from neuroagent.tools.bluenaas_tool import RecordingLocation
 from pydantic import BaseModel, Field
 
+from neuroagent.tools.bluenaas_tool import RecordingLocation
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
 
 logger = logging.getLogger(__name__)
 
 
 class BlueNAASInput(BaseModel):
-    """Inputs for the Bluenaas tool"""
+    """Inputs for the Bluenaas tool."""
 
     me_model_id: str = Field(
         description=(
@@ -59,11 +63,15 @@ class BlueNAASInput(BaseModel):
 
 
 class BlueNAASMetadata(BaseMetadata):
-    """Metadata class for the account detail tool"""
+    """Metadata class for the BlueNAAS tool."""
+
     section: str = Field(default="soma[0]", description="Section to record from")
     offset: float = Field(
         default=0.5, ge=0, le=1, description="Offset in the section to record from"
     )
+    bluenaas_url: str
+    httpx_client: AsyncClient
+    token: str
 
 
 class BlueNaaSValidatedOutput(BaseToolOutput):
@@ -83,8 +91,12 @@ class BlueNaaSInvalidatedOutput(BaseModel):
 
 
 class BlueNAASTool(BaseTool):
+    """Class defining the BlueNaaS tool."""
+
     name: ClassVar[str] = "bluenaas-tool"
-    description: str = """Runs a single-neuron simulation using the BlueNaaS service.
+    description: ClassVar[
+        str
+    ] = """Runs a single-neuron simulation using the BlueNaaS service.
     Requires a "me_model_id" which must be fetched by get-me-model-tool.
     Optionally, the user can specify simulation parameters.
     The tool will always ask for config validation from the user before running.
@@ -94,7 +106,12 @@ class BlueNAASTool(BaseTool):
     input_schema: BlueNAASInput
     metadata: BlueNAASMetadata
 
-    async def arun(self):
+    async def arun(
+        self,
+    ) -> (
+        tuple[BlueNaaSValidatedOutput, dict[str, bool]]
+        | tuple[BlueNaaSInvalidatedOutput, dict[str, bool]]
+    ):
         """Run the BlueNaaS tool."""
         logger.info("Running BlueNaaS tool")
 
@@ -114,10 +131,10 @@ class BlueNAASTool(BaseTool):
 
         if self.is_validated(self.input_schema.messages, json_api):
             try:
-                await self.metadata["httpx_client"].post(
-                    url=self.metadata["url"],
+                await self.metadata.httpx_client.post(
+                    url=self.metadata.bluenaas_url,
                     params={"model_id": self.input_schema.me_model_id},
-                    headers={"Authorization": f'Bearer {self.metadata["token"]}'},
+                    headers={"Authorization": f"Bearer {self.metadata.token}"},
                     json=json_api,
                     timeout=5.0,
                 )
@@ -130,3 +147,112 @@ class BlueNAASTool(BaseTool):
                 raise ToolException(str(e), self.name)
         else:
             return BlueNaaSInvalidatedOutput(inputs=json_api), {"is_validated": True}
+
+    @staticmethod
+    def create_json_api(
+        current_injection__inject_to: str = "soma[0]",
+        current_injection__stimulus__stimulus_type: Literal[
+            "current_clamp", "voltage_clamp", "conductance"
+        ] = "current_clamp",
+        current_injection__stimulus__stimulus_protocol: Literal[
+            "ap_waveform", "idrest", "iv", "fire_pattern"
+        ] = "ap_waveform",
+        current_injection__stimulus__amplitudes: list[float] | None = None,
+        record_from: list[RecordingLocation] | None = None,
+        conditions__celsius: int = 34,
+        conditions__vinit: int = -73,
+        conditions__hypamp: int = 0,
+        conditions__max_time: int = 100,
+        conditions__time_step: float = 0.05,
+        conditions__seed: int = 100,
+    ) -> dict[str, Any]:
+        """Based on the simulation config, create a valid JSON for the API."""
+        if not current_injection__stimulus__amplitudes:
+            current_injection__stimulus__amplitudes = [0.1]
+        if not record_from:
+            record_from = [RecordingLocation()]
+        json_api = {
+            "currentInjection": {
+                "injectTo": current_injection__inject_to,
+                "stimulus": {
+                    "stimulusType": current_injection__stimulus__stimulus_type,
+                    "stimulusProtocol": current_injection__stimulus__stimulus_protocol,
+                    "amplitudes": current_injection__stimulus__amplitudes,
+                },
+            },
+            "recordFrom": [recording.model_dump() for recording in record_from],
+            "conditions": {
+                "celsius": conditions__celsius,
+                "vinit": conditions__vinit,
+                "hypamp": conditions__hypamp,
+                "max_time": conditions__max_time,
+                "time_step": conditions__time_step,
+                "seed": conditions__seed,
+            },
+            "type": "single-neuron-simulation",
+            "simulationDuration": conditions__max_time,
+        }
+        return json_api
+
+    @staticmethod
+    def is_validated(messages: list[BaseMessage], json_api: dict[str, Any]) -> bool:
+        """Decide whether the current configuration has been validated by the user.
+
+        Parameters
+        ----------
+        messages
+            List of Langgraph messages extracted from the graph state.
+        json_api
+            Simulation configuration that the tool will run if it has been validated.
+
+        Returns
+        -------
+        is_validated
+            Boolean stating wether or not the configuration has been validated by the user.
+        """
+        # If it is the first time the tool is called in the conversation, need validation
+        try:
+            # Get the last bluenaas call
+            last_bluenaas_call = next(
+                (
+                    message
+                    for message in reversed(messages)
+                    if isinstance(message, ToolMessage)
+                    and message.name == "bluenaas-tool"
+                )
+            )
+        except StopIteration:
+            return False
+
+        # Verify if the tool has been recently called to ask for validation
+        # There has to be at least 3 messages in the state otherwise cannot be validated
+        if len(messages) > 3:
+            last_messages = messages[-4:-1]
+            recently_validated = (
+                isinstance(last_messages[-1], HumanMessage)  # Approval from the human
+                and isinstance(
+                    last_messages[-2], AIMessage
+                )  # AI answering the human and asking for validation
+                and isinstance(
+                    last_messages[-3], ToolMessage
+                )  # First tool call not validated
+                and last_messages[-3].name == "bluenaas-tool"
+            )
+            # If it hasn't been recently validated, we need more validation
+            if not recently_validated:
+                return False
+        # If there is not enough messages in the state to have a potential validation
+        else:
+            return False
+
+        # If the previous simulation was started, ask for validation on the new one
+        if not last_bluenaas_call.artifact.get("is_validated"):
+            return False
+
+        # Verify if the config has changed since previous call. Validate again if so
+        old_config = json.loads(
+            last_bluenaas_call.content.split("<json>")[-1]  # type: ignore
+            .split("</json>")[0]
+            .replace("'", '"')
+        )
+        return old_config == json_api

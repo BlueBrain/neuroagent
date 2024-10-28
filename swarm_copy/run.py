@@ -18,7 +18,7 @@ from swarm_copy.new_types import (
     Response,
     Result,
 )
-from swarm_copy.tools import BaseTool
+from swarm_copy.tools.base_tool import BaseTool
 
 
 class AgentsRoutine:

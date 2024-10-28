@@ -5,7 +5,7 @@ from typing import Any, Callable
 # Third-party imports
 from pydantic import BaseModel
 
-from swarm_copy.tools import BaseTool
+from swarm_copy.tools.base_tool import BaseTool
 
 
 class Agent(BaseModel):
