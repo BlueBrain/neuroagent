@@ -5,7 +5,7 @@ from typing import ClassVar
 
 from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from neuroagent.resolving import resolve_query
 from neuroagent.tools.base_tool import ETYPE_IDS, EtypesLiteral
@@ -68,6 +68,7 @@ class ResolveBRMetadata(BaseMetadata):
     httpx_client: AsyncClient
     kg_sparql_url: str
     kg_class_view_url: str
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class ResolveEntitiesTool(BaseTool):

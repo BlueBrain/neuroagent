@@ -8,7 +8,7 @@ import numpy as np
 from httpx import AsyncClient
 from langchain_core.tools import ToolException
 from neurom import load_morphology
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from neuroagent.utils import get_kg_data
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -35,6 +35,7 @@ class MorphologyFeaturesMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     httpx_client: AsyncClient
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class MorphologyFeatureTool(BaseTool):

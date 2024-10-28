@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal
 
 from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from neuroagent.utils import get_descendants_id
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -155,6 +155,7 @@ class FeatureMetadata(BaseMetadata):
     httpx_client: AsyncClient
     morpho_search_size: int
     brainregion_path: str
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class KGMorphoFeatureOutput(BaseToolOutput):

@@ -4,7 +4,7 @@ import logging
 from typing import Any, ClassVar
 
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
 
@@ -33,6 +33,7 @@ class LiteratureSearchMetadata(BaseMetadata):
     retriever_k: int
     reranker_k: int
     use_reranker: bool
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class ParagraphMetadata(BaseToolOutput, extra="ignore"):

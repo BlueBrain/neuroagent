@@ -8,7 +8,7 @@ from httpx import AsyncClient
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import ToolException
 from langgraph.prebuilt import InjectedState
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from neuroagent.tools.bluenaas_tool import RecordingLocation
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -72,6 +72,7 @@ class BlueNAASMetadata(BaseMetadata):
     bluenaas_url: str
     httpx_client: AsyncClient
     token: str
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class BlueNaaSValidatedOutput(BaseToolOutput):

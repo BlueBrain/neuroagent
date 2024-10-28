@@ -9,7 +9,7 @@ from bluepyefe.extract import extract_efeatures
 from efel.units import get_unit
 from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from neuroagent.utils import get_kg_data
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -169,6 +169,7 @@ class ElectrophysMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     httpx_client: AsyncClient
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class FeaturesOutput(BaseToolOutput):

@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from neuroagent.cell_types import get_celltypes_descendants
 from neuroagent.utils import get_descendants_id
@@ -39,6 +39,7 @@ class GetMEModelMetadata(BaseMetadata):
     me_model_search_size: int
     brainregion_path: str
     celltypes_path: str
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class MEModelOutput(BaseToolOutput):

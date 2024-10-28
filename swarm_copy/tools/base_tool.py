@@ -1,12 +1,11 @@
 """Base tool."""
 
-import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
 from openai.lib._tools import pydantic_function_tool
 from openai.types.chat import ChatCompletionToolParam
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class BaseMetadata(BaseModel):
@@ -43,33 +42,3 @@ class BaseToolOutput(BaseModel):
     def __repr__(self) -> str:
         """Representation method."""
         return self.model_dump_json()
-
-
-class AccountDetailInput(BaseModel):
-    """Inputs for the account detail tool."""
-
-    account_name: str = Field(
-        description="Name the the person to whom the account belongs."
-    )
-
-
-class AccountDetailMetadata(BaseMetadata):
-    """Metadata class for the account detail tool."""
-
-    user_id: int
-
-
-class PrintAccountDetailsTool(BaseTool):
-    """Dummy agent tool."""
-
-    name: ClassVar[str] = "print-account-details-tool"
-    description: ClassVar[str] = "Print the account details"
-    input_schema: AccountDetailInput
-    metadata: AccountDetailMetadata
-
-    async def arun(self) -> str:
-        """Run the tool."""
-        user_id = self.metadata.user_id
-        await asyncio.sleep(0.5)
-        print(f"Account Details: {self.input_schema.account_name} {user_id}")
-        return "Success"
