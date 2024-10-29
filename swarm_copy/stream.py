@@ -3,7 +3,9 @@
 from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from swarm_copy.app.database.db_utils import put_messages_in_db
 from swarm_copy.new_types import Agent, Response
 from swarm_copy.run import AgentsRoutine
 
@@ -13,6 +15,8 @@ async def stream_agent_response(
     agent: Agent,
     messages: list[dict[str, str]],
     context_variables: dict[str, Any],
+    thread_id: str,
+    session: AsyncSession,
 ) -> AsyncIterator[str]:
     """Redefine fastAPI connections to enable streaming."""
     if isinstance(agents_routine.client, AsyncOpenAI):
@@ -31,4 +35,9 @@ async def stream_agent_response(
         else:
             to_db = chunk  # noqa: F841
 
-    # Put in db logic...
+    await put_messages_in_db(
+        history=to_db.messages,
+        offset=len(messages) - 1,
+        thread_id=thread_id,
+        session=session,
+    )
