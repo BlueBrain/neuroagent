@@ -2,7 +2,7 @@
 
 import logging
 from functools import cache
-from typing import Annotated, Any
+from typing import Annotated, Any, AsyncIterator
 
 from fastapi import Depends
 from openai import AsyncOpenAI
@@ -22,14 +22,18 @@ def get_settings() -> Settings:
     return Settings()
 
 
-def get_openai_client(
+async def get_openai_client(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> AsyncOpenAI | None:
+) -> AsyncIterator[AsyncOpenAI | None]:
     """Get the OpenAi Async client."""
-    if settings.openai.token:
-        return AsyncOpenAI(api_key=settings.openai.token.get_secret_value())
+    if not settings.openai.token:
+        yield None
     else:
-        return None
+        try:
+            client = AsyncOpenAI(api_key=settings.openai.token.get_secret_value())
+            yield client
+        finally:
+            await client.close()
 
 
 def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> Agent:
@@ -55,7 +59,7 @@ def get_context_variables(
 
 
 def get_agents_routine(
-    openai: Annotated[AsyncOpenAI, Depends(get_openai_client)],
+    openai: Annotated[AsyncOpenAI | None, Depends(get_openai_client)],
 ) -> AgentsRoutine:
     """Get the AgentRoutine client."""
     return AgentsRoutine(openai)
