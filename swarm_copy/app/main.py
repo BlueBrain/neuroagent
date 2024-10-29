@@ -9,6 +9,7 @@ from uuid import uuid4
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from swarm_copy.app.app_utils import setup_engine
@@ -22,6 +23,7 @@ from swarm_copy.app.dependencies import (
 )
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
+from swarm_copy.stream import stream_agent_response
 
 LOGGING = {
     "version": 1,
@@ -128,4 +130,21 @@ async def run_simple_agent(
     response = await agent_routine.arun(
         agent, [{"role": "user", "content": user_request.query}], context_variables
     )
-    return response.message
+    return response.messages
+
+
+@app.post("/run/streamed")
+async def stream_simple_agent(
+    user_request: AgentRequest,
+    agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
+    agent: Annotated[Agent, Depends(get_starting_agent)],
+    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
+) -> StreamingResponse:
+    """Run a single agent query in a streamed fashion."""
+    stream_generator = stream_agent_response(
+        agents_routine,
+        agent,
+        [{"role": "user", "content": user_request.query}],
+        context_variables,
+    )
+    return StreamingResponse(stream_generator, media_type="text/event-stream")

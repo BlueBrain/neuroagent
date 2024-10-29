@@ -18,7 +18,6 @@ class Agent(BaseModel):
     tools: list[type[BaseTool]] = []
     tool_choice: str | None = None
     parallel_tool_calls: bool = True
-    database_session: AsyncSession | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -26,7 +25,7 @@ class Agent(BaseModel):
 class Response(BaseModel):
     """Agent response."""
 
-    messages: list[dict[str, str]] = []
+    messages: list[dict[str, Any]] = []
     agent: Agent | None = None
     context_variables: dict[str, Any] = {}
 
