@@ -1,0 +1,46 @@
+name: Deploy to ECR
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+
+  build:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Build FastAPI Image
+      run: |
+        docker build -t temp:latest -f Dockerfile .
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1.7.0
+
+      with:
+        role-to-assume: arn:aws:iam::671250183987:role/GitHub2ECR  # check terraform output
+
+        role-session-name: GitHub_to_AWS_via_FederatedOIDC
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr-management
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Tag and Push FastAPI Image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr-management.outputs.registry }}
+        ECR_REPOSITORY: 671250183987.dkr.ecr.us-east-1.amazonaws.com/ml-repository
+        IMAGE_TAG: neuroagent-${{ github.ref_name }}
+      run: |
+        docker tag temp:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
