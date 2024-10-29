@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2](https://github.com/BlueBrain/neuroagent/compare/v0.3.1...v0.3.2) (2024-10-29)
+
+
+### Bug Fixes
+
+* Fix ([#39](https://github.com/BlueBrain/neuroagent/issues/39)) ([948b8bf](https://github.com/BlueBrain/neuroagent/commit/948b8bf7b77fa62baddba357c293979b9ba05847))
+
 ## [0.3.1](https://github.com/BlueBrain/neuroagent/compare/v0.3.0...v0.3.1) (2024-10-29)
 
 
