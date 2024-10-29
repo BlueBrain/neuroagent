@@ -6,7 +6,6 @@ from typing import Annotated, Any, AsyncIterator
 
 from fastapi import Depends, HTTPException, Request
 from openai import AsyncOpenAI
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from swarm_copy.app.config import Settings
@@ -101,7 +100,7 @@ def get_starting_agent(
 
 
 # TEMP function, will get replaced by the CRUDs.
-async def get_user_thread_id(
+async def get_thread_id(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> str:
     """Temp function to get the thread id."""
@@ -109,20 +108,10 @@ async def get_user_thread_id(
     user_sub = "dev"
     thread_id = "dev_thread"
 
-    # check if user is in DB.
-    query_user = await session.execute(select(Users).where(Users.user_sub == user_sub))
-    user = query_user.scalar_one_or_none()
-    if not user:
-        new_user = Users(user_sub=user_sub)
-        session.add(new_user)
-        await session.commit()
-        await session.refresh(new_user)
-        user = new_user
-
     # check if thread is in DB.
     thread = await session.get(Threads, thread_id)
-    if not thread or thread.user_id != user.id:
-        new_thread = Threads(user_id=user.id, thread_id=thread_id)
+    if not thread:
+        new_thread = Threads(user_id=user_sub, thread_id=thread_id)
         session.add(new_thread)
         await session.commit()
         await session.refresh(new_thread)
@@ -134,7 +123,7 @@ async def get_user_thread_id(
 def get_context_variables(
     settings: Annotated[Settings, Depends(get_settings)],
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
-    thread_id: Annotated[str, Depends(get_user_thread_id)],
+    thread_id: Annotated[str, Depends(get_thread_id)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {"user_id": 1234, "starting_agent": starting_agent, "thread_id": thread_id}

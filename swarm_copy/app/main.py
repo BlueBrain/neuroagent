@@ -11,13 +11,16 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from swarm_copy.app.app_utils import setup_engine
+from swarm_copy.app.database.db_utils import get_messages_from_db, put_messages_in_db
 from swarm_copy.app.database.sql_schemas import Base
 from swarm_copy.app.dependencies import (
     get_agents_routine,
     get_connection_string,
     get_context_variables,
+    get_session,
     get_settings,
     get_starting_agent,
 )
@@ -125,12 +128,20 @@ async def run_simple_agent(
     agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> str:
     """Run a single agent query."""
-    response = await agent_routine.arun(
-        agent, [{"role": "user", "content": user_request.query}], context_variables
+    messages = await get_messages_from_db(
+        thread_id=context_variables["thread_id"], session=session
     )
-    return response.messages
+    messages.extend([{"role": "user", "content": user_request.query}])
+    response = await agent_routine.arun(agent, messages, context_variables)
+    await put_messages_in_db(
+        history=response.messages,
+        thread_id=context_variables["thread_id"],
+        session=session,
+    )
+    return response.messages[-1]["content"]
 
 
 @app.post("/run/streamed")
