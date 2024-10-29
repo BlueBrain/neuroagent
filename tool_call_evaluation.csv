@@ -1,0 +1,7 @@
+,Prompt,Actual,Expected,Match
+0,What are the morphological features of neurons in the thalamus?,"['resolve-entities-tool', 'get-morpho-tool']","['resolve-entities-tool', 'get-morpho-tool']",Yes
+1,Find me articles about the role of the hippocampus in memory formation.,['literature-search-tool'],['literature-search-tool'],Yes
+2,Retrieve electrophysiological features of cortical neurons.,"['resolve-entities-tool', 'get-traces-tool', 'get-traces-tool', 'electrophys-features-tool', 'electrophys-features-tool', 'electrophys-features-tool', 'electrophys-features-tool', 'electrophys-features-tool', 'electrophys-features-tool', 'electrophys-features-tool']",['electrophys-feature-tool'],No
+3,Get traces for neurons in the hippocampus.,"['resolve-entities-tool', 'literature-search-tool']","[None, 'get-traces-tool']",No
+4,Search for literature on synaptic plasticity.,['literature-search-tool'],['literature-search-tool'],Yes
+5,"Run 1000 ms of simulation of a me model from somatosensory cortex with 34 degree temperature, current clamp stimulation mode with step current for fire pattern detection. use 1 number of step and 0.05 nA current stimulation. Record from soma.","['resolve-entities-tool', 'get-me-model-tool', 'bluenaas-tool']","['resolve-entities-tool', 'get-me-model-tool', 'bluenaas-tool']",Yes

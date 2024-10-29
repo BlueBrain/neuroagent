@@ -432,6 +432,7 @@ def get_agent(
     ],
     traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
     me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
+    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> BaseAgent | BaseMultiAgent:
     """Get the generative question answering service."""
@@ -461,6 +462,7 @@ def get_agent(
             electrophys_feature_tool,
             traces_tool,
             me_model_tool,
+            bluenaas_tool,
         ]
         logger.info("Load simple agent")
         return SimpleAgent(llm=llm, tools=tools)  # type: ignore
