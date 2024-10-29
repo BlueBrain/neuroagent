@@ -1,34 +1,41 @@
-import json 
+"""Utilities for the agent's database."""
 
+import json
 from typing import Any
+
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import  AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from swarm_copy.app.database.sql_schemas import Messages
 
-async def put_messages_in_db(history: list[dict[str, Any]], thread_id: str, session: AsyncSession) -> None:
-    # Add messages to DB.
+
+async def put_messages_in_db(
+    history: list[dict[str, Any]], thread_id: str, offset: int, session: AsyncSession
+) -> None:
+    """Add the new messages in the database."""
     for i, messages in enumerate(history):
         new_msg = Messages(
-            message_order=i,
+            order=i + offset,
             thread_id=thread_id,
-            message_content=json.dumps(messages),
+            content=json.dumps(messages),
         )
         session.add(new_msg)
-        await session.commit()
-        await session.refresh(new_msg)
+    await session.commit()
+    await session.refresh(new_msg)
 
-async def get_messages_from_db(thread_id: str,  session: AsyncSession) -> list[dict[str, Any] | None ]:
-    # get messages from history.
+
+async def get_messages_from_db(
+    thread_id: str, session: AsyncSession
+) -> list[dict[str, Any] | None]:
+    """Retreive the message history from the DB."""
     message_query = await session.execute(
-        select(Messages).where(Messages.thread_id == thread_id)
+        select(Messages).where(Messages.thread_id == thread_id).order_by(Messages.order)
     )
     db_messages = message_query.scalars().all()
 
     messages = []
     if db_messages:
         for msg in db_messages:
-            messages.append(json.loads(msg.message_content))
-    if messages:
-        return messages
-    else:
-        return []
+            messages.append(json.loads(msg.content))
+
+    return messages

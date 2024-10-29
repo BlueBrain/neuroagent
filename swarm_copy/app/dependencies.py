@@ -123,10 +123,9 @@ async def get_thread_id(
 def get_context_variables(
     settings: Annotated[Settings, Depends(get_settings)],
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
-    thread_id: Annotated[str, Depends(get_thread_id)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
-    return {"user_id": 1234, "starting_agent": starting_agent, "thread_id": thread_id}
+    return {"user_id": 1234, "starting_agent": starting_agent}
 
 
 def get_agents_routine(

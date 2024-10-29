@@ -23,8 +23,9 @@ from swarm_copy.app.dependencies import (
     get_session,
     get_settings,
     get_starting_agent,
+    get_thread_id,
 )
-from swarm_copy.new_types import Agent
+from swarm_copy.new_types import Agent, AgentResponse
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.stream import stream_agent_response
 
@@ -129,19 +130,19 @@ async def run_simple_agent(
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
     session: Annotated[AsyncSession, Depends(get_session)],
-) -> str:
+    thread_id: Annotated[str, Depends(get_thread_id)],
+) -> AgentResponse:
     """Run a single agent query."""
-    messages = await get_messages_from_db(
-        thread_id=context_variables["thread_id"], session=session
-    )
-    messages.extend([{"role": "user", "content": user_request.query}])
+    messages = await get_messages_from_db(thread_id=thread_id, session=session)
+    messages.append({"role": "user", "content": user_request.query})
     response = await agent_routine.arun(agent, messages, context_variables)
     await put_messages_in_db(
         history=response.messages,
-        thread_id=context_variables["thread_id"],
+        offset=len(messages) - 1,
+        thread_id=thread_id,
         session=session,
     )
-    return response.messages[-1]["content"]
+    return AgentResponse(message=response.messages[-1]["content"])
 
 
 @app.post("/run/streamed")

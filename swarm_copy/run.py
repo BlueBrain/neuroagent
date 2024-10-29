@@ -13,12 +13,9 @@ from openai.types.chat.chat_completion_message_tool_call import (
     Function,
 )
 from pydantic import ValidationError
-from sqlalchemy import select
 
-from swarm_copy.app.database.sql_schemas import Messages
 from swarm_copy.new_types import (
     Agent,
-    AgentResponse,
     Response,
     Result,
 )
@@ -211,7 +208,7 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
         return Response(
-            messages=history,
+            messages=history[init_len - 1 :],
             agent=active_agent,
             context_variables=context_variables,
         )
@@ -305,7 +302,7 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
         yield Response(
-            messages=history[init_len:],
+            messages=history[init_len - 1 :],
             agent=active_agent,
             context_variables=context_variables,
         )
