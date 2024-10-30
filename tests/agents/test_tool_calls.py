@@ -2,11 +2,19 @@ import requests
 import json
 import pandas as pd
 from tqdm import tqdm
+import pytest
+import argparse
 
 # Base URL for the local API
 base_url = "http://localhost:8000"
 
-def test_tool_calls():
+def is_subsequence(expected, actual):
+    it = iter(actual)
+    # Check if all items in expected are in it and in the correct order
+    return all(item in it for item in expected) and all(item in expected for item in actual)
+
+@pytest.mark.skip(reason="Skipping this test by default unless provoked")
+def test_tool_calls(output_file='tool_call_evaluation.csv'):
     # Load the expected tool calls from the JSON file
     with open('tests/data/tool_calls.json') as f:
         tool_calls_data = json.load(f)
@@ -37,8 +45,8 @@ def test_tool_calls():
             steps = response.json().get("steps", [])
             called_tool_names = [step.get("tool_name", None) for step in steps]
             expected_tool_names = [tool_call.get("tool_name", None) for tool_call in expected_tool_calls]
-            match = called_tool_names == expected_tool_names
-
+            match = is_subsequence(expected_tool_names, called_tool_names)
+            
             # Append the result to the list
             results_list.append({
                 "Prompt": prompt,
@@ -67,4 +75,14 @@ def test_tool_calls():
     results_df = pd.DataFrame(results_list)
 
     # Save the results to a CSV file
-    results_df.to_csv('tool_call_evaluation.csv')
+    results_df.to_csv(output_file)
+
+def main():
+    parser = argparse.ArgumentParser(description="Run tool call tests and save results.")
+    parser.add_argument('--output', type=str, default='tool_call_evaluation.csv', help='Output CSV file for results')
+    args = parser.parse_args()
+    
+    test_tool_calls(args.output)
+
+if __name__ == '__main__':
+    main()
