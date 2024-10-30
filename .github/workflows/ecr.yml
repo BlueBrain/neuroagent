@@ -40,7 +40,7 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr-management.outputs.registry }}
         ECR_REPOSITORY: ml-repository
-        IMAGE_TAG: neuroagent-${{ github.event.release.tag_name }}
+        IMAGE_TAG: neuroagent-${{ github.ref_name }}
       run: |
         docker tag temp:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
