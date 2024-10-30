@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 30.10.2024
+
 ### Changed
 - Removed release please bot and add automatic on tag pushes to ecr.
 
