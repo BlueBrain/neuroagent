@@ -3,7 +3,6 @@
 import logging
 from typing import Any, ClassVar
 
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -47,7 +46,6 @@ class GetTracesMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
     trace_search_size: int
     brainregion_path: str
     model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
@@ -74,12 +72,11 @@ class GetTracesTool(BaseTool):
     input_schema: GetTracesInput
     metadata: GetTracesMetadata
 
-    def _run(self, query: str) -> list[TracesOutput]:  # type: ignore
+    def run(self) -> list[TracesOutput]:  # type: ignore
+        """Not implemented yet."""
         pass
 
-    async def _arun(
-        self,
-    ) -> list[TracesOutput] | dict[str, str]:
+    async def arun(self) -> list[TracesOutput] | dict[str, str]:
         """From a brain region ID, extract traces."""
         logger.info(
             f"Entering get trace tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.etype_id=}"

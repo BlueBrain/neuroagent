@@ -3,7 +3,6 @@
 import logging
 from typing import ClassVar
 
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -65,7 +64,6 @@ class ResolveBRMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
     kg_sparql_url: str
     kg_class_view_url: str
     model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
@@ -85,11 +83,11 @@ class ResolveEntitiesTool(BaseTool):
     input_schema: ResolveBRInput
     metadata: ResolveBRMetadata
 
-    def _run(self) -> None:
+    def run(self) -> None:
         """Not implemented yet."""
         pass
 
-    async def _arun(
+    async def arun(
         self,
     ) -> list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput]:
         """Given a brain region in natural language, resolve its ID."""

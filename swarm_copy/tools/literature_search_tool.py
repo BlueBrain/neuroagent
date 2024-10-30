@@ -4,7 +4,7 @@ import logging
 from typing import Any, ClassVar
 
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
 
@@ -29,11 +29,9 @@ class LiteratureSearchMetadata(BaseMetadata):
     knowledge_graph_url: str
     literature_search_url: str
     token: str
-    httpx_client: Any
     retriever_k: int
     reranker_k: int
     use_reranker: bool
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class ParagraphMetadata(BaseToolOutput, extra="ignore"):
@@ -64,44 +62,25 @@ class LiteratureSearchTool(BaseTool):
     input_schema: LiteratureSearchInput
     metadata: LiteratureSearchMetadata
 
-    def _run(self) -> list[ParagraphMetadata]:
-        """Search the scientific literature and returns citations."""
-        # Prepare the request's body
-        req_body = {
-            "query": self.input_schema.query,
-            "retriever_k": self.metadata.retriever_k,
-            "use_reranker": self.metadata.use_reranker,
-            "reranker_k": self.metadata.reranker_k,
-        }
+    def run(self) -> None:
+        """Not implemented yet."""
+        pass
 
-        # Send the request
-        return self._process_output(
-            self.metadata.httpx_client.get(
-                self.metadata.literature_search_url,
-                headers={"Authorization": f"Bearer {self.metadata.token}"},
-                json=req_body,
-                timeout=None,
-            ).json()
-        )
-
-    async def _arun(self, query: str) -> list[ParagraphMetadata] | str:
+    async def arun(self) -> list[ParagraphMetadata] | str:
         """Async search the scientific literature and returns citations.
-
-        Parameters
-        ----------
-        query
-            Query to send to the literature search backend
 
         Returns
         -------
             List of paragraphs and their metadata
         """
         try:
-            logger.info(f"Entering literature search tool. Inputs: {query=}")
+            logger.info(
+                f"Entering literature search tool. Inputs: {self.input_schema.query=}"
+            )
 
             # Prepare the request's body
             req_body = {
-                "query": query,
+                "query": self.input_schema.query,
                 "retriever_k": self.metadata.retriever_k,
                 "use_reranker": self.metadata.use_reranker,
                 "reranker_k": self.metadata.reranker_k,
@@ -111,7 +90,7 @@ class LiteratureSearchTool(BaseTool):
             response = await self.metadata.httpx_client.get(
                 self.metadata.literature_search_url,
                 headers={"Authorization": f"Bearer {self.metadata.token}"},
-                params=req_body,
+                params=req_body,  # type: ignore
                 timeout=None,
             )
 

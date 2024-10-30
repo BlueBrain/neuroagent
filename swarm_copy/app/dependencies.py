@@ -10,11 +10,9 @@ from httpx import AsyncClient
 from keycloak import KeycloakOpenID
 from openai import AsyncOpenAI
 
-from neuroagent.tools import GetTracesTool
 from swarm_copy.app.config import Settings
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
-from swarm_copy.tools.bluenaas_tool import BlueNAASTool
 from swarm_copy.tools.electrophys_tool import ElectrophysTool
 from swarm_copy.tools.get_me_model_tool import GetMEModelTool
 from swarm_copy.tools.get_morpho_tool import GetMorphoTool
@@ -22,6 +20,7 @@ from swarm_copy.tools.kg_morpho_features_tool import KGMorphoFeatureTool
 from swarm_copy.tools.literature_search_tool import LiteratureSearchTool
 from swarm_copy.tools.morphology_features_tool import MorphologyFeatureTool
 from swarm_copy.tools.resolve_entities_tool import ResolveEntitiesTool
+from swarm_copy.tools.traces_tool import GetTracesTool
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +44,6 @@ def get_settings() -> Settings:
     return Settings()
 
 
-async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
-    """Manage the httpx client for the request."""
-    client = AsyncClient(
-        timeout=None,
-        verify=False,
-        headers={"x-request-id": request.headers["x-request-id"]},
-    )
-    yield client
-
-
 def get_openai_client(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AsyncOpenAI | None:
@@ -74,7 +63,6 @@ def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> 
                 You must always specify in your answers from which brain regions the information is extracted.
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
         tools=[
-            BlueNAASTool,
             LiteratureSearchTool,
             ElectrophysTool,
             GetMEModelTool,
@@ -87,6 +75,16 @@ def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> 
         model=settings.openai.model,
     )
     return agent
+
+
+async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
+    """Manage the httpx client for the request."""
+    client = AsyncClient(
+        timeout=None,
+        verify=False,
+        headers={"x-request-id": request.headers["x-request-id"]},
+    )
+    yield client
 
 
 def get_kg_token(
@@ -113,7 +111,6 @@ def get_context_variables(
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-    httpx_async_client: Annotated[AsyncClient, Depends(get_httpx_client)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {
@@ -123,8 +120,6 @@ def get_context_variables(
         "offset": 0.5,
         "bluenaas_url": settings.tools.bluenaas.url,
         "token": token,
-        "httpx_client": httpx_client,
-        "httpx_async_client": httpx_async_client,
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,
@@ -137,6 +132,7 @@ def get_context_variables(
         "trace_search_size": settings.tools.trace.search_size,
         "kg_sparql_url": settings.knowledge_graph.sparql_url,
         "kg_class_view_url": settings.knowledge_graph.class_view_url,
+        "httpx_client": httpx_client,
     }
 
 

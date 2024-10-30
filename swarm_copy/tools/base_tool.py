@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
+from httpx import AsyncClient
 from openai.lib._tools import pydantic_function_tool
 from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel, ConfigDict
@@ -11,7 +12,8 @@ from pydantic import BaseModel, ConfigDict
 class BaseMetadata(BaseModel):
     """Base class for metadata."""
 
-    model_config = ConfigDict(extra="ignore")
+    httpx_client: AsyncClient
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class BaseTool(BaseModel, ABC):
@@ -34,6 +36,8 @@ class BaseTool(BaseModel, ABC):
     @abstractmethod
     async def arun(self) -> Any:
         """Run the tool."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class BaseToolOutput(BaseModel):

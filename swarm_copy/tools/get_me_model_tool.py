@@ -3,9 +3,8 @@
 import logging
 from typing import Any, ClassVar
 
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from neuroagent.cell_types import get_celltypes_descendants
 from neuroagent.utils import get_descendants_id
@@ -35,11 +34,9 @@ class GetMEModelMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
     me_model_search_size: int
     brainregion_path: str
     celltypes_path: str
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class MEModelOutput(BaseToolOutput):
@@ -79,12 +76,11 @@ class GetMEModelTool(BaseTool):
     input_schema: GetMEModelInput
     metadata: GetMEModelMetadata
 
-    def _run(self) -> None:
+    def run(self) -> None:
+        """Not implemented yet."""
         pass
 
-    async def _arun(
-        self,
-    ) -> list[MEModelOutput]:
+    async def arun(self) -> list[MEModelOutput]:
         """From a brain region ID, extract ME models."""
         logger.info(
             f"Entering Get ME Model tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.mtype_id=}, {self.input_schema.etype_id=}"

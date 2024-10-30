@@ -7,9 +7,8 @@ from typing import Any, ClassVar, Literal, Optional
 
 from bluepyefe.extract import extract_efeatures
 from efel.units import get_unit
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from neuroagent.utils import get_kg_data
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -168,8 +167,6 @@ class ElectrophysMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class FeaturesOutput(BaseToolOutput):
@@ -195,11 +192,11 @@ class ElectrophysTool(BaseTool):
     input_schema: ElectrophysInput
     metadata: ElectrophysMetadata
 
-    def _run(self) -> None:
+    def run(self) -> None:
         """Not implemented yet."""
         pass
 
-    async def _arun(self) -> FeaturesOutput | dict[str, str]:
+    async def arun(self) -> FeaturesOutput | dict[str, str]:
         """Give features about trace."""
         logger.info(
             f"Entering electrophys tool. Inputs: {self.input_schema.trace_id=}, {self.input_schema.calculated_feature=},"

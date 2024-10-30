@@ -4,11 +4,10 @@ import json
 import logging
 from typing import Annotated, Any, ClassVar, Literal
 
-from httpx import AsyncClient
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import ToolException
 from langgraph.prebuilt import InjectedState
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from neuroagent.tools.bluenaas_tool import RecordingLocation
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -70,9 +69,7 @@ class BlueNAASMetadata(BaseMetadata):
         default=0.5, ge=0, le=1, description="Offset in the section to record from"
     )
     bluenaas_url: str
-    httpx_client: AsyncClient
     token: str
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class BlueNaaSValidatedOutput(BaseToolOutput):

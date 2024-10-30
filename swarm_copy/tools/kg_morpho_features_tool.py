@@ -3,9 +3,8 @@
 import logging
 from typing import Any, ClassVar, Literal
 
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from neuroagent.utils import get_descendants_id
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -152,10 +151,8 @@ class FeatureMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
     morpho_search_size: int
     brainregion_path: str
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class KGMorphoFeatureOutput(BaseToolOutput):
@@ -190,19 +187,12 @@ class KGMorphoFeatureTool(BaseTool):
     input_schema: MorphoFeaturesInput
     metadata: FeatureMetadata
 
-    def _run(self) -> None:
-        """Not defined yet."""
+    def run(self) -> None:
+        """Not implemented yet."""
         pass
 
-    async def _arun(self) -> list[KGMorphoFeatureOutput] | dict[str, str]:
+    async def arun(self) -> list[KGMorphoFeatureOutput] | dict[str, str]:
         """Run the tool async.
-
-        Parameters
-        ----------
-        brain_region_id
-            ID of the brain region of interest (of the form http://api.brain-map.org/api/v2/data/Structure/...)
-        features
-            Pydantic class describing the features one wants to compute
 
         Returns
         -------

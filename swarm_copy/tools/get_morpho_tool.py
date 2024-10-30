@@ -3,9 +3,8 @@
 import logging
 from typing import Any, ClassVar, Optional
 
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from neuroagent.cell_types import get_celltypes_descendants
 from neuroagent.utils import get_descendants_id
@@ -31,11 +30,9 @@ class GetMorphoMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
     morpho_search_size: int
     brainregion_path: str
     celltypes_path: str
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class KnowledgeGraphOutput(BaseToolOutput):
@@ -74,18 +71,12 @@ class GetMorphoTool(BaseTool):
     input_schema: GetMorphoInput
     metadata: GetMorphoMetadata
 
-    def _run(self) -> None:
+    def run(self) -> None:
+        """Not implemented yet."""
         pass
 
-    async def _arun(self) -> list[KnowledgeGraphOutput]:
+    async def arun(self) -> list[KnowledgeGraphOutput]:
         """From a brain region ID, extract morphologies.
-
-        Parameters
-        ----------
-        brain_region_id
-            ID of the brain region of interest (of the form http://api.brain-map.org/api/v2/data/Structure/...)
-        mtype_id
-            ID of the mtype of the morphology
 
         Returns
         -------

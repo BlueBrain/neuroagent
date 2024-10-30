@@ -5,10 +5,9 @@ from typing import Any, ClassVar
 
 import neurom
 import numpy as np
-from httpx import AsyncClient
 from langchain_core.tools import ToolException
 from neurom import load_morphology
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from neuroagent.utils import get_kg_data
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
@@ -34,8 +33,6 @@ class MorphologyFeaturesMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    httpx_client: AsyncClient
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class MorphologyFeatureTool(BaseTool):
@@ -50,11 +47,11 @@ class MorphologyFeatureTool(BaseTool):
     input_schema: MorphologyFeaturesInput
     metadata: MorphologyFeaturesMetadata
 
-    def _run(self) -> None:
+    def run(self) -> None:
         """Not implemented yet."""
         pass
 
-    async def _arun(self) -> list[MorphologyFeatureOutput]:
+    async def arun(self) -> list[MorphologyFeatureOutput]:
         """Give features about morphology."""
         logger.info(
             f"Entering morphology feature tool. Inputs: {self.input_schema.morphology_id=}"
@@ -81,13 +78,6 @@ class MorphologyFeatureTool(BaseTool):
 
     def get_features(self, morphology_content: bytes, reader: str) -> dict[str, Any]:
         """Get features from a morphology.
-
-        Parameters
-        ----------
-        morphology_content
-            Bytes of the file containing the morphology info (comes from the KG)
-        reader
-            type of file (i.e. its extension)
 
         Returns
         -------
