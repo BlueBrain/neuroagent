@@ -21,7 +21,9 @@ class InputResolveBR(BaseModel):
     """Inputs of the Resolve Brain Region tool.."""
 
     brain_region: str = Field(
-        description="Brain region of interest specified by the user in natural english."
+        description=("Allen Institute's Mouse Brain Hierarchy Brain Region Names."
+         "User's given brain region of interest should be mapped to the closest Allen Brain region."
+         "If a given brain region is not found, try literature search tool for its synonyms")
     )
     mtype: str | None = Field(
         default=None,

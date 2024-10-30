@@ -27,6 +27,18 @@
       "prompt": "Retrieve electrophysiological features of cortical neurons.",
       "expected_tool_calls": [
         {
+          "tool_name": "resolve-entities-tool",
+          "arguments": {
+              "brain_region": "cortex"
+          }
+        },
+        {
+          "tool_name": "get-traces-tool",
+          "arguments": {
+              "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/134"
+          }
+        },    
+        {
             "tool_name": "electrophys-feature-tool",
             "arguments": {
                 "brain_region": "cortex"
@@ -38,17 +50,18 @@
       "prompt": "Get traces for neurons in the hippocampus.",
       "expected_tool_calls": [
         {
-          "function": {
-              "tool_name": "resolve-entities-tool",
-              "arguments": {
-                "brain_region": "hippocampus"}
-            }
+            "tool_name": "resolve-entities-tool",
+            "arguments": {
+              "brain_region": "hippocampus"}
         },
         {
             "tool_name": "get-traces-tool",
             "arguments": {
                 "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/134"
             }
+        },
+        {
+            "tool_name": "electrophys-features-tool"
         }
       ]
   },
@@ -71,6 +84,9 @@
             "arguments": {
                 "brain_region": "somatosensory area"
             }
+        },
+        {
+          "tool_name": "literature-search-tool"
         },
         {
           "tool_name": "get-me-model-tool",

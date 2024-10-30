@@ -48,9 +48,12 @@ class GetTracesTool(BasicTool):
     """Class defining the logic to obtain traces ids."""
 
     name: str = "get-traces-tool"
-    description: str = """Searches a neuroscience based knowledge graph to retrieve traces names, IDs and descriptions.
-    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph.
-    Optionally accepts an e-type id.
+    description: str = """Searches a neuroscience based knowledge graph to 
+   retrieve experimental traces names, IDs and descriptions.
+   Dont run this tool unless user requests already published traces.
+   Requires a 'brain_region_id' which is the ID of the brain region of interest
+   as registered in the knowledge graph.
+   Optionally accepts an e-type id.
     The output is a list of traces, containing:
     - The trace id.
     - The brain region ID.
