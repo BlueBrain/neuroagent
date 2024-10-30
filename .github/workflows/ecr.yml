@@ -38,7 +38,7 @@ jobs:
     - name: Tag and Push FastAPI Image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr-management.outputs.registry }}
-        ECR_REPOSITORY: 671250183987.dkr.ecr.us-east-1.amazonaws.com/ml-repository
+        ECR_REPOSITORY: ml-repository
         IMAGE_TAG: neuroagent-${{ github.event.release.tag_name }}
       run: |
         docker tag temp:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
