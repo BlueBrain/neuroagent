@@ -1,8 +1,9 @@
 name: Deploy to ECR
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - '*'
 
 permissions:
   id-token: write   # This is required for requesting the JWT
@@ -18,7 +19,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
 
-    - name: Build FastAPI Image
+    - name: Build Image
       run: |
         docker build -t temp:latest -f Dockerfile .
 
@@ -35,11 +36,11 @@ jobs:
       id: login-ecr-management
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Tag and Push FastAPI Image to Amazon ECR
+    - name: Tag and Push Image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr-management.outputs.registry }}
         ECR_REPOSITORY: ml-repository
-        IMAGE_TAG: neuroagent-${{ github.event.release.tag_name }}
+        IMAGE_TAG: neuroagent-${{ github.ref_name }}
       run: |
         docker tag temp:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
