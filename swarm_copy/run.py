@@ -171,7 +171,7 @@ class AgentsRoutine:
     async def arun(
         self,
         agent: Agent,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
@@ -216,7 +216,7 @@ class AgentsRoutine:
     async def astream(
         self,
         agent: Agent,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),

@@ -117,7 +117,7 @@ async def get_thread_id(
         await session.refresh(new_thread)
         thread = new_thread
 
-    return thread.thread_id
+    return thread.thread_id  # type: ignore
 
 
 def get_context_variables(

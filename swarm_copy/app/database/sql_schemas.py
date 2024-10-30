@@ -30,7 +30,7 @@ class Threads(Base):
     update_date = Column(DateTime, default=datetime.datetime.now)
 
     user_id = Column(String, nullable=False)
-    messages = relationship(
+    messages: list["Messages"] = relationship(
         "Messages", back_populates="thread", cascade="all, delete-orphan"
     )
 
@@ -45,4 +45,4 @@ class Messages(Base):
     content = Column(String, nullable=False)
 
     thread_id = Column(String, ForeignKey("threads.thread_id"), nullable=False)
-    thread = relationship("Threads", back_populates="messages")
+    thread: "Threads" = relationship("Threads", back_populates="messages")

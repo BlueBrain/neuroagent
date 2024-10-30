@@ -23,13 +23,14 @@ async def put_messages_in_db(
         session.add(new_msg)
     # we need to update the thread update time
     thread = await session.get(Threads, thread_id)
-    thread.update_date = datetime.datetime.now()
+    if thread:
+        thread.update_date = datetime.datetime.now()
     await session.commit()
 
 
 async def get_messages_from_db(
     thread_id: str, session: AsyncSession
-) -> list[dict[str, Any] | None]:
+) -> list[dict[str, Any]]:
     """Retreive the message history from the DB."""
     message_query = await session.execute(
         select(Messages).where(Messages.thread_id == thread_id).order_by(Messages.order)
@@ -39,6 +40,7 @@ async def get_messages_from_db(
     messages = []
     if db_messages:
         for msg in db_messages:
-            messages.append(json.loads(msg.content))
+            if msg.content:
+                messages.append(json.loads(msg.content))
 
     return messages
