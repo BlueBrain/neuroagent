@@ -4,13 +4,14 @@ import asyncio
 import copy
 import json
 from collections import defaultdict
-from typing import Any
+from typing import Any, AsyncIterator
 
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import (
     ChatCompletionMessageToolCall,
+    Function,
 )
 from pydantic import ValidationError
 
@@ -20,6 +21,7 @@ from swarm_copy.new_types import (
     Result,
 )
 from swarm_copy.tools.base_tool import BaseTool
+from swarm_copy.utils import merge_chunk
 
 
 class AgentsRoutine:
@@ -36,6 +38,7 @@ class AgentsRoutine:
         history: list[dict[str, str]],
         context_variables: dict[str, Any],
         model_override: str | None,
+        stream: bool = False,
     ) -> ChatCompletionMessage:
         """Send the OpenAI request."""
         context_variables = defaultdict(str, context_variables)
@@ -53,7 +56,7 @@ class AgentsRoutine:
             "messages": messages,
             "tools": tools or None,
             "tool_choice": agent.tool_choice,
-            "stream": False,
+            "stream": stream,
         }
 
         if tools:
@@ -173,7 +176,6 @@ class AgentsRoutine:
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
-        execute_tools: bool = True,
     ) -> Response:
         """Run the agent main loop."""
         active_agent = agent
@@ -195,12 +197,13 @@ class AgentsRoutine:
                 history=history,
                 context_variables=context_variables,
                 model_override=model_override,
+                stream=False,
             )
             message = completion.choices[0].message  # type: ignore
             message.sender = active_agent.name
             history.append(json.loads(message.model_dump_json()))
 
-            if not message.tool_calls or not execute_tools:
+            if not message.tool_calls:
                 break
 
             # handle function calls, updating context_variables, and switching agents
@@ -214,6 +217,100 @@ class AgentsRoutine:
 
         return Response(
             messages=history,
+            agent=active_agent,
+            context_variables=context_variables,
+        )
+
+    async def astream(
+        self,
+        agent: Agent,
+        messages: list[dict[str, str]],
+        context_variables: dict[str, Any] = {},
+        model_override: str | None = None,
+        max_turns: int | float = float("inf"),
+    ) -> AsyncIterator[str | Response]:
+        """Stream the agent response."""
+        active_agent = agent
+        context_variables = copy.deepcopy(context_variables)
+        history = copy.deepcopy(messages)
+        init_len = len(messages)
+        is_streaming = False
+
+        while len(history) - init_len < max_turns:
+            message: dict[str, Any] = {
+                "content": "",
+                "sender": agent.name,
+                "role": "assistant",
+                "function_call": None,
+                "tool_calls": defaultdict(
+                    lambda: {
+                        "function": {"arguments": "", "name": ""},
+                        "id": "",
+                        "type": "",
+                    }
+                ),
+            }
+
+            # get completion with current history, agent
+            completion = await self.get_chat_completion(
+                agent=active_agent,
+                history=history,
+                context_variables=context_variables,
+                model_override=model_override,
+                stream=True,
+            )
+            async for chunk in completion:  # type: ignore
+                delta = json.loads(chunk.choices[0].delta.json())
+
+                # Check for tool calls
+                if delta["tool_calls"]:
+                    tool = delta["tool_calls"][0]["function"]
+                    if tool["name"]:
+                        yield f"\nCalling tool : {tool['name']} with arguments : "
+                    if tool["arguments"]:
+                        yield tool["arguments"]
+
+                # Check for content
+                if delta["content"]:
+                    if not is_streaming:
+                        yield "\n<begin_llm_response>\n"
+                        is_streaming = True
+                    yield delta["content"]
+
+                delta.pop("role", None)
+                merge_chunk(message, delta)
+
+            message["tool_calls"] = list(message.get("tool_calls", {}).values())
+            if not message["tool_calls"]:
+                message["tool_calls"] = None
+            history.append(message)
+
+            if not message["tool_calls"]:
+                break
+
+            # convert tool_calls to objects
+            tool_calls = []
+            for tool_call in message["tool_calls"]:
+                function = Function(
+                    arguments=tool_call["function"]["arguments"],
+                    name=tool_call["function"]["name"],
+                )
+                tool_call_object = ChatCompletionMessageToolCall(
+                    id=tool_call["id"], function=function, type=tool_call["type"]
+                )
+                tool_calls.append(tool_call_object)
+
+            # handle function calls, updating context_variables, and switching agents
+            partial_response = await self.execute_tool_calls(
+                tool_calls, active_agent.tools, context_variables
+            )
+            history.extend(partial_response.messages)
+            context_variables.update(partial_response.context_variables)
+            if partial_response.agent:
+                active_agent = partial_response.agent
+
+        yield Response(
+            messages=history[init_len:],
             agent=active_agent,
             context_variables=context_variables,
         )
