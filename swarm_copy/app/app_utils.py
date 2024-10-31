@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from neuroagent.app.config import Settings
+from swarm_copy.app.config import Settings
 
 logger = logging.getLogger(__name__)
 

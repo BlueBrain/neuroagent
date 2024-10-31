@@ -10,8 +10,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 class Base(DeclarativeBase):
     """Base declarative base for SQLAlchemy."""
 
-    pass
-
 
 def uuid_to_str() -> str:
     """Turn a uuid into a string."""
@@ -47,7 +45,7 @@ class Threads(Base):
 
 
 class Messages(Base):
-    """SQL table for the messaages in the threads."""
+    """SQL table for the messsages in the threads."""
 
     __tablename__ = "messages"
     message_id: Mapped[str] = mapped_column(
