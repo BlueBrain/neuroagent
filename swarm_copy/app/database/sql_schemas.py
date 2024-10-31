@@ -20,7 +20,7 @@ def uuid_to_str() -> str:
 
 def utc_now() -> datetime.datetime:
     """Return the utc time."""
-    return datetime.datetime.now(datetime.timezone.utc)
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 class Threads(Base):
