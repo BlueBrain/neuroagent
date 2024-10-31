@@ -1,13 +1,12 @@
 """Utilities for the agent's database."""
 
-import datetime
 import json
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from swarm_copy.app.database.sql_schemas import Messages, Threads
+from swarm_copy.app.database.sql_schemas import Messages, Threads, utc_now
 
 
 async def put_messages_in_db(
@@ -24,7 +23,7 @@ async def put_messages_in_db(
     # we need to update the thread update time
     thread = await session.get(Threads, thread_id)
     if thread:
-        thread.update_date = datetime.datetime.now()
+        thread.update_date = utc_now()
     await session.commit()
 
 

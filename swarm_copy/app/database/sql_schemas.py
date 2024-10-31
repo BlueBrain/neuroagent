@@ -3,10 +3,14 @@
 import datetime
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """Base declarative base for SQLAlchemy."""
+
+    pass
 
 
 def uuid_to_str() -> str:
@@ -14,23 +18,30 @@ def uuid_to_str() -> str:
     return uuid.uuid4().hex
 
 
+def utc_now() -> datetime.datetime:
+    """Return the utc time."""
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
 class Threads(Base):
     """SQL table for the users thread / conversations."""
 
     __tablename__ = "threads"
-    thread_id = Column(String, primary_key=True, default=uuid_to_str)
-    vlab_id = Column(
+    thread_id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=uuid_to_str
+    )
+    vlab_id: Mapped[str] = mapped_column(
         String, default="430108e9-a81d-4b13-b7b6-afca00195908"
     )  # only default for now !
-    project_id = Column(
+    project_id: Mapped[str] = mapped_column(
         String, default="eff09ea1-be16-47f0-91b6-52a3ea3ee575"
     )  # only default for now !
-    title = Column(String, default="New chat")
-    creation_date = Column(DateTime, default=datetime.datetime.now)
-    update_date = Column(DateTime, default=datetime.datetime.now)
+    title: Mapped[str] = mapped_column(String, default="New chat")
+    creation_date: Mapped[datetime.datetime] = mapped_column(DateTime, default=utc_now)
+    update_date: Mapped[datetime.datetime] = mapped_column(DateTime, default=utc_now)
 
-    user_id = Column(String, nullable=False)
-    messages: list["Messages"] = relationship(
+    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    messages: Mapped[list["Messages"]] = relationship(
         "Messages", back_populates="thread", cascade="all, delete-orphan"
     )
 
@@ -39,10 +50,14 @@ class Messages(Base):
     """SQL table for the messaages in the threads."""
 
     __tablename__ = "messages"
-    message_id = Column(String, primary_key=True, default=uuid_to_str)
-    order = Column(Integer, nullable=False)
-    creation_date = Column(DateTime, default=datetime.datetime.now)
-    content = Column(String, nullable=False)
+    message_id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=uuid_to_str
+    )
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
+    creation_date: Mapped[datetime.datetime] = mapped_column(DateTime, default=utc_now)
+    content: Mapped[str] = mapped_column(String, nullable=False)
 
-    thread_id = Column(String, ForeignKey("threads.thread_id"), nullable=False)
-    thread: "Threads" = relationship("Threads", back_populates="messages")
+    thread_id: Mapped[str] = mapped_column(
+        String, ForeignKey("threads.thread_id"), nullable=False
+    )
+    thread: Mapped["Threads"] = relationship("Threads", back_populates="messages")
