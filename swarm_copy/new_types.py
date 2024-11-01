@@ -27,6 +27,12 @@ class Response(BaseModel):
     context_variables: dict[str, Any] = {}
 
 
+class AgentRequest(BaseModel):
+    """Class for agent request."""
+
+    query: str
+
+
 class AgentResponse(BaseModel):
     """Final agent response."""
 

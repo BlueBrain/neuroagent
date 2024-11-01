@@ -11,11 +11,6 @@ class Base(DeclarativeBase):
     """Base declarative base for SQLAlchemy."""
 
 
-def uuid_to_str() -> str:
-    """Turn a uuid into a string."""
-    return uuid.uuid4().hex
-
-
 def utc_now() -> datetime.datetime:
     """Return the utc time."""
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
@@ -26,13 +21,13 @@ class Threads(Base):
 
     __tablename__ = "threads"
     thread_id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=uuid_to_str
+        String, primary_key=True, default=lambda: uuid.uuid4().hex
     )
     vlab_id: Mapped[str] = mapped_column(
-        String, default="430108e9-a81d-4b13-b7b6-afca00195908"
+        String, default="430108e9-a81d-4b13-b7b6-afca00195908", nullable=False
     )  # only default for now !
     project_id: Mapped[str] = mapped_column(
-        String, default="eff09ea1-be16-47f0-91b6-52a3ea3ee575"
+        String, default="eff09ea1-be16-47f0-91b6-52a3ea3ee575", nullable=False
     )  # only default for now !
     title: Mapped[str] = mapped_column(String, default="New chat")
     creation_date: Mapped[datetime.datetime] = mapped_column(DateTime, default=utc_now)
@@ -40,7 +35,9 @@ class Threads(Base):
 
     user_id: Mapped[str] = mapped_column(String, nullable=False)
     messages: Mapped[list["Messages"]] = relationship(
-        "Messages", back_populates="thread", cascade="all, delete-orphan"
+        "Messages",
+        back_populates="thread",
+        cascade="delete, save-update, delete-orphan, merge",
     )
 
 
@@ -49,7 +46,7 @@ class Messages(Base):
 
     __tablename__ = "messages"
     message_id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=uuid_to_str
+        String, primary_key=True, default=lambda: uuid.uuid4().hex
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     creation_date: Mapped[datetime.datetime] = mapped_column(DateTime, default=utc_now)

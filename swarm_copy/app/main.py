@@ -9,25 +9,15 @@ from uuid import uuid4
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from swarm_copy.app.app_utils import setup_engine
-from swarm_copy.app.database.db_utils import get_messages_from_db, put_messages_in_db
+from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Base
 from swarm_copy.app.dependencies import (
-    get_agents_routine,
     get_connection_string,
-    get_context_variables,
-    get_session,
     get_settings,
-    get_starting_agent,
-    get_thread_id,
 )
-from swarm_copy.new_types import Agent, AgentResponse
-from swarm_copy.run import AgentsRoutine
-from swarm_copy.stream import stream_agent_response
+from swarm_copy.app.routers import qa
 
 LOGGING = {
     "version": 1,
@@ -117,68 +107,25 @@ app.add_middleware(
 )
 
 
-class AgentRequest(BaseModel):
-    """Class for agent request."""
-
-    query: str
+app.include_router(qa.router)
 
 
-@app.post("/run/qa")
-async def run_simple_agent(
-    user_request: AgentRequest,
-    agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
-    agent: Annotated[Agent, Depends(get_starting_agent)],
-    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-    session: Annotated[AsyncSession, Depends(get_session)],
-    thread_id: Annotated[str, Depends(get_thread_id)],
-) -> AgentResponse:
-    """Run a single agent query."""
-    response = await agent_routine.arun(
-        agent, [{"role": "user", "content": user_request.query}], context_variables
-    )
-    return AgentResponse(message=response.messages[-1]["content"])
+@app.get("/healthz")
+def healthz() -> str:
+    """Check the health of the API."""
+    return "200"
 
 
-@app.post("/run/chat")
-async def run_chat_agent(
-    user_request: AgentRequest,
-    agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
-    agent: Annotated[Agent, Depends(get_starting_agent)],
-    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-    session: Annotated[AsyncSession, Depends(get_session)],
-    thread_id: Annotated[str, Depends(get_thread_id)],
-) -> AgentResponse:
-    """Run a single agent query."""
-    messages = await get_messages_from_db(thread_id=thread_id, session=session)
-    messages.append({"role": "user", "content": user_request.query})
-    response = await agent_routine.arun(agent, messages, context_variables)
-    await put_messages_in_db(
-        history=response.messages,
-        offset=len(messages) - 1,
-        thread_id=thread_id,
-        session=session,
-    )
-    return AgentResponse(message=response.messages[-1]["content"])
+@app.get("/")
+def readyz() -> dict[str, str]:
+    """Check if the API is ready to accept traffic."""
+    return {"status": "ok"}
 
 
-@app.post("/run/chat_streamed")
-async def stream_chat_agent(
-    user_request: AgentRequest,
-    agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
-    agent: Annotated[Agent, Depends(get_starting_agent)],
-    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-    session: Annotated[AsyncSession, Depends(get_session)],
-    thread_id: Annotated[str, Depends(get_thread_id)],
-) -> StreamingResponse:
-    """Run a single agent query in a streamed fashion."""
-    messages = await get_messages_from_db(thread_id=thread_id, session=session)
-    messages.append({"role": "user", "content": user_request.query})
-    stream_generator = stream_agent_response(
-        agents_routine,
-        agent,
-        messages,
-        context_variables,
-        thread_id,
-        session,
-    )
-    return StreamingResponse(stream_generator, media_type="text/event-stream")
+@app.get("/settings")
+def settings(settings: Annotated[Settings, Depends(get_settings)]) -> Any:
+    """Show complete settings of the backend.
+
+    Did not add return model since it pollutes the Swagger UI.
+    """
+    return settings

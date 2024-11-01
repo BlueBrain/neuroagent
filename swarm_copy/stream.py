@@ -33,7 +33,7 @@ async def stream_agent_response(
             yield chunk
         # Final chunk that contains the whole response
         else:
-            to_db = chunk  # noqa: F841
+            to_db = chunk
 
     await put_messages_in_db(
         history=to_db.messages,
