@@ -3,10 +3,9 @@
 import logging
 from typing import Any, ClassVar, Literal
 
-from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field, model_validator
 
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
@@ -155,7 +154,7 @@ class FeatureMetadata(BaseMetadata):
     brainregion_path: str
 
 
-class KGMorphoFeatureOutput(BaseToolOutput):
+class KGMorphoFeatureOutput(BaseModel):
     """Output schema for the knowledge graph API."""
 
     brain_region_id: str
@@ -198,36 +197,30 @@ class KGMorphoFeatureTool(BaseTool):
         -------
             list of KGMorphoFeatureOutput to describe the morphology and its features, or an error dict.
         """
-        try:
-            logger.info(
-                f"Entering KG morpho feature tool. Inputs: {self.input_schema.brain_region_id=},"
-                f" {self.input_schema.features=}"
-            )
-            # Get the descendants of the brain region specified as input
-            hierarchy_ids = get_descendants_id(
-                self.input_schema.brain_region_id,
-                json_path=self.metadata.brainregion_path,
-            )
-            logger.info(
-                f"Found {len(list(hierarchy_ids))} children of the brain ontology."
-            )
+        logger.info(
+            f"Entering KG morpho feature tool. Inputs: {self.input_schema.brain_region_id=},"
+            f" {self.input_schema.features=}"
+        )
+        # Get the descendants of the brain region specified as input
+        hierarchy_ids = get_descendants_id(
+            self.input_schema.brain_region_id,
+            json_path=self.metadata.brainregion_path,
+        )
+        logger.info(f"Found {len(list(hierarchy_ids))} children of the brain ontology.")
 
-            # Get the associated ES query
-            entire_query = self.create_query(
-                brain_regions_ids=hierarchy_ids, features=self.input_schema.features
-            )
+        # Get the associated ES query
+        entire_query = self.create_query(
+            brain_regions_ids=hierarchy_ids, features=self.input_schema.features
+        )
 
-            # Send the ES query to the KG
-            response = await self.metadata.httpx_client.post(
-                url=self.metadata.knowledge_graph_url,
-                headers={"Authorization": f"Bearer {self.metadata.token}"},
-                json=entire_query,
-            )
+        # Send the ES query to the KG
+        response = await self.metadata.httpx_client.post(
+            url=self.metadata.knowledge_graph_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            json=entire_query,
+        )
 
-            return self._process_output(response.json())
-
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        return self._process_output(response.json())
 
     def create_query(
         self, brain_regions_ids: set[str], features: FeatureInput

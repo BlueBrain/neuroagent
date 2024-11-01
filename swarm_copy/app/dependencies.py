@@ -4,11 +4,12 @@ import logging
 from functools import cache
 from typing import Annotated, Any, AsyncIterator
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
-from httpx import AsyncClient
+from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from openai import AsyncOpenAI
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 from swarm_copy.app.config import Settings
 from swarm_copy.new_types import Agent
@@ -110,19 +111,40 @@ def get_kg_token(
         )["access_token"]
 
 
+async def get_user_id(
+    token: Annotated[str, Depends(auth)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> str:
+    """Validate JWT token and returns user ID."""
+    if settings.keycloak.validate_token and settings.keycloak.user_info_endpoint:
+        try:
+            response = await httpx_client.get(
+                settings.keycloak.user_info_endpoint,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            response.raise_for_status()
+            user_info = response.json()
+            return user_info["sub"]
+        except HTTPStatusError:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
+            )
+    else:
+        return "dev"
+
+
 def get_context_variables(
     settings: Annotated[Settings, Depends(get_settings)],
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    user_stub: Annotated[int, Depends(get_user_id)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {
-        "user_id": 1234,
+        "user_stub": user_stub,
         "starting_agent": starting_agent,
-        "section": "soma[0]",
-        "offset": 0.5,
-        "bluenaas_url": settings.tools.bluenaas.url,
         "token": token,
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,

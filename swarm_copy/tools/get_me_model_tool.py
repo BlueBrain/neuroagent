@@ -3,11 +3,10 @@
 import logging
 from typing import Any, ClassVar
 
-from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from swarm_copy.cell_types import get_celltypes_descendants
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ class GetMEModelMetadata(BaseMetadata):
     celltypes_path: str
 
 
-class MEModelOutput(BaseToolOutput):
+class MEModelOutput(BaseModel):
     """Output schema for the knowledge graph API."""
 
     me_model_id: str
@@ -85,45 +84,39 @@ class GetMEModelTool(BaseTool):
         logger.info(
             f"Entering Get ME Model tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.mtype_id=}, {self.input_schema.etype_id=}"
         )
-        try:
-            # From the brain region ID, get the descendants.
-            hierarchy_ids = get_descendants_id(
-                self.input_schema.brain_region_id,
-                json_path=self.metadata.brainregion_path,
+        # From the brain region ID, get the descendants.
+        hierarchy_ids = get_descendants_id(
+            self.input_schema.brain_region_id,
+            json_path=self.metadata.brainregion_path,
+        )
+        logger.info(f"Found {len(list(hierarchy_ids))} children of the brain ontology.")
+
+        if self.input_schema.mtype_id:
+            mtype_ids = get_celltypes_descendants(
+                self.input_schema.mtype_id, self.metadata.celltypes_path
             )
             logger.info(
-                f"Found {len(list(hierarchy_ids))} children of the brain ontology."
+                f"Found {len(list(mtype_ids))} children of the cell types ontology for mtype."
             )
+        else:
+            mtype_ids = None
 
-            if self.input_schema.mtype_id:
-                mtype_ids = get_celltypes_descendants(
-                    self.input_schema.mtype_id, self.metadata.celltypes_path
-                )
-                logger.info(
-                    f"Found {len(list(mtype_ids))} children of the cell types ontology for mtype."
-                )
-            else:
-                mtype_ids = None
+        # Create the ES query to query the KG.
+        entire_query = self.create_query(
+            brain_regions_ids=hierarchy_ids,
+            mtype_ids=mtype_ids,
+            etype_id=self.input_schema.etype_id,
+        )
 
-            # Create the ES query to query the KG.
-            entire_query = self.create_query(
-                brain_regions_ids=hierarchy_ids,
-                mtype_ids=mtype_ids,
-                etype_id=self.input_schema.etype_id,
-            )
+        # Send the query to get ME models.
+        response = await self.metadata.httpx_client.post(
+            url=self.metadata.knowledge_graph_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            json=entire_query,
+        )
 
-            # Send the query to get ME models.
-            response = await self.metadata.httpx_client.post(
-                url=self.metadata.knowledge_graph_url,
-                headers={"Authorization": f"Bearer {self.metadata.token}"},
-                json=entire_query,
-            )
-
-            # Process the output and return.
-            return self._process_output(response.json())
-
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        # Process the output and return.
+        return self._process_output(response.json())
 
     def create_query(
         self,

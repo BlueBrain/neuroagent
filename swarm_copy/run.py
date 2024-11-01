@@ -6,7 +6,6 @@ import json
 from collections import defaultdict
 from typing import Any, AsyncIterator
 
-from httpx import AsyncClient
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import (
@@ -179,14 +178,6 @@ class AgentsRoutine:
     ) -> Response:
         """Run the agent main loop."""
         active_agent = agent
-        new_context_variables = {}
-        for k, v in context_variables.items():
-            # AsyncClient cannot be deep copied.
-            if isinstance(v, AsyncClient):
-                new_context_variables[k] = copy.copy(v)
-            else:
-                new_context_variables[k] = copy.deepcopy(v)
-        context_variables = new_context_variables
         history = copy.deepcopy(messages)
         init_len = len(messages)
 

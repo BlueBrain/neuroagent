@@ -3,15 +3,13 @@
 import logging
 from typing import ClassVar
 
-from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from swarm_copy.resolving import resolve_query
 from swarm_copy.tools.base_tool import (
     ETYPE_IDS,
     BaseMetadata,
     BaseTool,
-    BaseToolOutput,
     EtypesLiteral,
 )
 
@@ -43,21 +41,21 @@ class ResolveBRInput(BaseModel):
     )
 
 
-class BRResolveOutput(BaseToolOutput):
+class BRResolveOutput(BaseModel):
     """Output schema for the Brain region resolver."""
 
     brain_region_name: str
     brain_region_id: str
 
 
-class MTypeResolveOutput(BaseToolOutput):
+class MTypeResolveOutput(BaseModel):
     """Output schema for the Mtype resolver."""
 
     mtype_name: str
     mtype_id: str
 
 
-class EtypeResolveOutput(BaseToolOutput):
+class EtypeResolveOutput(BaseModel):
     """Output schema for the Mtype resolver."""
 
     etype_name: str
@@ -71,7 +69,6 @@ class ResolveBRMetadata(BaseMetadata):
     token: str
     kg_sparql_url: str
     kg_class_view_url: str
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class ResolveEntitiesTool(BaseTool):
@@ -100,60 +97,53 @@ class ResolveEntitiesTool(BaseTool):
             f"Entering Brain Region resolver tool. Inputs: {self.input_schema.brain_region=}, "
             f"{self.input_schema.mtype=}, {self.input_schema.etype=}"
         )
-        try:
-            # Prepare the output list.
-            output: list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput] = []
+        # Prepare the output list.
+        output: list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput] = []
 
-            # First resolve the brain regions.
-            brain_regions = await resolve_query(
+        # First resolve the brain regions.
+        brain_regions = await resolve_query(
+            sparql_view_url=self.metadata.kg_sparql_url,
+            token=self.metadata.token,
+            query=self.input_schema.brain_region,
+            resource_type="nsg:BrainRegion",
+            search_size=10,
+            httpx_client=self.metadata.httpx_client,
+            es_view_url=self.metadata.kg_class_view_url,
+        )
+        # Extend the resolved BRs.
+        output.extend(
+            [
+                BRResolveOutput(brain_region_name=br["label"], brain_region_id=br["id"])
+                for br in brain_regions
+            ]
+        )
+
+        # Optionally resolve the mtypes.
+        if self.input_schema.mtype is not None:
+            mtypes = await resolve_query(
                 sparql_view_url=self.metadata.kg_sparql_url,
                 token=self.metadata.token,
-                query=self.input_schema.brain_region,
-                resource_type="nsg:BrainRegion",
+                query=self.input_schema.mtype,
+                resource_type="bmo:BrainCellType",
                 search_size=10,
                 httpx_client=self.metadata.httpx_client,
                 es_view_url=self.metadata.kg_class_view_url,
             )
-            # Extend the resolved BRs.
+            # Extend the resolved mtypes.
             output.extend(
                 [
-                    BRResolveOutput(
-                        brain_region_name=br["label"], brain_region_id=br["id"]
-                    )
-                    for br in brain_regions
+                    MTypeResolveOutput(mtype_name=mtype["label"], mtype_id=mtype["id"])
+                    for mtype in mtypes
                 ]
             )
 
-            # Optionally resolve the mtypes.
-            if self.input_schema.mtype is not None:
-                mtypes = await resolve_query(
-                    sparql_view_url=self.metadata.kg_sparql_url,
-                    token=self.metadata.token,
-                    query=self.input_schema.mtype,
-                    resource_type="bmo:BrainCellType",
-                    search_size=10,
-                    httpx_client=self.metadata.httpx_client,
-                    es_view_url=self.metadata.kg_class_view_url,
+        # Optionally resolve the etype
+        if self.input_schema.etype is not None:
+            output.append(
+                EtypeResolveOutput(
+                    etype_name=self.input_schema.etype,
+                    etype_id=ETYPE_IDS[self.input_schema.etype],
                 )
-                # Extend the resolved mtypes.
-                output.extend(
-                    [
-                        MTypeResolveOutput(
-                            mtype_name=mtype["label"], mtype_id=mtype["id"]
-                        )
-                        for mtype in mtypes
-                    ]
-                )
+            )
 
-            # Optionally resolve the etype
-            if self.input_schema.etype is not None:
-                output.append(
-                    EtypeResolveOutput(
-                        etype_name=self.input_schema.etype,
-                        etype_id=ETYPE_IDS[self.input_schema.etype],
-                    )
-                )
-
-            return output
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        return output

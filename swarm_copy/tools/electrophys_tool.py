@@ -3,14 +3,13 @@
 import logging
 import tempfile
 from statistics import mean
-from typing import Any, ClassVar, Literal, Optional
+from typing import Any, ClassVar, Literal
 
 from bluepyefe.extract import extract_efeatures
 from efel.units import get_unit
-from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_kg_data
 
 logger = logging.getLogger(__name__)
@@ -127,7 +126,7 @@ class ElectrophysInput(BaseModel):
             " link such as 'https://bbp.epfl.ch/neurosciencegraph/data/traces...'."
         )
     )
-    stimuli_types: Optional[STIMULI_TYPES] = Field(
+    stimuli_types: STIMULI_TYPES | None = Field(
         description=(
             "Type of stimuli requested by the user. Should be one of 'spontaneous',"
             " 'idrest', 'idthres', 'apwaveform', 'iv', 'step', 'spontaps',"
@@ -137,7 +136,7 @@ class ElectrophysInput(BaseModel):
             " 'spikerec', 'sinespec'."
         )
     )
-    calculated_feature: Optional[CALCULATED_FEATURES] = Field(
+    calculated_feature: CALCULATED_FEATURES | None = Field(
         description=(
             "Feature requested by the user. Should be one of 'spike_count',"
             "'time_to_first_spike', 'time_to_last_spike',"
@@ -152,7 +151,7 @@ class ElectrophysInput(BaseModel):
             "'decay_time_constant_after_stim', 'depol_block_bool'"
         )
     )
-    amplitude: Optional[AmplitudeInput] = Field(
+    amplitude: AmplitudeInput | None = Field(
         description=(
             "Amplitude of the protocol (should be specified in nA)."
             "Can be a range of amplitudes with min and max values"
@@ -169,7 +168,7 @@ class ElectrophysMetadata(BaseMetadata):
     token: str
 
 
-class FeaturesOutput(BaseToolOutput):
+class FeaturesOutput(BaseModel):
     """Output schema for the neurom tool."""
 
     brain_region: str
@@ -202,130 +201,127 @@ class ElectrophysTool(BaseTool):
             f"Entering electrophys tool. Inputs: {self.input_schema.trace_id=}, {self.input_schema.calculated_feature=},"
             f" {self.input_schema.amplitude=}, {self.input_schema.stimuli_types=}"
         )
-        try:
-            # Deal with cases where user did not specify stimulus type or/and feature
-            if not self.input_schema.stimuli_types:
-                # Default to IDRest if protocol not specified
-                logger.warning("No stimulus type specified. Defaulting to IDRest.")
-                stimuli_types = ["idrest"]
-            if not self.input_schema.calculated_feature:
-                # Compute ALL of the available features if not specified
-                logger.warning("No feature specified. Defaulting to everything.")
-                calculated_feature = list(CALCULATED_FEATURES.__args__[0].__args__)  # type: ignore
+        # Deal with cases where user did not specify stimulus type or/and feature
+        if not self.input_schema.stimuli_types:
+            # Default to IDRest if protocol not specified
+            logger.warning("No stimulus type specified. Defaulting to IDRest.")
+            stimuli_types = ["idrest"]
+        if not self.input_schema.calculated_feature:
+            # Compute ALL of the available features if not specified
+            logger.warning("No feature specified. Defaulting to everything.")
+            calculated_feature = list(CALCULATED_FEATURES.__args__[0].__args__)  # type: ignore
 
-            # Download the .nwb file associated to the trace from the KG
-            trace_content, metadata = await get_kg_data(
-                object_id=self.input_schema.trace_id,
-                httpx_client=self.metadata.httpx_client,
-                url=self.metadata.knowledge_graph_url,
-                token=self.metadata.token,
-                preferred_format="nwb",
+        # Download the .nwb file associated to the trace from the KG
+        trace_content, metadata = await get_kg_data(
+            object_id=self.input_schema.trace_id,
+            httpx_client=self.metadata.httpx_client,
+            url=self.metadata.knowledge_graph_url,
+            token=self.metadata.token,
+            preferred_format="nwb",
+        )
+
+        # Turn amplitude requirement of user into a bluepyefe compatible representation
+        if isinstance(self.input_schema.amplitude, AmplitudeInput):
+            # If the user specified amplitude/a range of amplitudes,
+            # the target amplitude is centered on the range and the
+            # tolerance is set as half the range
+            desired_amplitude = mean(
+                [
+                    self.input_schema.amplitude.min_value,
+                    self.input_schema.amplitude.max_value,
+                ]
             )
 
-            # Turn amplitude requirement of user into a bluepyefe compatible representation
-            if isinstance(self.input_schema.amplitude, AmplitudeInput):
-                # If the user specified amplitude/a range of amplitudes,
-                # the target amplitude is centered on the range and the
-                # tolerance is set as half the range
-                desired_amplitude = mean(
-                    [
-                        self.input_schema.amplitude.min_value,
-                        self.input_schema.amplitude.max_value,
-                    ]
-                )
-
-                # If the range is just one number, use 10% of it as tolerance
-                if (
-                    self.input_schema.amplitude.min_value
-                    == self.input_schema.amplitude.max_value
-                ):
-                    desired_tolerance = self.input_schema.amplitude.max_value * 0.1
-                else:
-                    desired_tolerance = (
-                        self.input_schema.amplitude.max_value - desired_amplitude
-                    )
-            else:
-                # If the amplitudes are not specified, take an arbitrarily high tolerance
-                desired_amplitude = 0
-                desired_tolerance = 1e12
-            logger.info(
-                f"target amplitude set to {desired_amplitude} nA. Tolerance is"
-                f" {desired_tolerance} nA"
-            )
-
-            targets = []
-            # Create a target for each stimuli_types and their various spellings and for each feature to compute
-            for stim_type in stimuli_types:
-                for efeature in calculated_feature:
-                    for protocol in POSSIBLE_PROTOCOLS[stim_type]:
-                        target = {
-                            "efeature": efeature,
-                            "protocol": protocol,
-                            "amplitude": desired_amplitude,
-                            "tolerance": desired_tolerance,
-                        }
-                        targets.append(target)
-            logger.info(f"Generated {len(targets)} targets.")
-
-            # The trace needs to be opened from a file, no way to hack it
-            with (
-                tempfile.NamedTemporaryFile(suffix=".nwb") as temp_file,
-                tempfile.TemporaryDirectory() as temp_dir,
+            # If the range is just one number, use 10% of it as tolerance
+            if (
+                self.input_schema.amplitude.min_value
+                == self.input_schema.amplitude.max_value
             ):
-                temp_file.write(trace_content)
-
-                # LNMC traces need to be adjusted by an output voltage of 14mV due to their experimental protocol
-                if metadata.is_lnmc:
-                    files_metadata = {
-                        "test": {
-                            stim_type: [
-                                {
-                                    "filepath": temp_file.name,
-                                    "protocol": protocol,
-                                    "ljp": 14,
-                                }
-                                for protocol in POSSIBLE_PROTOCOLS[stim_type]
-                            ]
-                            for stim_type in stimuli_types
-                        }
-                    }
-                else:
-                    files_metadata = {
-                        "test": {
-                            stim_type: [
-                                {"filepath": temp_file.name, "protocol": protocol}
-                                for protocol in POSSIBLE_PROTOCOLS[stim_type]
-                            ]
-                            for stim_type in stimuli_types
-                        }
-                    }
-
-                # Extract the requested features for the requested protocols
-                efeatures, protocol_definitions, _ = extract_efeatures(
-                    output_directory=temp_dir,
-                    files_metadata=files_metadata,
-                    targets=targets,
-                    absolute_amplitude=True,
+                desired_tolerance = self.input_schema.amplitude.max_value * 0.1
+            else:
+                desired_tolerance = (
+                    self.input_schema.amplitude.max_value - desired_amplitude
                 )
-                output_features = {}
+        else:
+            # If the amplitudes are not specified, take an arbitrarily high tolerance
+            desired_amplitude = 0
+            desired_tolerance = 1e12
+        logger.info(
+            f"target amplitude set to {desired_amplitude} nA. Tolerance is"
+            f" {desired_tolerance} nA"
+        )
 
-                # Format the extracted features into a readable dict for the model
-                for protocol_name in protocol_definitions.keys():
-                    efeatures_values = efeatures[protocol_name]
-                    protocol_def = protocol_definitions[protocol_name]
-                    output_features[protocol_name] = {
-                        f"{f['efeature_name']} (avg on n={f['n']} trace(s))": (
-                            f"{f['val'][0]} {get_unit(f['efeature_name']) if get_unit(f['efeature_name']) != 'constant' else ''}".strip()
-                        )
-                        for f in efeatures_values["soma"]
+        targets = []
+        # Create a target for each stimuli_types and their various spellings and for each feature to compute
+        for stim_type in stimuli_types:
+            for efeature in calculated_feature:
+                for protocol in POSSIBLE_PROTOCOLS[stim_type]:
+                    target = {
+                        "efeature": efeature,
+                        "protocol": protocol,
+                        "amplitude": desired_amplitude,
+                        "tolerance": desired_tolerance,
                     }
+                    targets.append(target)
+        logger.info(f"Generated {len(targets)} targets.")
 
-                    # Add the stimulus current of the protocol to the output
-                    output_features[protocol_name]["stimulus_current"] = (
-                        f"{protocol_def['step']['amp']} nA"
-                    )
-            return FeaturesOutput(
-                brain_region=metadata.brain_region, feature_dict=output_features
+        # The trace needs to be opened from a file, no way to hack it
+        with (
+            tempfile.NamedTemporaryFile(suffix=".nwb") as temp_file,
+            tempfile.TemporaryDirectory() as temp_dir,
+        ):
+            temp_file.write(trace_content)
+
+            # LNMC traces need to be adjusted by an output voltage of 14mV due to their experimental protocol
+            if metadata.is_lnmc:
+                files_metadata = {
+                    "test": {
+                        stim_type: [
+                            {
+                                "filepath": temp_file.name,
+                                "protocol": protocol,
+                                "ljp": 14,
+                            }
+                            for protocol in POSSIBLE_PROTOCOLS[stim_type]
+                        ]
+                        for stim_type in stimuli_types
+                    }
+                }
+            else:
+                files_metadata = {
+                    "test": {
+                        stim_type: [
+                            {"filepath": temp_file.name, "protocol": protocol}
+                            for protocol in POSSIBLE_PROTOCOLS[stim_type]
+                        ]
+                        for stim_type in stimuli_types
+                    }
+                }
+
+            # Extract the requested features for the requested protocols
+            efeatures, protocol_definitions, _ = extract_efeatures(
+                output_directory=temp_dir,
+                files_metadata=files_metadata,
+                targets=targets,
+                absolute_amplitude=True,
             )
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+            output_features = {}
+
+            # Format the extracted features into a readable dict for the model
+            for protocol_name in protocol_definitions.keys():
+                efeatures_values = efeatures[protocol_name]
+                protocol_def = protocol_definitions[protocol_name]
+                output_features[protocol_name] = {
+                    f"{f['efeature_name']} (avg on n={f['n']} trace(s))": (
+                        f"{f['val'][0]} {get_unit(f['efeature_name']) if get_unit(f['efeature_name']) != 'constant' else ''}".strip()
+                    )
+                    for f in efeatures_values["soma"]
+                }
+
+                # Add the stimulus current of the protocol to the output
+                output_features[protocol_name]["stimulus_current"] = (
+                    f"{protocol_def['step']['amp']} nA"
+                )
+        return FeaturesOutput(
+            brain_region=metadata.brain_region, feature_dict=output_features
+        )

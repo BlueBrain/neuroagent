@@ -3,10 +3,9 @@
 import logging
 from typing import Any, ClassVar
 
-from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,6 @@ class LiteratureSearchInput(BaseModel):
 class LiteratureSearchMetadata(BaseMetadata):
     """Metadata class for LiteratureSearchTool."""
 
-    knowledge_graph_url: str
     literature_search_url: str
     token: str
     retriever_k: int
@@ -34,7 +32,7 @@ class LiteratureSearchMetadata(BaseMetadata):
     use_reranker: bool
 
 
-class ParagraphMetadata(BaseToolOutput, extra="ignore"):
+class ParagraphMetadata(BaseModel):
     """Metadata for an article."""
 
     article_title: str
@@ -43,6 +41,7 @@ class ParagraphMetadata(BaseToolOutput, extra="ignore"):
     section: str | None = None
     article_doi: str | None = None
     journal_issn: str | None = None
+    model_config = ConfigDict(extra="ignore")
 
 
 class LiteratureSearchTool(BaseTool):
@@ -73,30 +72,27 @@ class LiteratureSearchTool(BaseTool):
         -------
             List of paragraphs and their metadata
         """
-        try:
-            logger.info(
-                f"Entering literature search tool. Inputs: {self.input_schema.query=}"
-            )
+        logger.info(
+            f"Entering literature search tool. Inputs: {self.input_schema.query=}"
+        )
 
-            # Prepare the request's body
-            req_body = {
-                "query": self.input_schema.query,
-                "retriever_k": self.metadata.retriever_k,
-                "use_reranker": self.metadata.use_reranker,
-                "reranker_k": self.metadata.reranker_k,
-            }
+        # Prepare the request's body
+        req_body = {
+            "query": self.input_schema.query,
+            "retriever_k": self.metadata.retriever_k,
+            "use_reranker": self.metadata.use_reranker,
+            "reranker_k": self.metadata.reranker_k,
+        }
 
-            # Send the request
-            response = await self.metadata.httpx_client.get(
-                self.metadata.literature_search_url,
-                headers={"Authorization": f"Bearer {self.metadata.token}"},
-                params=req_body,  # type: ignore
-                timeout=None,
-            )
+        # Send the request
+        response = await self.metadata.httpx_client.get(
+            self.metadata.literature_search_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            params=req_body,  # type: ignore
+            timeout=None,
+        )
 
-            return self._process_output(response.json())
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        return self._process_output(response.json())
 
     @staticmethod
     def _process_output(output: list[dict[str, Any]]) -> list[ParagraphMetadata]:

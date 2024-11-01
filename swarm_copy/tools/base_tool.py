@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Literal
 
 from httpx import AsyncClient
-from langchain_core.tools import ToolException
 from openai.lib._tools import pydantic_function_tool
 from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
@@ -86,8 +85,6 @@ class BaseTool(BaseModel, ABC):
     async def arun(self) -> Any:
         """Run the tool."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
 
 def process_validation_error(error: ValidationError) -> str:
     """Handle validation errors when tool inputs are wrong."""
@@ -131,7 +128,7 @@ def process_validation_error(error: ValidationError) -> str:
     return json.dumps(error_list)
 
 
-def process_tool_error(error: ToolException) -> str:
+def process_tool_error(error: Exception) -> str:
     """Handle errors inside tools."""
     logger.warning(
         f"TOOL ERROR: Error in tool {error.args[1]}. Error: {str(error.args[0])}"
@@ -150,11 +147,3 @@ class BasicTool(BaseTool):
         data["handle_validation_error"] = process_validation_error
         data["handle_tool_error"] = process_tool_error
         return data
-
-
-class BaseToolOutput(BaseModel):
-    """Base class for tool outputs."""
-
-    def __repr__(self) -> str:
-        """Representation method."""
-        return self.model_dump_json()

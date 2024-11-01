@@ -1,13 +1,12 @@
 """Get Morpho tool."""
 
 import logging
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
-from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from swarm_copy.cell_types import get_celltypes_descendants
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ class GetMorphoInput(BaseModel):
     brain_region_id: str = Field(
         description="ID of the brain region of interest. To get this ID, please use the `resolve-entities-tool` first."
     )
-    mtype_id: Optional[str] = Field(
+    mtype_id: str | None = Field(
         default=None,
         description="ID of the M-type of interest. To get this ID, please use the `resolve-entities-tool` first.",
     )
@@ -35,7 +34,7 @@ class GetMorphoMetadata(BaseMetadata):
     celltypes_path: str
 
 
-class KnowledgeGraphOutput(BaseToolOutput):
+class KnowledgeGraphOutput(BaseModel):
     """Output schema for the knowledge graph API."""
 
     morphology_id: str
@@ -85,40 +84,34 @@ class GetMorphoTool(BaseTool):
         logger.info(
             f"Entering Get Morpho tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.mtype_id=}"
         )
-        try:
-            # From the brain region ID, get the descendants.
-            hierarchy_ids = get_descendants_id(
-                self.input_schema.brain_region_id,
-                json_path=self.metadata.brainregion_path,
-            )
-            logger.info(
-                f"Found {len(list(hierarchy_ids))} children of the brain ontology."
-            )
+        # From the brain region ID, get the descendants.
+        hierarchy_ids = get_descendants_id(
+            self.input_schema.brain_region_id,
+            json_path=self.metadata.brainregion_path,
+        )
+        logger.info(f"Found {len(list(hierarchy_ids))} children of the brain ontology.")
 
-            # Create the ES query to query the KG.
-            mtype_ids = (
-                get_celltypes_descendants(
-                    self.input_schema.mtype_id, self.metadata.celltypes_path
-                )
-                if self.input_schema.mtype_id
-                else None
+        # Create the ES query to query the KG.
+        mtype_ids = (
+            get_celltypes_descendants(
+                self.input_schema.mtype_id, self.metadata.celltypes_path
             )
-            entire_query = self.create_query(
-                brain_regions_ids=hierarchy_ids, mtype_ids=mtype_ids
-            )
+            if self.input_schema.mtype_id
+            else None
+        )
+        entire_query = self.create_query(
+            brain_regions_ids=hierarchy_ids, mtype_ids=mtype_ids
+        )
 
-            # Send the query to get morphologies.
-            response = await self.metadata.httpx_client.post(
-                url=self.metadata.knowledge_graph_url,
-                headers={"Authorization": f"Bearer {self.metadata.token}"},
-                json=entire_query,
-            )
+        # Send the query to get morphologies.
+        response = await self.metadata.httpx_client.post(
+            url=self.metadata.knowledge_graph_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            json=entire_query,
+        )
 
-            # Process the output and return.
-            return self._process_output(response.json())
-
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        # Process the output and return.
+        return self._process_output(response.json())
 
     def create_query(
         self, brain_regions_ids: set[str], mtype_ids: set[str] | None = None

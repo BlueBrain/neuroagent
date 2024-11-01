@@ -3,10 +3,9 @@
 import logging
 from typing import Any, ClassVar
 
-from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ class GetTracesInput(BaseModel):
     )
 
 
-class TracesOutput(BaseToolOutput):
+class TracesOutput(BaseModel):
     """Output schema for the traces."""
 
     trace_id: str
@@ -48,7 +47,6 @@ class GetTracesMetadata(BaseMetadata):
     token: str
     trace_search_size: int
     brainregion_path: str
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
 class GetTracesTool(BaseTool):
@@ -81,30 +79,25 @@ class GetTracesTool(BaseTool):
         logger.info(
             f"Entering get trace tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.etype_id=}"
         )
-        try:
-            # Get descendants of the brain region specified as input
-            hierarchy_ids = get_descendants_id(
-                self.input_schema.brain_region_id,
-                json_path=self.metadata.brainregion_path,
-            )
-            logger.info(
-                f"Found {len(list(hierarchy_ids))} children of the brain ontology."
-            )
+        # Get descendants of the brain region specified as input
+        hierarchy_ids = get_descendants_id(
+            self.input_schema.brain_region_id,
+            json_path=self.metadata.brainregion_path,
+        )
+        logger.info(f"Found {len(list(hierarchy_ids))} children of the brain ontology.")
 
-            # Create the ES query to query the KG with resolved descendants
-            entire_query = self.create_query(
-                brain_region_ids=hierarchy_ids, etype_id=self.input_schema.etype_id
-            )
+        # Create the ES query to query the KG with resolved descendants
+        entire_query = self.create_query(
+            brain_region_ids=hierarchy_ids, etype_id=self.input_schema.etype_id
+        )
 
-            # Send the query to the KG
-            response = await self.metadata.httpx_client.post(
-                url=self.metadata.knowledge_graph_url,
-                headers={"Authorization": f"Bearer {self.metadata.token}"},
-                json=entire_query,
-            )
-            return self._process_output(response.json())
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        # Send the query to the KG
+        response = await self.metadata.httpx_client.post(
+            url=self.metadata.knowledge_graph_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            json=entire_query,
+        )
+        return self._process_output(response.json())
 
     def create_query(
         self,

@@ -5,17 +5,16 @@ from typing import Any, ClassVar
 
 import neurom
 import numpy as np
-from langchain_core.tools import ToolException
 from neurom import load_morphology
 from pydantic import BaseModel
 
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_kg_data
 
 logger = logging.getLogger(__name__)
 
 
-class MorphologyFeatureOutput(BaseToolOutput):
+class MorphologyFeatureOutput(BaseModel):
     """Output schema for the neurom tool."""
 
     brain_region: str
@@ -56,25 +55,22 @@ class MorphologyFeatureTool(BaseTool):
         logger.info(
             f"Entering morphology feature tool. Inputs: {self.input_schema.morphology_id=}"
         )
-        try:
-            # Download the .swc file describing the morphology from the KG
-            morphology_content, metadata = await get_kg_data(
-                object_id=self.input_schema.morphology_id,
-                httpx_client=self.metadata.httpx_client,
-                url=self.metadata.knowledge_graph_url,
-                token=self.metadata.token,
-                preferred_format="swc",
-            )
+        # Download the .swc file describing the morphology from the KG
+        morphology_content, metadata = await get_kg_data(
+            object_id=self.input_schema.morphology_id,
+            httpx_client=self.metadata.httpx_client,
+            url=self.metadata.knowledge_graph_url,
+            token=self.metadata.token,
+            preferred_format="swc",
+        )
 
-            # Extract the features from it
-            features = self.get_features(morphology_content, metadata.file_extension)
-            return [
-                MorphologyFeatureOutput(
-                    brain_region=metadata.brain_region, feature_dict=features
-                )
-            ]
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        # Extract the features from it
+        features = self.get_features(morphology_content, metadata.file_extension)
+        return [
+            MorphologyFeatureOutput(
+                brain_region=metadata.brain_region, feature_dict=features
+            )
+        ]
 
     def get_features(self, morphology_content: bytes, reader: str) -> dict[str, Any]:
         """Get features from a morphology.
