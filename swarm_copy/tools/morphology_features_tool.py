@@ -9,8 +9,8 @@ from langchain_core.tools import ToolException
 from neurom import load_morphology
 from pydantic import BaseModel
 
-from neuroagent.utils import get_kg_data
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.utils import get_kg_data
 
 logger = logging.getLogger(__name__)
 

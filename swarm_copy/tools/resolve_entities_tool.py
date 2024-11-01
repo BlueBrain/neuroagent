@@ -6,9 +6,14 @@ from typing import ClassVar
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, ConfigDict, Field
 
-from neuroagent.resolving import resolve_query
-from neuroagent.tools.base_tool import ETYPE_IDS, EtypesLiteral
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.resolving import resolve_query
+from swarm_copy.tools.base_tool import (
+    ETYPE_IDS,
+    BaseMetadata,
+    BaseTool,
+    BaseToolOutput,
+    EtypesLiteral,
+)
 
 logger = logging.getLogger(__name__)
 

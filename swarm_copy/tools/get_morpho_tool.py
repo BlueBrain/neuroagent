@@ -6,9 +6,9 @@ from typing import Any, ClassVar, Optional
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
-from neuroagent.cell_types import get_celltypes_descendants
-from neuroagent.utils import get_descendants_id
+from swarm_copy.cell_types import get_celltypes_descendants
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
 

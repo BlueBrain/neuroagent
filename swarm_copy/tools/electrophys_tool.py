@@ -10,8 +10,8 @@ from efel.units import get_unit
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
-from neuroagent.utils import get_kg_data
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.utils import get_kg_data
 
 logger = logging.getLogger(__name__)
 

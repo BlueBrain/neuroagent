@@ -6,8 +6,8 @@ from typing import Any, ClassVar, Literal
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field, model_validator
 
-from neuroagent.utils import get_descendants_id
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
+from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
 

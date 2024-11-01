@@ -9,10 +9,18 @@ from langchain_core.tools import ToolException
 from langgraph.prebuilt import InjectedState
 from pydantic import BaseModel, Field
 
-from neuroagent.tools.bluenaas_tool import RecordingLocation
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, BaseToolOutput
 
 logger = logging.getLogger(__name__)
+
+
+class RecordingLocation(BaseModel):
+    """Configuration for the recording location in the simulation."""
+
+    section: str = Field(default="soma[0]", description="Section to record from")
+    offset: float = Field(
+        default=0.5, ge=0, le=1, description="Offset in the section to record from"
+    )
 
 
 class BlueNAASInput(BaseModel):
