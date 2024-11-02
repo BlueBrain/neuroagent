@@ -3,6 +3,7 @@
 import json
 from typing import Any
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +25,13 @@ async def put_messages_in_db(
     thread = await session.get(Threads, thread_id)
     if thread:
         thread.update_date = utc_now()
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "detail": "Thread not found.",
+            },
+        )
     await session.commit()
 
 
