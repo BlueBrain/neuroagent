@@ -36,11 +36,14 @@ async def put_messages_in_db(
 
 
 async def get_messages_from_db(
-    thread_id: str, session: AsyncSession
+    user_id: str, thread_id: str, session: AsyncSession
 ) -> list[dict[str, Any]]:
     """Retreive the message history from the DB."""
     message_query = await session.execute(
-        select(Messages).where(Messages.thread_id == thread_id).order_by(Messages.order)
+        select(Messages)
+        .join(Threads)
+        .where(Threads.user_id == user_id, Messages.thread_id == thread_id)
+        .order_by(Messages.order)
     )
     db_messages = message_query.scalars().all()
 

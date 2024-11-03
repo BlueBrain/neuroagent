@@ -7,13 +7,13 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class Base(DeclarativeBase):
-    """Base declarative base for SQLAlchemy."""
-
-
 def utc_now() -> datetime.datetime:
     """Return the utc time."""
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+
+class Base(DeclarativeBase):
+    """Base declarative base for SQLAlchemy."""
 
 
 class Threads(Base):
@@ -37,7 +37,7 @@ class Threads(Base):
     messages: Mapped[list["Messages"]] = relationship(
         "Messages",
         back_populates="thread",
-        cascade="delete, save-update, delete-orphan, merge",
+        cascade="all, delete-orphan",
     )
 
 
