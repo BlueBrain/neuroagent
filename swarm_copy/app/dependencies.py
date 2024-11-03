@@ -5,8 +5,11 @@ from functools import cache
 from typing import Annotated, Any, AsyncIterator
 
 from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer
+from httpx import AsyncClient, HTTPStatusError
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Threads
@@ -17,11 +20,33 @@ from swarm_copy.tools import PrintAccountDetailsTool
 logger = logging.getLogger(__name__)
 
 
+class HTTPBearerDirect(HTTPBearer):
+    """HTTPBearer class that returns directly the token in the call."""
+
+    async def __call__(self, request: Request) -> str | None:  # type: ignore
+        """Intercept the bearer token in the headers."""
+        auth_credentials = await super().__call__(request)
+        return auth_credentials.credentials if auth_credentials else None
+
+
+auth = HTTPBearerDirect(auto_error=False)
+
+
 @cache
 def get_settings() -> Settings:
     """Get the global settings."""
     logger.info("Reading the environment and instantiating settings")
     return Settings()
+
+
+async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
+    """Manage the httpx client for the request."""
+    client = AsyncClient(
+        timeout=None,
+        verify=False,
+        headers={"x-request-id": request.headers["x-request-id"]},
+    )
+    yield client
 
 
 async def get_openai_client(
@@ -97,6 +122,29 @@ def get_starting_agent(
         model=settings.openai.model,
     )
     return agent
+
+
+async def get_user_id(
+    token: Annotated[str, Depends(auth)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> str:
+    """Validate JWT token and returns user ID."""
+    if settings.keycloak.validate_token and settings.keycloak.user_info_endpoint:
+        try:
+            response = await httpx_client.get(
+                settings.keycloak.user_info_endpoint,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            response.raise_for_status()
+            user_info = response.json()
+            return user_info["sub"]
+        except HTTPStatusError:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
+            )
+    else:
+        return "dev"
 
 
 # TEMP function, will get replaced by the CRUDs.
