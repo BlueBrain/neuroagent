@@ -10,13 +10,15 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from httpx import AsyncClient
 from pydantic import BaseModel
 
+from swarm_copy.app.app_utils import setup_engine
 from swarm_copy.app.dependencies import (
     get_agents_routine,
     get_context_variables,
     get_settings,
-    get_starting_agent,
+    get_starting_agent, get_update_kg_hierarchy, get_kg_token, get_cell_types_kg_hierarchy, get_connection_string,
 )
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
@@ -68,6 +70,19 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
     logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
     logging.getLogger("bluepyefe").setLevel("CRITICAL")
+
+    if app_settings.knowledge_graph.download_hierarchy:
+        # update KG hierarchy file if requested
+        await get_update_kg_hierarchy(
+            token=get_kg_token(app_settings, token=None),
+            httpx_client=AsyncClient(),
+            settings=app_settings,
+        )
+        await get_cell_types_kg_hierarchy(
+            token=get_kg_token(app_settings, token=None),
+            httpx_client=AsyncClient(),
+            settings=app_settings,
+        )
 
     yield
 

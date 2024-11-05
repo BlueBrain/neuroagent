@@ -74,7 +74,7 @@ class GetTracesTool(BaseTool):
         """Not implemented yet."""
         pass
 
-    async def arun(self) -> list[TracesOutput] | dict[str, str]:
+    async def arun(self) -> list[TracesOutput]:
         """From a brain region ID, extract traces."""
         logger.info(
             f"Entering get trace tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.etype_id=}"

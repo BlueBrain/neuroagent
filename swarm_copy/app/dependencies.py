@@ -12,6 +12,7 @@ from openai import AsyncOpenAI
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from swarm_copy.app.config import Settings
+from swarm_copy.cell_types import CellTypesMeta
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools.electrophys_tool import ElectrophysTool
@@ -22,6 +23,7 @@ from swarm_copy.tools.literature_search_tool import LiteratureSearchTool
 from swarm_copy.tools.morphology_features_tool import MorphologyFeatureTool
 from swarm_copy.tools.resolve_entities_tool import ResolveEntitiesTool
 from swarm_copy.tools.traces_tool import GetTracesTool
+from swarm_copy.utils import RegionMeta, get_file_from_KG
 
 logger = logging.getLogger(__name__)
 
@@ -84,12 +86,15 @@ def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> 
 
 async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
     """Manage the httpx client for the request."""
-    client = AsyncClient(
-        timeout=None,
-        verify=False,
-        headers={"x-request-id": request.headers["x-request-id"]},
-    )
-    yield client
+    try:
+        client = AsyncClient(
+            timeout=None,
+            verify=False,
+            headers={"x-request-id": request.headers["x-request-id"]},
+        )
+        yield client
+    finally:
+        await client.close()
 
 
 def get_kg_token(
@@ -138,12 +143,10 @@ def get_context_variables(
     settings: Annotated[Settings, Depends(get_settings)],
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
     token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-    user_stub: Annotated[int, Depends(get_user_id)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)]
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {
-        "user_stub": user_stub,
         "starting_agent": starting_agent,
         "token": token,
         "retriever_k": settings.tools.literature.retriever_k,
@@ -154,7 +157,8 @@ def get_context_variables(
         "me_model_search_size": settings.tools.me_model.search_size,
         "brainregion_path": settings.knowledge_graph.br_saving_path,
         "celltypes_path": settings.knowledge_graph.ct_saving_path,
-        "morpho_search_size": settings.tools.kg_morpho_features.search_size,
+        "morpho_search_size": settings.tools.morpho.search_size,
+        "kg_morpho_feature_search_size": settings.tools.kg_morpho_features.search_size,
         "trace_search_size": settings.tools.trace.search_size,
         "kg_sparql_url": settings.knowledge_graph.sparql_url,
         "kg_class_view_url": settings.knowledge_graph.class_view_url,
@@ -167,3 +171,68 @@ def get_agents_routine(
 ) -> AgentsRoutine:
     """Get the AgentRoutine client."""
     return AgentsRoutine(openai)
+
+
+async def get_update_kg_hierarchy(
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    file_name: str = "brainregion.json",
+) -> None:
+    """Query file from KG and update the local hierarchy file."""
+    file_url = f"<{settings.knowledge_graph.hierarchy_url}/brainregion>"
+    KG_hierarchy = await get_file_from_KG(
+        file_url=file_url,
+        file_name=file_name,
+        view_url=settings.knowledge_graph.sparql_url,
+        token=token,
+        httpx_client=httpx_client,
+    )
+    RegionMeta_temp = RegionMeta.from_KG_dict(KG_hierarchy)
+    RegionMeta_temp.save_config(settings.knowledge_graph.br_saving_path)
+    logger.info("Knowledge Graph Brain Regions Hierarchy file updated.")
+
+
+async def get_cell_types_kg_hierarchy(
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    file_name: str = "celltypes.json",
+) -> None:
+    """Query file from KG and update the local hierarchy file."""
+    file_url = f"<{settings.knowledge_graph.hierarchy_url}/celltypes>"
+    hierarchy = await get_file_from_KG(
+        file_url=file_url,
+        file_name=file_name,
+        view_url=settings.knowledge_graph.sparql_url,
+        token=token,
+        httpx_client=httpx_client,
+    )
+    celltypesmeta = CellTypesMeta.from_dict(hierarchy)
+    celltypesmeta.save_config(settings.knowledge_graph.ct_saving_path)
+    logger.info("Knowledge Graph Cell Types Hierarchy file updated.")
+
+
+def get_connection_string(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> str | None:
+    """Get the db interacting class for chat agent."""
+    if settings.db.prefix:
+        connection_string = settings.db.prefix
+        if settings.db.user and settings.db.password:
+            # Add authentication.
+            connection_string += (
+                f"{settings.db.user}:{settings.db.password.get_secret_value()}@"
+            )
+        if settings.db.host:
+            # Either in file DB or connect to remote host.
+            connection_string += settings.db.host
+        if settings.db.port:
+            # Add the port if remote host.
+            connection_string += f":{settings.db.port}"
+        if settings.db.name:
+            # Add database name if specified.
+            connection_string += f"/{settings.db.name}"
+        return connection_string
+    else:
+        return None

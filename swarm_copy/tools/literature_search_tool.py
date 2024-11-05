@@ -65,7 +65,7 @@ class LiteratureSearchTool(BaseTool):
         """Not implemented yet."""
         pass
 
-    async def arun(self) -> list[ParagraphMetadata] | str:
+    async def arun(self) -> list[ParagraphMetadata]:
         """Async search the scientific literature and returns citations.
 
         Returns

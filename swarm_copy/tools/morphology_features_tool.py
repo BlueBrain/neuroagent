@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import neurom
 import numpy as np
 from neurom import load_morphology
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 from swarm_copy.utils import get_kg_data
@@ -21,13 +21,13 @@ class MorphologyFeatureOutput(BaseModel):
     feature_dict: dict[str, Any]
 
 
-class MorphologyFeaturesInput(BaseModel):
+class MorphologyFeatureInput(BaseModel):
     """Inputs for MorphologyFeatureTool."""
 
-    morphology_id: str
+    morphology_id: str = Field()
 
 
-class MorphologyFeaturesMetadata(BaseMetadata):
+class MorphologyFeatureMetadata(BaseMetadata):
     """Metadata for MorphologyFeatureTool."""
 
     knowledge_graph_url: str
@@ -43,8 +43,8 @@ class MorphologyFeatureTool(BaseTool):
     ] = """Given a morphology ID, fetch data about the features of the morphology. You need to know a morphology ID to use this tool and they can only come from the 'get-morpho-tool'. Therefore this tool should only be used if you already called the 'knowledge-graph-tool'.
     Here is an exhaustive list of features that can be retrieved with this tool:
     Soma radius, Soma surface area, Number of neurites, Number of sections, Number of sections per neurite, Section lengths, Segment lengths, Section radial distance, Section path distance, Local bifurcation angles, Remote bifurcation angles."""
-    input_schema: MorphologyFeaturesInput
-    metadata: MorphologyFeaturesMetadata
+    input_schema: MorphologyFeatureInput
+    metadata: MorphologyFeatureMetadata
 
     def run(self) -> None:
         """Not implemented yet."""

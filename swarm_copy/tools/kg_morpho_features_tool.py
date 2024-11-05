@@ -132,7 +132,7 @@ class FeatureInput(BaseModel):
         return data_dict
 
 
-class MorphoFeaturesInput(BaseModel):
+class MorphoFeatureInput(BaseModel):
     """Input definition for MorphoFeatures."""
 
     brain_region_id: str = Field(description="ID of the brain region of interest.")
@@ -150,7 +150,7 @@ class FeatureMetadata(BaseMetadata):
 
     knowledge_graph_url: str
     token: str
-    morpho_search_size: int
+    kg_morpho_feature_search_size: int
     brainregion_path: str
 
 
@@ -183,14 +183,14 @@ class KGMorphoFeatureTool(BaseTool):
     - The morphology name.
     - The list of features of the morphology.
     If a given feature has multiple statistics (e.g. mean, min, max, median...), please return only its mean unless specified differently by the user."""
-    input_schema: MorphoFeaturesInput
+    input_schema: MorphoFeatureInput
     metadata: FeatureMetadata
 
     def run(self) -> None:
         """Not implemented yet."""
         pass
 
-    async def arun(self) -> list[KGMorphoFeatureOutput] | dict[str, str]:
+    async def arun(self) -> list[KGMorphoFeatureOutput]:
         """Run the tool async.
 
         Returns
@@ -303,7 +303,7 @@ class KGMorphoFeatureTool(BaseTool):
 
         # Unwrap all of the conditions in the global query
         entire_query = {
-            "size": self.metadata.morpho_search_size,
+            "size": self.metadata.kg_morpho_feature_search_size,
             "track_total_hits": True,
             "query": {
                 "bool": {

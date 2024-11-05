@@ -65,7 +65,6 @@ class EtypeResolveOutput(BaseModel):
 class ResolveBRMetadata(BaseMetadata):
     """Metadata for ResolveEntitiesTool."""
 
-    knowledge_graph_url: str
     token: str
     kg_sparql_url: str
     kg_class_view_url: str

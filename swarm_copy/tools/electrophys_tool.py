@@ -195,7 +195,7 @@ class ElectrophysTool(BaseTool):
         """Not implemented yet."""
         pass
 
-    async def arun(self) -> FeaturesOutput | dict[str, str]:
+    async def arun(self) -> FeaturesOutput:
         """Give features about trace."""
         logger.info(
             f"Entering electrophys tool. Inputs: {self.input_schema.trace_id=}, {self.input_schema.calculated_feature=},"
@@ -206,6 +206,9 @@ class ElectrophysTool(BaseTool):
             # Default to IDRest if protocol not specified
             logger.warning("No stimulus type specified. Defaulting to IDRest.")
             stimuli_types = ["idrest"]
+        else:
+            stimuli_types = []
+
         if not self.input_schema.calculated_feature:
             # Compute ALL of the available features if not specified
             logger.warning("No feature specified. Defaulting to everything.")
