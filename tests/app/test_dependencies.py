@@ -363,10 +363,14 @@ async def test_get_agent(monkeypatch, httpx_mock, patch_required_env):
     me_model_tool = get_me_model_tool(
         settings=settings, token=token, httpx_client=httpx_client
     )
+    bluenaas_tool = get_bluenaas_tool(
+        settings=settings, token=token, httpx_client=httpx_client
+    )
 
     agent = get_agent(
         valid_project,
         llm=language_model,
+        bluenaas_tool=bluenaas_tool,
         literature_tool=literature_tool,
         entities_resolver_tool=entities_resolver_tool,
         morpho_tool=morpho_tool,

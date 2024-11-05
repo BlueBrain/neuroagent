@@ -10,9 +10,11 @@ from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from openai import AsyncOpenAI
 from starlette.status import HTTP_401_UNAUTHORIZED
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from swarm_copy.app.config import Settings
 from swarm_copy.cell_types import CellTypesMeta
+from swarm_copy.app.config import Settings
+from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools.electrophys_tool import ElectrophysTool
@@ -61,7 +63,54 @@ async def get_openai_client(
             await client.close()
 
 
-def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> Agent:
+def get_connection_string(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> str | None:
+    """Get the db interacting class for chat agent."""
+    if settings.db.prefix:
+        connection_string = settings.db.prefix
+        if settings.db.user and settings.db.password:
+            # Add authentication.
+            connection_string += (
+                f"{settings.db.user}:{settings.db.password.get_secret_value()}@"
+            )
+        if settings.db.host:
+            # Either in file DB or connect to remote host.
+            connection_string += settings.db.host
+        if settings.db.port:
+            # Add the port if remote host.
+            connection_string += f":{settings.db.port}"
+        if settings.db.name:
+            # Add database name if specified.
+            connection_string += f"/{settings.db.name}"
+        return connection_string
+    else:
+        return None
+
+
+def get_engine(request: Request) -> AsyncEngine | None:
+    """Get the SQL engine."""
+    return request.app.state.engine
+
+
+async def get_session(
+    engine: Annotated[AsyncEngine | None, Depends(get_engine)],
+) -> AsyncIterator[AsyncSession]:
+    """Yield a session per request."""
+    if not engine:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "detail": "Couldn't connect to the SQL DB.",
+            },
+        )
+    async with AsyncSession(engine) as session:
+        yield session
+
+
+def get_starting_agent(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Agent:
     """Get the starting agent."""
     logger.info(f"Loading model {settings.openai.model}.")
     agent = Agent(
@@ -139,6 +188,27 @@ async def get_user_id(
             )
     else:
         return "dev"
+      
+      
+# TEMP function, will get replaced by the CRUDs.
+async def get_thread_id(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> str:
+    """Temp function to get the thread id."""
+    # for now hard coded temp user_sub and thread_id.
+    user_sub = "dev"
+    thread_id = "dev_thread"
+
+    # check if thread is in DB.
+    thread = await session.get(Threads, thread_id)
+    if not thread:
+        new_thread = Threads(user_id=user_sub, thread_id=thread_id)
+        session.add(new_thread)
+        await session.commit()
+        await session.refresh(new_thread)
+        thread = new_thread
+
+    return thread.thread_id
 
 
 def get_context_variables(
