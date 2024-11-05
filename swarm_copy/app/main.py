@@ -13,12 +13,14 @@ from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 from pydantic import BaseModel
 
-from swarm_copy.app.app_utils import setup_engine
 from swarm_copy.app.dependencies import (
     get_agents_routine,
+    get_cell_types_kg_hierarchy,
     get_context_variables,
+    get_kg_token,
     get_settings,
-    get_starting_agent, get_update_kg_hierarchy, get_kg_token, get_cell_types_kg_hierarchy, get_connection_string,
+    get_starting_agent,
+    get_update_kg_hierarchy,
 )
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine

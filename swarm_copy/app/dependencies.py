@@ -86,6 +86,7 @@ def get_starting_agent(settings: Annotated[Settings, Depends(get_settings)]) -> 
 
 async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
     """Manage the httpx client for the request."""
+    client = None
     try:
         client = AsyncClient(
             timeout=None,
@@ -94,7 +95,8 @@ async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
         )
         yield client
     finally:
-        await client.close()
+        if client is not None:
+            await client.aclose()
 
 
 def get_kg_token(
@@ -143,7 +145,7 @@ def get_context_variables(
     settings: Annotated[Settings, Depends(get_settings)],
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
     token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)]
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {
