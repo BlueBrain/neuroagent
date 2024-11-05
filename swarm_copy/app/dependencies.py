@@ -9,12 +9,12 @@ from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from openai import AsyncOpenAI
-from starlette.status import HTTP_401_UNAUTHORIZED
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from starlette.status import HTTP_401_UNAUTHORIZED
 
-from swarm_copy.cell_types import CellTypesMeta
 from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Threads
+from swarm_copy.cell_types import CellTypesMeta
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools.electrophys_tool import ElectrophysTool
@@ -188,8 +188,8 @@ async def get_user_id(
             )
     else:
         return "dev"
-      
-      
+
+
 # TEMP function, will get replaced by the CRUDs.
 async def get_thread_id(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -283,28 +283,3 @@ async def get_cell_types_kg_hierarchy(
     celltypesmeta = CellTypesMeta.from_dict(hierarchy)
     celltypesmeta.save_config(settings.knowledge_graph.ct_saving_path)
     logger.info("Knowledge Graph Cell Types Hierarchy file updated.")
-
-
-def get_connection_string(
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> str | None:
-    """Get the db interacting class for chat agent."""
-    if settings.db.prefix:
-        connection_string = settings.db.prefix
-        if settings.db.user and settings.db.password:
-            # Add authentication.
-            connection_string += (
-                f"{settings.db.user}:{settings.db.password.get_secret_value()}@"
-            )
-        if settings.db.host:
-            # Either in file DB or connect to remote host.
-            connection_string += settings.db.host
-        if settings.db.port:
-            # Add the port if remote host.
-            connection_string += f":{settings.db.port}"
-        if settings.db.name:
-            # Add database name if specified.
-            connection_string += f"/{settings.db.name}"
-        return connection_string
-    else:
-        return None

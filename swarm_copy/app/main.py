@@ -9,23 +9,17 @@ from uuid import uuid4
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
-from pydantic import BaseModel
 
 from swarm_copy.app.app_utils import setup_engine
 from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Base
 from swarm_copy.app.dependencies import (
-    get_agents_routine,
     get_cell_types_kg_hierarchy,
-    get_context_variables,
+    get_connection_string,
     get_kg_token,
     get_settings,
-    get_starting_agent,
     get_update_kg_hierarchy,
-    get_connection_string,
-    get_settings,
 )
 from swarm_copy.app.routers import qa
 

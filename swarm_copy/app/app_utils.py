@@ -8,8 +8,6 @@ from httpx import AsyncClient
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from starlette.status import HTTP_401_UNAUTHORIZED
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from swarm_copy.app.config import Settings
 
