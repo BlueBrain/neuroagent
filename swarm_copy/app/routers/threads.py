@@ -4,10 +4,11 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from swarm_copy.app.database.db_utils import get_thread
 from swarm_copy.app.database.schemas import MessagesRead, ThreadsRead
 from swarm_copy.app.database.sql_schemas import Messages, Threads
 from swarm_copy.app.dependencies import get_session, get_user_id
@@ -38,9 +39,10 @@ async def get_threads(
     user_id: Annotated[str, Depends(get_user_id)],
 ) -> list[ThreadsRead]:
     """Get threads for a user."""
-    query = select(Threads).where(Threads.user_id == user_id)
-    results = await session.execute(query)
-    threads = results.scalars().all()
+    thread_result = await session.execute(
+        select(Threads).where(Threads.user_id == user_id)
+    )
+    threads = thread_result.scalars().all()
     return [ThreadsRead(**thread.__dict__) for thread in threads]
 
 
@@ -50,25 +52,26 @@ async def get_messages(
     user_id: Annotated[str, Depends(get_user_id)],
     thread_id: str,
 ) -> list[MessagesRead]:
-    """Get thread."""
-    message_query = await session.execute(
+    """Get all mesaages of the thread."""
+    await get_thread(user_id=user_id, thread_id=thread_id, session=session)
+
+    messages_result = await session.execute(
         select(Messages)
         .where(Messages.thread.has(user_id=user_id), Messages.thread_id == thread_id)
         .order_by(Messages.order)
     )
-    db_messages = message_query.scalars().all()
+    db_messages = messages_result.scalars().all()
 
     messages = []
     for msg in db_messages:
-        message_dict = json.loads(msg.content)
-        if message_dict["role"] == "user":
-            msg.entity = "Human"
-            msg.content = message_dict["content"]
-            messages.append(MessagesRead(**msg.__dict__))
-        if message_dict["role"] == "assistant" and message_dict["content"]:
-            msg.entity = "AI"
-            msg.content = message_dict["content"]
-            messages.append(MessagesRead(**msg.__dict__))
+        if msg.entity.value in ("user", "ai_message"):
+            messages.append(
+                MessagesRead(
+                    entity=msg.entity.value,
+                    content=json.loads(msg.content)["content"],
+                    **msg.__dict__,
+                )
+            )
 
     return messages
 
@@ -81,11 +84,19 @@ async def update_thread_title(
     thread_id: str,
 ) -> ThreadsRead:
     """Update thread."""
-    query = select(Threads).where(
-        Threads.user_id == user_id, Threads.thread_id == thread_id
+    thread_result = await session.execute(
+        select(Threads).where(
+            Threads.user_id == user_id, Threads.thread_id == thread_id
+        )
     )
-    thread_to_update = await session.execute(query)
-    thread_to_update = thread_to_update.scalar_one()
+    thread_to_update = thread_result.scalar_one_or_none()
+    if not thread_to_update:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "detail": "Thread not found.",
+            },
+        )
     thread_to_update.title = new_title
     await session.commit()
     await session.refresh(thread_to_update)
@@ -99,11 +110,19 @@ async def delete_thread(
     thread_id: str,
 ) -> dict[str, str]:
     """Delete the specified thread."""
-    query = select(Threads).where(
-        Threads.user_id == user_id, Threads.thread_id == thread_id
+    thread_result = await session.execute(
+        select(Threads).where(
+            Threads.user_id == user_id, Threads.thread_id == thread_id
+        )
     )
-    thread_to_delete = await session.execute(query)
-    thread_to_delete = thread_to_delete.scalar_one()
+    thread_to_delete = thread_result.scalar_one_or_none()
+    if not thread_to_delete:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "detail": "Thread not found.",
+            },
+        )
     await session.delete(thread_to_delete)
     await session.commit()
     return {"Acknowledged": "true"}

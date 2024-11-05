@@ -50,11 +50,14 @@ async def run_chat_agent(
 ) -> AgentResponse:
     """Run a single agent query."""
     messages = await get_messages_from_db(
-        user_id=user_id, thread_id=thread_id, session=session
+        user_id=user_id,
+        thread_id=thread_id,
+        session=session,
     )
     messages.append({"role": "user", "content": user_request.query})
     response = await agent_routine.arun(agent, messages, context_variables)
     await put_messages_in_db(
+        user_id=user_id,
         history=response.messages,
         offset=len(messages) - 1,
         thread_id=thread_id,
@@ -75,7 +78,9 @@ async def stream_chat_agent(
 ) -> StreamingResponse:
     """Run a single agent query in a streamed fashion."""
     messages = await get_messages_from_db(
-        user_id=user_id, thread_id=thread_id, session=session
+        user_id=user_id,
+        thread_id=thread_id,
+        session=session,
     )
     messages.append({"role": "user", "content": user_request.query})
     stream_generator = stream_agent_response(
@@ -83,6 +88,7 @@ async def stream_chat_agent(
         agent,
         messages,
         context_variables,
+        user_id,
         thread_id,
         session,
     )

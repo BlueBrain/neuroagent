@@ -15,6 +15,7 @@ async def stream_agent_response(
     agent: Agent,
     messages: list[dict[str, str]],
     context_variables: dict[str, Any],
+    user_id: str,
     thread_id: str,
     session: AsyncSession,
 ) -> AsyncIterator[str]:
@@ -36,6 +37,7 @@ async def stream_agent_response(
             to_db = chunk
 
     await put_messages_in_db(
+        user_id=user_id,
         history=to_db.messages,
         offset=len(messages) - 1,
         thread_id=thread_id,
