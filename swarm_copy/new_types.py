@@ -27,6 +27,18 @@ class Response(BaseModel):
     context_variables: dict[str, Any] = {}
 
 
+class AgentRequest(BaseModel):
+    """Class for agent request."""
+
+    query: str
+
+
+class AgentResponse(BaseModel):
+    """Final agent response."""
+
+    message: str = ""
+
+
 class Result(BaseModel):
     """
     Encapsulates the possible return values for an agent function.

@@ -171,7 +171,7 @@ class AgentsRoutine:
     async def arun(
         self,
         agent: Agent,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
@@ -208,7 +208,7 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
         return Response(
-            messages=history,
+            messages=history[init_len - 1 :],
             agent=active_agent,
             context_variables=context_variables,
         )
@@ -216,7 +216,7 @@ class AgentsRoutine:
     async def astream(
         self,
         agent: Agent,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
@@ -302,7 +302,7 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
         yield Response(
-            messages=history[init_len:],
+            messages=history[init_len - 1 :],
             agent=active_agent,
             context_variables=context_variables,
         )

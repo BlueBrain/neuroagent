@@ -9,18 +9,15 @@ from uuid import uuid4
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
+from swarm_copy.app.app_utils import setup_engine
+from swarm_copy.app.config import Settings
+from swarm_copy.app.database.sql_schemas import Base
 from swarm_copy.app.dependencies import (
-    get_agents_routine,
-    get_context_variables,
+    get_connection_string,
     get_settings,
-    get_starting_agent,
 )
-from swarm_copy.new_types import Agent
-from swarm_copy.run import AgentsRoutine
-from swarm_copy.stream import stream_agent_response
+from swarm_copy.app.routers import qa
 
 LOGGING = {
     "version": 1,
@@ -65,11 +62,22 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
     """Read environment (settings of the application)."""
     app_settings = fastapi_app.dependency_overrides.get(get_settings, get_settings)()
 
+    # Get the sqlalchemy engine and store it in app state.
+    engine = setup_engine(app_settings, get_connection_string(app_settings))
+    fastapi_app.state.engine = engine
+
+    # Create the tables for the agent memory.
+    if engine:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
     logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
     logging.getLogger("bluepyefe").setLevel("CRITICAL")
 
     yield
+    if engine:
+        await engine.dispose()
 
 
 app = FastAPI(
@@ -99,38 +107,25 @@ app.add_middleware(
 )
 
 
-class AgentRequest(BaseModel):
-    """Class for agent request."""
-
-    query: str
+app.include_router(qa.router)
 
 
-@app.post("/run/qa")
-async def run_simple_agent(
-    user_request: AgentRequest,
-    agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
-    agent: Annotated[Agent, Depends(get_starting_agent)],
-    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-) -> list[Any]:
-    """Run a single agent query."""
-    response = await agent_routine.arun(
-        agent, [{"role": "user", "content": user_request.query}], context_variables
-    )
-    return response.messages
+@app.get("/healthz")
+def healthz() -> str:
+    """Check the health of the API."""
+    return "200"
 
 
-@app.post("/run/streamed")
-async def stream_simple_agent(
-    user_request: AgentRequest,
-    agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
-    agent: Annotated[Agent, Depends(get_starting_agent)],
-    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-) -> StreamingResponse:
-    """Run a single agent query in a streamed fashion."""
-    stream_generator = stream_agent_response(
-        agents_routine,
-        agent,
-        [{"role": "user", "content": user_request.query}],
-        context_variables,
-    )
-    return StreamingResponse(stream_generator, media_type="text/event-stream")
+@app.get("/")
+def readyz() -> dict[str, str]:
+    """Check if the API is ready to accept traffic."""
+    return {"status": "ok"}
+
+
+@app.get("/settings")
+def settings(settings: Annotated[Settings, Depends(get_settings)]) -> Any:
+    """Show complete settings of the backend.
+
+    Did not add return model since it pollutes the Swagger UI.
+    """
+    return settings
