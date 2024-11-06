@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - LLM evaluation logic
 - Tool implementations without langchain or langgraph dependencies
+- Unit tests for the migrated tools
 
 ## [0.3.3] - 30.10.2024
 

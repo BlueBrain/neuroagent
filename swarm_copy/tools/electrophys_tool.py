@@ -214,6 +214,8 @@ class ElectrophysFeatureTool(BaseTool):
             # Compute ALL of the available features if not specified
             logger.warning("No feature specified. Defaulting to everything.")
             calculated_feature = list(CALCULATED_FEATURES.__args__[0].__args__)  # type: ignore
+        else:
+            calculated_feature = self.input_schema.calculated_feature
 
         # Download the .nwb file associated to the trace from the KG
         trace_content, metadata = await get_kg_data(
