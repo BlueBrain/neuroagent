@@ -24,7 +24,13 @@ class MorphologyFeatureOutput(BaseModel):
 class MorphologyFeatureInput(BaseModel):
     """Inputs for MorphologyFeatureTool."""
 
-    morphology_id: str = Field()
+    morphology_id: str = Field(
+        description=(
+            "ID of the morphology of interest. A morphology ID is an HTTP(S) link, it"
+            " should therefore match the following regex pattern:"
+            r" 'https?://\S+[a-zA-Z0-9]'"
+        )
+    )
 
 
 class MorphologyFeatureMetadata(BaseMetadata):

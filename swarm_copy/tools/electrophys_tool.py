@@ -168,14 +168,14 @@ class ElectrophysMetadata(BaseMetadata):
     token: str
 
 
-class FeaturesOutput(BaseModel):
+class FeatureOutput(BaseModel):
     """Output schema for the neurom tool."""
 
     brain_region: str
     feature_dict: dict[str, Any]
 
 
-class ElectrophysTool(BaseTool):
+class ElectrophysFeatureTool(BaseTool):
     """Class defining the Electrophys Featyres Tool."""
 
     name: ClassVar[str] = "electrophys-features-tool"
@@ -195,19 +195,20 @@ class ElectrophysTool(BaseTool):
         """Not implemented yet."""
         pass
 
-    async def arun(self) -> FeaturesOutput:
+    async def arun(self) -> FeatureOutput:
         """Give features about trace."""
         logger.info(
             f"Entering electrophys tool. Inputs: {self.input_schema.trace_id=}, {self.input_schema.calculated_feature=},"
             f" {self.input_schema.amplitude=}, {self.input_schema.stimuli_types=}"
         )
+        stimuli_types: list[str] | STIMULI_TYPES
         # Deal with cases where user did not specify stimulus type or/and feature
         if not self.input_schema.stimuli_types:
             # Default to IDRest if protocol not specified
             logger.warning("No stimulus type specified. Defaulting to IDRest.")
             stimuli_types = ["idrest"]
         else:
-            stimuli_types = []
+            stimuli_types = self.input_schema.stimuli_types
 
         if not self.input_schema.calculated_feature:
             # Compute ALL of the available features if not specified
@@ -325,6 +326,6 @@ class ElectrophysTool(BaseTool):
                 output_features[protocol_name]["stimulus_current"] = (
                     f"{protocol_def['step']['amp']} nA"
                 )
-        return FeaturesOutput(
+        return FeatureOutput(
             brain_region=metadata.brain_region, feature_dict=output_features
         )

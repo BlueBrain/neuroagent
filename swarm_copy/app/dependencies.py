@@ -17,14 +17,16 @@ from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.cell_types import CellTypesMeta
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
-from swarm_copy.tools.electrophys_tool import ElectrophysTool
-from swarm_copy.tools.get_me_model_tool import GetMEModelTool
-from swarm_copy.tools.get_morpho_tool import GetMorphoTool
-from swarm_copy.tools.kg_morpho_features_tool import KGMorphoFeatureTool
-from swarm_copy.tools.literature_search_tool import LiteratureSearchTool
-from swarm_copy.tools.morphology_features_tool import MorphologyFeatureTool
-from swarm_copy.tools.resolve_entities_tool import ResolveEntitiesTool
-from swarm_copy.tools.traces_tool import GetTracesTool
+from swarm_copy.tools import (
+    ElectrophysFeatureTool,
+    GetMEModelTool,
+    GetMorphoTool,
+    GetTracesTool,
+    KGMorphoFeatureTool,
+    LiteratureSearchTool,
+    MorphologyFeatureTool,
+    ResolveEntitiesTool,
+)
 from swarm_copy.utils import RegionMeta, get_file_from_KG
 
 logger = logging.getLogger(__name__)
@@ -120,7 +122,7 @@ def get_starting_agent(
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
         tools=[
             LiteratureSearchTool,
-            ElectrophysTool,
+            ElectrophysFeatureTool,
             GetMEModelTool,
             GetMorphoTool,
             KGMorphoFeatureTool,
@@ -135,17 +137,15 @@ def get_starting_agent(
 
 async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
     """Manage the httpx client for the request."""
-    client = None
+    client = AsyncClient(
+        timeout=None,
+        verify=False,
+        headers={"x-request-id": request.headers["x-request-id"]},
+    )
     try:
-        client = AsyncClient(
-            timeout=None,
-            verify=False,
-            headers={"x-request-id": request.headers["x-request-id"]},
-        )
         yield client
     finally:
-        if client is not None:
-            await client.aclose()
+        await client.aclose()
 
 
 def get_kg_token(

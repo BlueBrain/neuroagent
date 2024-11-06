@@ -98,14 +98,14 @@ STATISTICS = {
 }
 
 
-class FeatRangeInput(BaseModel):
+class KGFeatRangeInput(BaseModel):
     """Features Range input class."""
 
     min_value: float | int | None = None
     max_value: float | int | None = None
 
 
-class FeatureInput(BaseModel):
+class KGFeatureInput(BaseModel):
     """Class defining the scheme of inputs the agent should use for the features."""
 
     label: LABEL
@@ -119,7 +119,7 @@ class FeatureInput(BaseModel):
             " user"
         ),
     )
-    feat_range: FeatRangeInput | None = None
+    feat_range: KGFeatRangeInput | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -132,11 +132,11 @@ class FeatureInput(BaseModel):
         return data_dict
 
 
-class MorphoFeatureInput(BaseModel):
+class KGMorphoFeatureInput(BaseModel):
     """Input definition for MorphoFeatures."""
 
     brain_region_id: str = Field(description="ID of the brain region of interest.")
-    features: FeatureInput = Field(
+    features: KGFeatureInput = Field(
         description="""Definition of the feature and values expected by the user.
         The input consists of a dictionary with three keys. The first one is the label (or name) of the feature specified by the user.
         The second one is the compartment in which the feature is calculated. It MUST be None if not explicitly specified by the user.
@@ -145,7 +145,7 @@ class MorphoFeatureInput(BaseModel):
     )
 
 
-class FeatureMetadata(BaseMetadata):
+class KGFeatureMetadata(BaseMetadata):
     """Metadata class for the morpho features tool."""
 
     knowledge_graph_url: str
@@ -183,8 +183,8 @@ class KGMorphoFeatureTool(BaseTool):
     - The morphology name.
     - The list of features of the morphology.
     If a given feature has multiple statistics (e.g. mean, min, max, median...), please return only its mean unless specified differently by the user."""
-    input_schema: MorphoFeatureInput
-    metadata: FeatureMetadata
+    input_schema: KGMorphoFeatureInput
+    metadata: KGFeatureMetadata
 
     def run(self) -> None:
         """Not implemented yet."""
@@ -223,7 +223,7 @@ class KGMorphoFeatureTool(BaseTool):
         return self._process_output(response.json())
 
     def create_query(
-        self, brain_regions_ids: set[str], features: FeatureInput
+        self, brain_regions_ids: set[str], features: KGFeatureInput
     ) -> dict[str, Any]:
         """Create ES query to query the KG with.
 
