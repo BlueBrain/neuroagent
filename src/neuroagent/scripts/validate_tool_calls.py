@@ -163,7 +163,6 @@ def main():
     )
     args = parser.parse_args()
 
-    breakpoint()
     test_tool_calls(args.output)
 
 
