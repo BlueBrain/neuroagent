@@ -46,7 +46,9 @@ def validate_tool(
     for tool in actual_tool_calls:
         if order < len(required_tools) and tool == required_tools[order]:
             order += 1
-        elif tool in optional_tools or (order > 0 and tool == required_tools[order - 1]):
+        elif tool in optional_tools or (
+            order > 0 and tool == required_tools[order - 1]
+        ):
             continue
         elif tool not in required_tools[:order]:
             return False, f"Unexpected tool called: {tool}"
