@@ -141,6 +141,35 @@ class TestValidateTool(unittest.TestCase):
         self.assertFalse(result)
         self.assertEqual(message, "Forbidden tool called: tool3")
 
+    def test_overrepeated_tools(self):
+        result, message = validate_tool(
+            required_tools=["tool1", "tool2", "tool3"],
+            actual_tool_calls=["tool1", "tool2", "tool2", "tool2", "tool3"],
+            optional_tools=[],
+            forbidden_tools=[],
+        )
+        self.assertTrue(result)
+        self.assertEqual(message, "All required tools called correctly")
+
+    def test_overrepeated_tools2(self):
+        result, message = validate_tool(
+            required_tools=["tool1", "tool2", "tool3"],
+            actual_tool_calls=["tool1", "tool2", "tool3", "tool3", "tool3"],
+            optional_tools=[],
+            forbidden_tools=[],
+        )
+        self.assertTrue(result)
+        self.assertEqual(message, "All required tools called correctly")
+
+    def test_overrepeated_tools3(self):
+        result, message = validate_tool(
+            required_tools=["tool1", "tool2", "tool3"],
+            actual_tool_calls=["tool1", "tool1", "tool1", "tool2", "tool2", "tool3", "tool3"],
+            optional_tools=[],
+            forbidden_tools=[],
+        )
+        self.assertTrue(result)
+        self.assertEqual(message, "All required tools called correctly")
 
 if __name__ == "__main__":
     unittest.main()

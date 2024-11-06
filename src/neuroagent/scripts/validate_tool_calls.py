@@ -44,20 +44,23 @@ def validate_tool(
     # Validate required tools order
     order = 0
     for tool in actual_tool_calls:
-        if tool in required_tools[order:]:
-            if tool == required_tools[order]:
-                order += 1
+        if tool == required_tools[order]:
+            order += 1
+            if order == len(required_tools):
+                break
+        elif tool in optional_tools or tool == required_tools[order - 1]:
             continue
-        elif tool in required_tools[:order]:
-            continue
-        elif tool in optional_tools:
-            continue
-        else:
+        elif tool not in required_tools[:order]:
             return False, f"Unexpected tool called: {tool}"
 
     # Check if all required tools were called
     if order != len(required_tools):
         return False, "Not all required tools were called"
+
+    # Allow extra repeated tools at the end
+    remaining_tools = actual_tool_calls[order:]
+    if any(tool not in required_tools + optional_tools for tool in remaining_tools):
+        return False, "Unexpected tools found after required sequence"
 
     return True, "All required tools called correctly"
 
