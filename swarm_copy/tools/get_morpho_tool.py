@@ -1,6 +1,7 @@
 """Get Morpho tool."""
 
 import logging
+import pathlib
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
@@ -30,8 +31,8 @@ class GetMorphoMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     morpho_search_size: int
-    brainregion_path: str
-    celltypes_path: str
+    brainregion_path: pathlib.Path | str
+    celltypes_path: pathlib.Path | str
 
 
 class KnowledgeGraphOutput(BaseModel):

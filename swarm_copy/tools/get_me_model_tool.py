@@ -1,6 +1,7 @@
 """Module defining the Get ME Model tool."""
 
 import logging
+import pathlib
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
@@ -34,8 +35,8 @@ class GetMEModelMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     me_model_search_size: int
-    brainregion_path: str
-    celltypes_path: str
+    brainregion_path: pathlib.Path | str
+    celltypes_path: pathlib.Path | str
 
 
 class MEModelOutput(BaseModel):

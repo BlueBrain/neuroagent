@@ -1,6 +1,7 @@
 """Traces tool."""
 
 import logging
+import pathlib
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
@@ -46,7 +47,7 @@ class GetTracesMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     trace_search_size: int
-    brainregion_path: str
+    brainregion_path: pathlib.Path | str
 
 
 class GetTracesTool(BaseTool):
