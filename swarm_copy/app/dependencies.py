@@ -18,6 +18,7 @@ from swarm_copy.cell_types import CellTypesMeta
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools import (
+    BlueNaaSTool,
     ElectrophysFeatureTool,
     GetMEModelTool,
     GetMorphoTool,
@@ -121,6 +122,7 @@ def get_starting_agent(
                 You must always specify in your answers from which brain regions the information is extracted.
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
         tools=[
+            BlueNaaSTool,
             LiteratureSearchTool,
             ElectrophysFeatureTool,
             GetMEModelTool,
@@ -221,6 +223,7 @@ def get_context_variables(
     return {
         "starting_agent": starting_agent,
         "token": token,
+        "bluenaas_url": settings.tools.bluenaas.url,
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,
