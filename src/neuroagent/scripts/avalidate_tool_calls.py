@@ -116,10 +116,7 @@ async def validate_tool_calls_async(
     results_list = []
 
     async with aiohttp.ClientSession() as session:
-        tasks = [
-            fetch_tool_call(session, query, base_url)
-            for query in tool_calls_data
-        ]
+        tasks = [fetch_tool_call(session, query, base_url) for query in tool_calls_data]
         results_list = await asyncio.gather(*tasks)
 
     results_df = pd.DataFrame(results_list)

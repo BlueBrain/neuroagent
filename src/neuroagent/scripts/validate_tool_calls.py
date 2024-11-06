@@ -93,12 +93,10 @@ def validate_tool_calls(
 
         # Send a request to the API
         response = requests.post(
-            f"{base_url}/qa/run", 
-            headers={
-                "Content-Type": "application/json"
-            },  
+            f"{base_url}/qa/run",
+            headers={"Content-Type": "application/json"},
             json={
-                "query": prompt, 
+                "query": prompt,
             },
         )
 
