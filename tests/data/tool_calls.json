@@ -12,7 +12,7 @@
       }
     ],
     "optional_tools": ["literature-search-tool"],
-    "forbidden_tools": ["get-traces-tool", "electrophys-feature-tool", "get-me-model-tool", "bluenaas-tool"]
+    "forbidden_tools": ["get-traces-tool", "electrophys-features-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
     "prompt": "Find me articles about the role of the hippocampus in memory formation.",
@@ -25,7 +25,7 @@
       }
     ],
     "optional_tools": ["resolve-entities-tool"],
-    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-feature-tool", "get-me-model-tool", "bluenaas-tool"]
+    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-features-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
     "prompt": "Retrieve electrophysiological features of cortical neurons.",
@@ -43,7 +43,7 @@
         }
       },    
       {
-          "tool_name": "electrophys-feature-tool",
+          "tool_name": "electrophys-features-tool",
           "arguments": {
               "brain_region": "cortex"
           }
@@ -84,7 +84,7 @@
       }
     ],
     "optional_tools": ["resolve-entities-tool"],
-    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-feature-tool", "get-me-model-tool", "bluenaas-tool"]
+    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-features-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
     "prompt": "Run 1000 ms of simulation of a me model from somatosensory cortex with 34 degree temperature, current clamp stimulation mode with step current for fire pattern detection. use 1 number of step and 0.05 nA current stimulation. Record from soma.",
@@ -109,6 +109,6 @@
       }
     ],
     "optional_tools": [],
-    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-feature-tool"]
+    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-features-tool"]
   }
 ]

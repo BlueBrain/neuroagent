@@ -1,6 +1,15 @@
+import json
 import unittest
+from unittest.mock import AsyncMock, mock_open, patch
 
-from neuroagent.scripts.validate_tool_calls import validate_tool
+import aiohttp
+import pytest
+
+from src.neuroagent.scripts.avalidate_tool_calls import (
+    fetch_tool_call,
+    validate_tool,
+    validate_tool_calls_async,
+)
 
 
 class TestValidateTool(unittest.TestCase):
@@ -178,6 +187,73 @@ class TestValidateTool(unittest.TestCase):
         )
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
+
+
+@pytest.mark.asyncio
+async def test_fetch_tool_call_success():
+    test_case = {
+        "prompt": "Test prompt",
+        "expected_tools": [{"tool_name": "tool1"}, {"tool_name": "tool2"}],
+        "optional_tools": ["tool3"],
+        "forbidden_tools": ["tool4"],
+    }
+
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.json.return_value = {
+        "steps": [{"tool_name": "tool1"}, {"tool_name": "tool2"}]
+    }
+
+    # Mock the context manager behavior
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_post.return_value.__aenter__.return_value = mock_response
+
+        async with aiohttp.ClientSession() as session:
+            result = await fetch_tool_call(session, test_case)
+            assert result["Match"] == "Yes"
+            assert result["Actual"] == ["tool1", "tool2"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_tool_call_failure():
+    test_case = {
+        "prompt": "Test prompt",
+        "expected_tools": [{"tool_name": "tool1"}, {"tool_name": "tool2"}],
+        "optional_tools": ["tool3"],
+        "forbidden_tools": ["tool4"],
+    }
+
+    mock_response = AsyncMock()
+    mock_response.status = 500
+    mock_response.text.return_value = "Internal Server Error"
+
+    with patch("aiohttp.ClientSession.post", return_value=mock_response):
+        async with aiohttp.ClientSession() as session:
+            result = await fetch_tool_call(session, test_case)
+            assert result["Match"] == "No"
+            assert "API call failed" in result["Actual"]
+
+
+@pytest.mark.asyncio
+async def test_validate_tool_calls_async():
+    mock_data = json.dumps(
+        [
+            {
+                "prompt": "Test prompt",
+                "expected_tools": [{"tool_name": "tool1"}],
+                "optional_tools": [],
+                "forbidden_tools": [],
+            }
+        ]
+    )
+
+    with patch("builtins.open", mock_open(read_data=mock_data)):
+        with patch(
+            "src.neuroagent.scripts.avalidate_tool_calls.fetch_tool_call",
+            new_callable=AsyncMock,
+        ) as mock_fetch:
+            mock_fetch.return_value = {"Match": "Yes"}
+            await validate_tool_calls_async("test_output.csv")
 
 
 if __name__ == "__main__":
