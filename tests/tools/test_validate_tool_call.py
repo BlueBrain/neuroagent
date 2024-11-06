@@ -86,7 +86,7 @@ class TestValidateTool(unittest.TestCase):
         result, message = validate_tool(
             required_tools=[],
             actual_tool_calls=["tool1", "tool2"],
-            optional_tools=["tool1","tool2"],
+            optional_tools=["tool1", "tool2"],
             forbidden_tools=[]
         )
         self.assertTrue(result)
