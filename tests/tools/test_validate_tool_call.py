@@ -1,6 +1,7 @@
 import unittest
 from neuroagent.scripts.validate_tool_calls import validate_tool
 import pytest
+
 class TestValidateTool(unittest.TestCase):
 
     def test_no_tools_called(self):
@@ -72,6 +73,73 @@ class TestValidateTool(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
 
+    def test_no_required_tools(self):
+        result, message = validate_tool(
+            required_tools=[],
+            actual_tool_calls=["tool1", "tool2"],
+            optional_tools=[],
+            forbidden_tools=[]
+        )
+        self.assertFalse(result)
+
+    def test_no_required_tools_but_optional(self):
+        result, message = validate_tool(
+            required_tools=[],
+            actual_tool_calls=["tool1", "tool2"],
+            optional_tools=["tool1","tool2"],
+            forbidden_tools=[]
+        )
+        self.assertTrue(result)
+
+    def test_only_optional_tools_called(self):
+        result, message = validate_tool(
+            required_tools=[],
+            actual_tool_calls=["tool2"],
+            optional_tools=["tool2"],
+            forbidden_tools=[]
+        )
+        self.assertTrue(result)
+        self.assertEqual(message, "All required tools called correctly")
+
+    def test_only_forbidden_tools_called(self):
+        result, message = validate_tool(
+            required_tools=[],
+            actual_tool_calls=["tool3"],
+            optional_tools=[],
+            forbidden_tools=["tool3"]
+        )
+        self.assertFalse(result)
+        self.assertEqual(message, "Forbidden tool called: tool3")
+
+    def test_mixed_tools_called(self):
+        result, message = validate_tool(
+            required_tools=["tool1"],
+            actual_tool_calls=["tool1", "tool2", "tool3"],
+            optional_tools=["tool2"],
+            forbidden_tools=["tool3"]
+        )
+        self.assertFalse(result)
+        self.assertEqual(message, "Forbidden tool called: tool3")
+
+    def test_repeated_required_tools(self):
+        result, message = validate_tool(
+            required_tools=["tool1", "tool1"],
+            actual_tool_calls=["tool1", "tool1"],
+            optional_tools=[],
+            forbidden_tools=[]
+        )
+        self.assertTrue(result)
+        self.assertEqual(message, "All required tools called correctly")
+
+    def test_repeated_forbidden_tools(self):
+        result, message = validate_tool(
+            required_tools=["tool1"],
+            actual_tool_calls=["tool1", "tool3", "tool3"],
+            optional_tools=[],
+            forbidden_tools=["tool3"]
+        )
+        self.assertFalse(result)
+        self.assertEqual(message, "Forbidden tool called: tool3")
 
 if __name__ == '__main__':
     unittest.main()
