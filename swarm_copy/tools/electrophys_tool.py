@@ -207,7 +207,7 @@ class ElectrophysFeatureTool(BaseTool):
             logger.warning("No stimulus type specified. Defaulting to IDRest.")
             stimuli_types = ["idrest"]
         else:
-            stimuli_types = self.input_schema.stimuli_types
+            stimuli_types = self.input_schema.stimuli_types  # type: ignore
 
         if not self.input_schema.calculated_feature:
             # Compute ALL of the available features if not specified
