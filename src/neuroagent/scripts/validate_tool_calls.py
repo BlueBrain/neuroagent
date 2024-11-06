@@ -83,23 +83,22 @@ def validate_tool_calls(
     results_list = []
 
     # Iterate over each test case with a progress bar
-    for test_case in tqdm(tool_calls_data, desc="Processing test cases"):
-        prompt = test_case["prompt"]
-        expected_tool_calls = test_case["expected_tools"]
-        optional_tools = test_case["optional_tools"]
-        forbidden_tools = test_case["forbidden_tools"]
+    for query in tqdm(tool_calls_data, desc="Processing test cases"):
+        prompt = query["prompt"]
+        expected_tool_calls = query["expected_tools"]
+        optional_tools = query["optional_tools"]
+        forbidden_tools = query["forbidden_tools"]
 
         logging.info(f"Testing prompt: {prompt}")
 
         # Send a request to the API
         response = requests.post(
-            f"{base_url}/qa/run",  # Replace with the actual endpoint
+            f"{base_url}/qa/run", 
             headers={
                 "Content-Type": "application/json"
-            },  # Ensure the correct header is set
+            },  
             json={
-                "query": prompt,  # Add the 'query' field with the prompt as its value
-                "messages": [{"role": "user", "content": prompt}],
+                "query": prompt, 
             },
         )
 

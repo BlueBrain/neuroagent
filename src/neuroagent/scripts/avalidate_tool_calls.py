@@ -16,7 +16,7 @@ logging.basicConfig(
 
 
 async def fetch_tool_call(
-    session: aiohttp.ClientSession, test_case: Dict[str, Any], base_url: str
+    session: aiohttp.ClientSession, query: Dict[str, Any], base_url: str
 ) -> Dict[str, Any]:
     """
     Fetch the tool call results for a given test case.
@@ -27,7 +27,7 @@ async def fetch_tool_call(
     Args:
     ----
     session (aiohttp.ClientSession): The aiohttp session used to make the HTTP request.
-    test_case (dict): A dictionary containing the test case data, including the prompt,
+    query (dict): A dictionary containing the test case data, including the prompt,
                       expected tools, optional tools, and forbidden tools.
     base_url (str): The base URL of the API.
 
@@ -36,10 +36,10 @@ async def fetch_tool_call(
     dict: A dictionary containing the prompt, actual tool calls, expected tool calls,
           and whether the actual calls match the expected ones.
     """
-    prompt = test_case["prompt"]
-    expected_tool_calls = test_case["expected_tools"]
-    optional_tools = test_case["optional_tools"]
-    forbidden_tools = test_case["forbidden_tools"]
+    prompt = query["prompt"]
+    expected_tool_calls = query["expected_tools"]
+    optional_tools = query["optional_tools"]
+    forbidden_tools = query["forbidden_tools"]
 
     logging.info(f"Testing prompt: {prompt}")
 
@@ -117,8 +117,8 @@ async def validate_tool_calls_async(
 
     async with aiohttp.ClientSession() as session:
         tasks = [
-            fetch_tool_call(session, test_case, base_url)
-            for test_case in tool_calls_data
+            fetch_tool_call(session, query, base_url)
+            for query in tool_calls_data
         ]
         results_list = await asyncio.gather(*tasks)
 
