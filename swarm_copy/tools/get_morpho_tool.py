@@ -181,7 +181,7 @@ class GetMorphoTool(BaseTool):
         Parameters
         ----------
         output
-            Raw output of the _arun method, which comes from the KG
+            Raw output of the arun method, which comes from the KG
 
         Returns
         -------

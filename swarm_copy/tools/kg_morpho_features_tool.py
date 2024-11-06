@@ -145,7 +145,7 @@ class KGMorphoFeatureInput(BaseModel):
     )
 
 
-class KGFeatureMetadata(BaseMetadata):
+class KGMorphoFeatureMetadata(BaseMetadata):
     """Metadata class for the morpho features tool."""
 
     knowledge_graph_url: str
@@ -184,7 +184,7 @@ class KGMorphoFeatureTool(BaseTool):
     - The list of features of the morphology.
     If a given feature has multiple statistics (e.g. mean, min, max, median...), please return only its mean unless specified differently by the user."""
     input_schema: KGMorphoFeatureInput
-    metadata: KGFeatureMetadata
+    metadata: KGMorphoFeatureMetadata
 
     async def arun(self) -> list[KGMorphoFeatureOutput]:
         """Run the tool async.
