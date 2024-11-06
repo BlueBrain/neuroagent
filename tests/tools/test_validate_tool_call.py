@@ -1,3 +1,4 @@
+import asyncio
 import json
 import unittest
 from unittest.mock import AsyncMock, mock_open, patch
@@ -192,11 +193,17 @@ async def test_fetch_tool_call_success():
 
         async with aiohttp.ClientSession() as session:
             base_url = "http://localhost:8000"  # Define the base URL for testing
+            semaphore = asyncio.Semaphore(1)  # Create a semaphore for testing
             result = await fetch_tool_call(
-                session, test_case, base_url
-            )  # Pass base_url
-            assert result["Match"] == "Yes"
+                session, test_case, base_url, semaphore
+            )  # Pass semaphore
+
+            assert result["Prompt"] == "Test prompt"
             assert result["Actual"] == ["tool1", "tool2"]
+            assert result["Expected"] == ["tool1", "tool2"]
+            assert result["Optional"] == ["tool3"]
+            assert result["Forbidden"] == ["tool4"]
+            assert result["Match"] == "Yes"
 
 
 @pytest.mark.asyncio
@@ -212,14 +219,25 @@ async def test_fetch_tool_call_failure():
     mock_response.status = 500
     mock_response.text.return_value = "Internal Server Error"
 
-    with patch("aiohttp.ClientSession.post", return_value=mock_response):
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_post.return_value.__aenter__.return_value = mock_response
+
         async with aiohttp.ClientSession() as session:
             base_url = "http://localhost:8000"  # Define the base URL for testing
+            semaphore = asyncio.Semaphore(1)  # Create a semaphore for testing
             result = await fetch_tool_call(
-                session, test_case, base_url
-            )  # Pass base_url
-            assert result["Match"] == "No"
+                session, test_case, base_url, semaphore
+            )  # Pass semaphore
+
+            assert result["Prompt"] == "Test prompt"
             assert "API call failed" in result["Actual"]
+            assert result["Expected"] == [
+                {"tool_name": "tool1"},
+                {"tool_name": "tool2"},
+            ]
+            assert result["Optional"] == ["tool3"]
+            assert result["Forbidden"] == ["tool4"]
+            assert result["Match"] == "No"
 
 
 @pytest.mark.asyncio

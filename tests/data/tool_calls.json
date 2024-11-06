@@ -74,6 +74,24 @@
     "forbidden_tools": ["get-morpho-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
+    "prompt": "Get traces for neurons in the primary somatosensory area.",
+    "expected_tools": [
+      {
+          "tool_name": "resolve-entities-tool",
+          "arguments": {
+            "brain_region": "primary somatosensory area"}
+      },
+      {
+          "tool_name": "get-traces-tool"
+      },
+      {
+          "tool_name": "electrophys-features-tool"
+      }
+    ],
+    "optional_tools": ["literature-search-tool"],
+    "forbidden_tools": ["get-morpho-tool", "get-me-model-tool", "bluenaas-tool"]
+  },
+  {
     "prompt": "Search for literature on synaptic plasticity.",
     "expected_tools": [
       {

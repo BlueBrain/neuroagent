@@ -16,7 +16,10 @@ logging.basicConfig(
 
 
 async def fetch_tool_call(
-    session: aiohttp.ClientSession, query: Dict[str, Any], base_url: str
+    session: aiohttp.ClientSession,
+    query: Dict[str, Any],
+    base_url: str,
+    semaphore: asyncio.Semaphore,
 ) -> Dict[str, Any]:
     """
     Fetch the tool call results for a given test case.
@@ -36,67 +39,72 @@ async def fetch_tool_call(
     dict: A dictionary containing the prompt, actual tool calls, expected tool calls,
           and whether the actual calls match the expected ones.
     """
-    prompt = query["prompt"]
-    expected_tool_calls = query["expected_tools"]
-    optional_tools = query["optional_tools"]
-    forbidden_tools = query["forbidden_tools"]
+    async with semaphore:
+        prompt = query["prompt"]
+        expected_tool_calls = query["expected_tools"]
+        optional_tools = query["optional_tools"]
+        forbidden_tools = query["forbidden_tools"]
 
-    logging.info(f"Testing prompt: {prompt}")
+        logging.info(f"Testing prompt: {prompt}")
 
-    # Send a request to the API
-    async with session.post(
-        f"{base_url}/qa/run",
-        headers={"Content-Type": "application/json"},
-        json={
-            "query": prompt,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-    ) as response:
-        if response.status == 200:
-            steps = await response.json()
-            called_tool_names = [
-                step.get("tool_name", None) for step in steps.get("steps", [])
-            ]
-            expected_tool_names = [
-                tool_call.get("tool_name", None) for tool_call in expected_tool_calls
-            ]
-            match, _ = validate_tool(
-                expected_tool_names,
-                called_tool_names,
-                optional_tools=optional_tools,
-                forbidden_tools=forbidden_tools,
-            )
-            return {
-                "Prompt": prompt,
-                "Actual": called_tool_names,
-                "Expected": expected_tool_names,
-                "Match": "Yes" if match else "No",
-            }
-        else:
-            error_info = {
-                "status_code": response.status,
-                "response_content": await response.text(),
-            }
-            logging.error(
-                f"API call failed for prompt: {prompt} with error: {error_info}"
-            )
-            return {
-                "Prompt": prompt,
-                "Actual": f"API call failed: {error_info}",
-                "Expected": expected_tool_calls,
-                "Match": "No",
-            }
+        # Send a request to the API
+        async with session.post(
+            f"{base_url}/qa/run",
+            headers={"Content-Type": "application/json"},
+            json={
+                "query": prompt,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+        ) as response:
+            if response.status == 200:
+                steps = await response.json()
+                called_tool_names = [
+                    step.get("tool_name", None) for step in steps.get("steps", [])
+                ]
+                expected_tool_names = [
+                    tool_call.get("tool_name", None)
+                    for tool_call in expected_tool_calls
+                ]
+                match, _ = validate_tool(
+                    expected_tool_names,
+                    called_tool_names,
+                    optional_tools=optional_tools,
+                    forbidden_tools=forbidden_tools,
+                )
+                return {
+                    "Prompt": prompt,
+                    "Actual": called_tool_names,
+                    "Expected": expected_tool_names,
+                    "Optional": optional_tools,
+                    "Forbidden": forbidden_tools,
+                    "Match": "Yes" if match else "No",
+                }
+            else:
+                error_info = {
+                    "status_code": response.status,
+                    "response_content": await response.text(),
+                }
+                logging.error(
+                    f"API call failed for prompt: {prompt} with error: {error_info}"
+                )
+                return {
+                    "Prompt": prompt,
+                    "Actual": f"API call failed: {error_info}",
+                    "Expected": expected_tool_calls,
+                    "Optional": optional_tools,
+                    "Forbidden": forbidden_tools,
+                    "Match": "No",
+                }
 
 
 async def validate_tool_calls_async(
-    base_url: str, data_file: str, output_file: str = "tool_call_evaluation.csv"
+    base_url: str,
+    data_file: str,
+    output_file: str = "tool_call_evaluation.csv",
+    max_concurrent_requests: int = 10,
 ) -> None:
     """
     Run asynchronous tool call tests and save the results to a CSV file.
-
-    This function reads test case data from a JSON file, performs asynchronous
-    API calls to validate tool calls, and writes the results to a specified
-    output CSV file.
 
     Args:
     ----
@@ -104,6 +112,8 @@ async def validate_tool_calls_async(
     data_file (str): The path to the JSON file containing test case data.
     output_file (str): The name of the output CSV file where the results will
                        be saved. Defaults to 'tool_call_evaluation.csv'.
+    max_concurrent_requests (int): Maximum number of concurrent API requests.
+                                   Defaults to 10.
 
     Returns
     -------
@@ -114,13 +124,17 @@ async def validate_tool_calls_async(
         tool_calls_data = json.load(f)
 
     results_list = []
+    semaphore = asyncio.Semaphore(max_concurrent_requests)
 
     async with aiohttp.ClientSession() as session:
-        tasks = [fetch_tool_call(session, query, base_url) for query in tool_calls_data]
+        tasks = [
+            fetch_tool_call(session, query, base_url, semaphore)
+            for query in tool_calls_data
+        ]
         results_list = await asyncio.gather(*tasks)
 
     results_df = pd.DataFrame(results_list)
-    results_df.to_csv(output_file)
+    results_df.to_csv(output_file, index=False)
 
 
 def validate_tool(
