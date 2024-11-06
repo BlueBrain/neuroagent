@@ -61,7 +61,7 @@ def validate_tool(
 
 
 def validate_tool_calls(
-    base_url: str, output_file: str = "tool_call_evaluation.csv"
+    base_url: str, json_file: str, output_file: str = "tool_call_evaluation.csv"
 ) -> None:
     """Test the tool calls by sending requests to the API and comparing the actual tool calls with the expected tool calls.
 
@@ -76,7 +76,7 @@ def validate_tool_calls(
     matches the expected sequence. The results are stored in a list and can be
     written to a CSV file for further analysis.
     """
-    with open("tests/data/tool_calls.json") as f:
+    with open(json_file) as f:
         tool_calls_data = json.load(f)
 
     # List to store results
@@ -197,7 +197,7 @@ def main() -> None:
     # Construct the full base URL
     base_url = f"http://{args.base}:{args.port}"
 
-    validate_tool_calls(base_url, args.output, args.json_file)
+    validate_tool_calls(base_url, args.json_file, args.output)
 
 
 if __name__ == "__main__":
