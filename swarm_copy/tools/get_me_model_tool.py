@@ -75,10 +75,6 @@ class GetMEModelTool(BaseTool):
     input_schema: GetMEModelInput
     metadata: GetMEModelMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> list[MEModelOutput]:
         """From a brain region ID, extract ME models."""
         logger.info(

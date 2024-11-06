@@ -186,10 +186,6 @@ class KGMorphoFeatureTool(BaseTool):
     input_schema: KGMorphoFeatureInput
     metadata: KGFeatureMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> list[KGMorphoFeatureOutput]:
         """Run the tool async.
 

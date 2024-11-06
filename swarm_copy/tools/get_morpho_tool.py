@@ -70,10 +70,6 @@ class GetMorphoTool(BaseTool):
     input_schema: GetMorphoInput
     metadata: GetMorphoMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> list[KnowledgeGraphOutput]:
         """From a brain region ID, extract morphologies.
 

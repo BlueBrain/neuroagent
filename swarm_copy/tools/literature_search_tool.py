@@ -61,10 +61,6 @@ class LiteratureSearchTool(BaseTool):
     input_schema: LiteratureSearchInput
     metadata: LiteratureSearchMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> list[ParagraphMetadata]:
         """Async search the scientific literature and returns citations.
 

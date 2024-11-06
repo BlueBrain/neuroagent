@@ -191,10 +191,6 @@ class ElectrophysFeatureTool(BaseTool):
     input_schema: ElectrophysInput
     metadata: ElectrophysMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> FeatureOutput:
         """Give features about trace."""
         logger.info(

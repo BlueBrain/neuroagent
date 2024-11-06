@@ -70,10 +70,6 @@ class GetTracesTool(BaseTool):
     input_schema: GetTracesInput
     metadata: GetTracesMetadata
 
-    def run(self) -> list[TracesOutput]:  # type: ignore
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> list[TracesOutput]:
         """From a brain region ID, extract traces."""
         logger.info(
