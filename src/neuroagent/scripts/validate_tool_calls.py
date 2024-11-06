@@ -62,7 +62,7 @@ def validate_tool(
     return True, "All required tools called correctly"
 
 
-def test_tool_calls(output_file: str = "tool_call_evaluation.csv"):
+def test_tool_calls(output_file: str = "tool_call_evaluation.csv") -> None:
     """Test the tool calls by sending requests to the API and comparing the actualtool calls with the expected tool calls.
 
     Args:
