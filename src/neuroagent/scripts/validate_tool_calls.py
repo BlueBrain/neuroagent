@@ -2,24 +2,25 @@
 
 import argparse
 import json
-from typing import List, Tuple
+import logging
 
 import pandas as pd
-
-# import pytest
 import requests
 from tqdm import tqdm
 
-# Base URL for the local API
-base_url = "http://localhost:8000"
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Define the log message format
+)
 
 
 def validate_tool(
-    required_tools: List[str],
-    actual_tool_calls: List[str],
-    optional_tools: List[str],
-    forbidden_tools: List[str],
-) -> Tuple[bool, str]:
+    required_tools: list[str],
+    actual_tool_calls: list[str],
+    optional_tools: list[str],
+    forbidden_tools: list[str],
+) -> tuple[bool, str]:
     """
     Validate the sequence of tool calls against required, optional, and forbidden tools.
 
@@ -37,9 +38,8 @@ def validate_tool(
                about the validation result.
     """
     # Check for forbidden tools
-    for tool in actual_tool_calls:
-        if tool in forbidden_tools:
-            return False, f"Forbidden tool called: {tool}"
+    if inter := set(actual_tool_calls) & set(forbidden_tools):
+        return False, f"Forbidden tool called: {inter}"
 
     # Validate required tools order
     order = 0
@@ -60,11 +60,14 @@ def validate_tool(
     return True, "All required tools called correctly"
 
 
-def test_tool_calls(output_file: str = "tool_call_evaluation.csv") -> None:
-    """Test the tool calls by sending requests to the API and comparing the actualtool calls with the expected tool calls.
+def validate_tool_calls(
+    base_url: str, output_file: str = "tool_call_evaluation.csv"
+) -> None:
+    """Test the tool calls by sending requests to the API and comparing the actual tool calls with the expected tool calls.
 
     Args:
     ----
+        base_url (str): The base URL of the API.
         output_file (str): The name of the file to which the evaluation results
                            will be written. Defaults to "tool_call_evaluation.csv".
 
@@ -86,7 +89,7 @@ def test_tool_calls(output_file: str = "tool_call_evaluation.csv") -> None:
         optional_tools = test_case["optional_tools"]
         forbidden_tools = test_case["forbidden_tools"]
 
-        print(f"Testing prompt: {prompt}")  # Verbose output
+        logging.info(f"Testing prompt: {prompt}")
 
         # Send a request to the API
         response = requests.post(
@@ -131,9 +134,9 @@ def test_tool_calls(output_file: str = "tool_call_evaluation.csv") -> None:
                 "response_content": response.text,
             }
 
-            print(
+            logging.error(
                 f"API call failed for prompt: {prompt} with error: {error_info}"
-            )  # Verbose output
+            )
 
             # Handle the case where the API call fails
             results_list.append(
@@ -157,15 +160,34 @@ def main() -> None:
     Execute the tool call validation process.
 
     This function sets up the argument parser to handle command-line arguments,
-    specifically for specifying the output CSV file name. It then calls the
-    test_tool_calls function with the provided output file name to perform
-    the validation of tool calls and save the results.
+    specifically for specifying the base URL, port, and output CSV file name.
+    It then calls the validate_tool_calls function with the provided arguments to
+    perform the validation of tool calls and save the results.
 
     The function is designed to be the entry point when the script is run
     directly from the command line.
     """
     parser = argparse.ArgumentParser(
         description="Run tool call tests and save results."
+    )
+    parser.add_argument(
+        "--json_file",
+        type=str,
+        default="tests/data/tool_calls.json",
+        help="Path to the JSON file containing tool call test cases",
+    )
+    args = parser.parse_args()
+    parser.add_argument(
+        "--base",
+        type=str,
+        default="localhost",
+        help="Base URL for the API",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port number for the API",
     )
     parser.add_argument(
         "--output",
@@ -175,7 +197,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    test_tool_calls(args.output)
+    # Construct the full base URL
+    base_url = f"http://{args.base}:{args.port}"
+
+    validate_tool_calls(base_url, args.output, args.json_file)
 
 
 if __name__ == "__main__":

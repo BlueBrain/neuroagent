@@ -3,19 +3,20 @@
 import argparse
 import asyncio
 import json
-from typing import Any, Dict, List, Tuple
+import logging
+from typing import Any, Dict
 
 import aiohttp
 import pandas as pd
 
-# import pytest
-
-# Base URL for the local API
-base_url = "http://localhost:8000"
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Define the log message format
+)
 
 
 async def fetch_tool_call(
-    session: aiohttp.ClientSession, test_case: Dict[str, Any]
+    session: aiohttp.ClientSession, test_case: Dict[str, Any], base_url: str
 ) -> Dict[str, Any]:
     """
     Fetch the tool call results for a given test case.
@@ -28,6 +29,7 @@ async def fetch_tool_call(
     session (aiohttp.ClientSession): The aiohttp session used to make the HTTP request.
     test_case (dict): A dictionary containing the test case data, including the prompt,
                       expected tools, optional tools, and forbidden tools.
+    base_url (str): The base URL of the API.
 
     Returns
     -------
@@ -39,7 +41,7 @@ async def fetch_tool_call(
     optional_tools = test_case["optional_tools"]
     forbidden_tools = test_case["forbidden_tools"]
 
-    print(f"Testing prompt: {prompt}")  # Verbose output
+    logging.info(f"Testing prompt: {prompt}")
 
     # Send a request to the API
     async with session.post(
@@ -75,7 +77,9 @@ async def fetch_tool_call(
                 "status_code": response.status,
                 "response_content": await response.text(),
             }
-            print(f"API call failed for prompt: {prompt} with error: {error_info}")
+            logging.error(
+                f"API call failed for prompt: {prompt} with error: {error_info}"
+            )
             return {
                 "Prompt": prompt,
                 "Actual": f"API call failed: {error_info}",
@@ -85,7 +89,7 @@ async def fetch_tool_call(
 
 
 async def validate_tool_calls_async(
-    output_file: str = "tool_call_evaluation.csv",
+    base_url: str, data_file: str, output_file: str = "tool_call_evaluation.csv"
 ) -> None:
     """
     Run asynchronous tool call tests and save the results to a CSV file.
@@ -96,6 +100,8 @@ async def validate_tool_calls_async(
 
     Args:
     ----
+    base_url (str): The base URL of the API.
+    data_file (str): The path to the JSON file containing test case data.
     output_file (str): The name of the output CSV file where the results will
                        be saved. Defaults to 'tool_call_evaluation.csv'.
 
@@ -104,13 +110,16 @@ async def validate_tool_calls_async(
     None: This function does not return any value. It writes the results to a
           CSV file.
     """
-    with open("tests/data/tool_calls.json") as f:
+    with open(data_file) as f:
         tool_calls_data = json.load(f)
 
     results_list = []
 
     async with aiohttp.ClientSession() as session:
-        tasks = [fetch_tool_call(session, test_case) for test_case in tool_calls_data]
+        tasks = [
+            fetch_tool_call(session, test_case, base_url)
+            for test_case in tool_calls_data
+        ]
         results_list = await asyncio.gather(*tasks)
 
     results_df = pd.DataFrame(results_list)
@@ -118,11 +127,11 @@ async def validate_tool_calls_async(
 
 
 def validate_tool(
-    required_tools: List[str],
-    actual_tool_calls: List[str],
-    optional_tools: List[str],
-    forbidden_tools: List[str],
-) -> Tuple[bool, str]:
+    required_tools: list[str],
+    actual_tool_calls: list[str],
+    optional_tools: list[str],
+    forbidden_tools: list[str],
+) -> tuple[bool, str]:
     """
     Validate the sequence of tool calls against required, optional, and forbidden tools.
 
@@ -140,9 +149,8 @@ def validate_tool(
                about the validation result.
     """
     # Check for forbidden tools
-    for tool in actual_tool_calls:
-        if tool in forbidden_tools:
-            return False, f"Forbidden tool called: {tool}"
+    if inter := set(actual_tool_calls) & set(forbidden_tools):
+        return False, f"Forbidden tool(s) called: {inter}"
 
     # Validate required tools order
     order = 0
@@ -168,15 +176,34 @@ def main() -> None:
     Execute the tool call validation process.
 
     This function sets up the argument parser to handle command-line arguments,
-    specifically for specifying the output CSV file name. It then calls the
-    test_tool_calls function with the provided output file name to perform
-    the validation of tool calls and save the results.
+    specifically for specifying the base URL, port, data file path, and output
+    CSV file name. It then calls the validate_tool_calls_async function with
+    the provided arguments to perform the validation of tool calls and save
+    the results.
 
     The function is designed to be the entry point when the script is run
     directly from the command line.
     """
     parser = argparse.ArgumentParser(
         description="Run tool call tests and save results."
+    )
+    parser.add_argument(
+        "--base",
+        type=str,
+        default="localhost",
+        help="Base URL for the API",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port number for the API",
+    )
+    parser.add_argument(
+        "--data",
+        type=str,
+        default="tests/data/tool_calls.json",
+        help="Path to the JSON file containing test case data",
     )
     parser.add_argument(
         "--output",
@@ -186,7 +213,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    asyncio.run(validate_tool_calls_async(args.output))
+    # Construct the full base URL
+    base_url = f"http://{args.base}:{args.port}"
+
+    asyncio.run(validate_tool_calls_async(base_url, args.data, args.output))
 
 
 if __name__ == "__main__":

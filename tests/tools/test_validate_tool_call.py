@@ -50,7 +50,7 @@ class TestValidateTool(unittest.TestCase):
             forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
-        self.assertEqual(message, "Forbidden tool called: tool3")
+        self.assertEqual(message, "Forbidden tool(s) called: {'tool3'}")
 
     def test_optional_tools_called(self):
         result, message = validate_tool(
@@ -91,15 +91,6 @@ class TestValidateTool(unittest.TestCase):
         )
         self.assertFalse(result)
 
-    def test_no_required_tools_but_optional(self):
-        result, message = validate_tool(
-            required_tools=[],
-            actual_tool_calls=["tool1", "tool2"],
-            optional_tools=["tool1", "tool2"],
-            forbidden_tools=[],
-        )
-        self.assertTrue(result)
-
     def test_only_optional_tools_called(self):
         result, message = validate_tool(
             required_tools=[],
@@ -118,7 +109,7 @@ class TestValidateTool(unittest.TestCase):
             forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
-        self.assertEqual(message, "Forbidden tool called: tool3")
+        self.assertEqual(message, "Forbidden tool(s) called: {'tool3'}")
 
     def test_mixed_tools_called(self):
         result, message = validate_tool(
@@ -128,7 +119,7 @@ class TestValidateTool(unittest.TestCase):
             forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
-        self.assertEqual(message, "Forbidden tool called: tool3")
+        self.assertEqual(message, "Forbidden tool(s) called: {'tool3'}")
 
     def test_repeated_required_tools(self):
         result, message = validate_tool(
@@ -148,7 +139,7 @@ class TestValidateTool(unittest.TestCase):
             forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
-        self.assertEqual(message, "Forbidden tool called: tool3")
+        self.assertEqual(message, "Forbidden tool(s) called: {'tool3'}")
 
     def test_overrepeated_tools(self):
         result, message = validate_tool(
@@ -209,7 +200,10 @@ async def test_fetch_tool_call_success():
         mock_post.return_value.__aenter__.return_value = mock_response
 
         async with aiohttp.ClientSession() as session:
-            result = await fetch_tool_call(session, test_case)
+            base_url = "http://localhost:8000"  # Define the base URL for testing
+            result = await fetch_tool_call(
+                session, test_case, base_url
+            )  # Pass base_url
             assert result["Match"] == "Yes"
             assert result["Actual"] == ["tool1", "tool2"]
 
@@ -229,7 +223,10 @@ async def test_fetch_tool_call_failure():
 
     with patch("aiohttp.ClientSession.post", return_value=mock_response):
         async with aiohttp.ClientSession() as session:
-            result = await fetch_tool_call(session, test_case)
+            base_url = "http://localhost:8000"  # Define the base URL for testing
+            result = await fetch_tool_call(
+                session, test_case, base_url
+            )  # Pass base_url
             assert result["Match"] == "No"
             assert "API call failed" in result["Actual"]
 
@@ -253,7 +250,9 @@ async def test_validate_tool_calls_async():
             new_callable=AsyncMock,
         ) as mock_fetch:
             mock_fetch.return_value = {"Match": "Yes"}
-            await validate_tool_calls_async("test_output.csv")
+            base_url = "http://localhost:8000"  # Define the base URL for testing
+            data_file = "mock_data.json"  # Mock data file path
+            await validate_tool_calls_async(base_url, data_file, "test_output.csv")
 
 
 if __name__ == "__main__":
