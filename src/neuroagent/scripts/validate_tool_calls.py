@@ -2,7 +2,7 @@
 
 import argparse
 import json
-from typing import List
+from typing import List, Tuple, Dict, Any
 
 import pandas as pd
 
@@ -15,11 +15,11 @@ base_url = "http://localhost:8000"
 
 
 def validate_tool(
-    required_tools: List,
-    actual_tool_calls: List,
-    optional_tools: List,
-    forbidden_tools: List,
-):
+    required_tools: List[str],
+    actual_tool_calls: List[str],
+    optional_tools: List[str],
+    forbidden_tools: List[str],
+) -> Tuple[bool, str]:
     """
     Validate the sequence of tool calls against required, optional, and forbidden tools.
 
@@ -62,7 +62,7 @@ def validate_tool(
     return True, "All required tools called correctly"
 
 
-def test_tool_calls(output_file="tool_call_evaluation.csv"):
+def test_tool_calls(output_file: str="tool_call_evaluation.csv"):
     """Test the tool calls by sending requests to the API and comparing the actualtool calls with the expected tool calls.
 
     Args:
@@ -154,7 +154,7 @@ def test_tool_calls(output_file="tool_call_evaluation.csv"):
     results_df.to_csv(output_file)
 
 
-def main():
+def main() -> None:
     """
     Execute the tool call validation process.
 
