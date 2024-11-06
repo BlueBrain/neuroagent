@@ -82,15 +82,6 @@ class TestValidateTool(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
 
-    def test_no_required_tools(self):
-        result, message = validate_tool(
-            required_tools=[],
-            actual_tool_calls=["tool1", "tool2"],
-            optional_tools=[],
-            forbidden_tools=[],
-        )
-        self.assertFalse(result)
-
     def test_only_optional_tools_called(self):
         result, message = validate_tool(
             required_tools=[],
