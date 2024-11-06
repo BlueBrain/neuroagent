@@ -1,38 +1,41 @@
+"""Run validation on tool calls."""
+
 import argparse
 import json
+from typing import List
 
 import pandas as pd
+
 # import pytest
 import requests
 from tqdm import tqdm
-from typing import List
-
 
 # Base URL for the local API
 base_url = "http://localhost:8000"
 
 
-def is_subsequence(expected, actual):
+def validate_tool(
+    required_tools: List,
+    actual_tool_calls: List,
+    optional_tools: List,
+    forbidden_tools: List,
+):
     """
-    Check if the expected sequence is a subsequence of the actual sequence.
+    Validate the sequence of tool calls against required, optional, and forbidden tools.
 
     Args:
-        expected (list): The expected sequence of items.
-        actual (list): The actual sequence of items.
+    ----
+        required_tools (List): A list of tools that must be called in the specified order.
+        actual_tool_calls (List): A list of tools that were actually called.
+        optional_tools (List): A list of tools that can be called but are not required.
+        forbidden_tools (List): A list of tools that must not be called.
 
-    Returns:
-        bool: True if the expected sequence is a subsequence of the actual sequence, False otherwise.
+    Returns
+    -------
+        tuple: A tuple containing a boolean and a string message. The boolean is True if the
+               validation is successful, otherwise False. The string message provides details
+               about the validation result.
     """
-    it = iter(actual)
-    # Check if all items in expected are in it and in the correct order
-    return all(item in it for item in expected) and all(
-        item in expected for item in actual
-    )
-
-def validate_tool(required_tools:List, 
-                  actual_tool_calls:List, 
-                  optional_tools:List, 
-                  forbidden_tools:List):
     # Check for forbidden tools
     for tool in actual_tool_calls:
         if tool in forbidden_tools:
@@ -51,20 +54,19 @@ def validate_tool(required_tools:List,
             continue
         else:
             return False, f"Unexpected tool called: {tool}"
-    
+
     # Check if all required tools were called
     if order != len(required_tools):
         return False, "Not all required tools were called"
-    
+
     return True, "All required tools called correctly"
 
-# @pytest.mark.skip(reason="Skipping this test by default unless provoked")
+
 def test_tool_calls(output_file="tool_call_evaluation.csv"):
-    """
-    Test the tool calls by sending requests to the API and comparing the actual
-    tool calls with the expected tool calls.
+    """Test the tool calls by sending requests to the API and comparing the actualtool calls with the expected tool calls.
 
     Args:
+    ----
         output_file (str): The name of the file to which the evaluation results
                            will be written. Defaults to "tool_call_evaluation.csv".
 
@@ -73,7 +75,6 @@ def test_tool_calls(output_file="tool_call_evaluation.csv"):
     matches the expected sequence. The results are stored in a list and can be
     written to a CSV file for further analysis.
     """
-    # Load the expected tool calls from the JSON file
     with open("tests/data/tool_calls.json") as f:
         tool_calls_data = json.load(f)
 
@@ -109,10 +110,12 @@ def test_tool_calls(output_file="tool_call_evaluation.csv"):
             expected_tool_names = [
                 tool_call.get("tool_name", None) for tool_call in expected_tool_calls
             ]
-            match, _ = validate_tool(expected_tool_names, 
-                                  called_tool_names, 
-                                  optional_tools=optional_tools,
-                                  forbidden_tools=forbidden_tools)
+            match, _ = validate_tool(
+                expected_tool_names,
+                called_tool_names,
+                optional_tools=optional_tools,
+                forbidden_tools=forbidden_tools,
+            )
 
             # Append the result to the list
             results_list.append(
@@ -152,6 +155,17 @@ def test_tool_calls(output_file="tool_call_evaluation.csv"):
 
 
 def main():
+    """
+    Execute the tool call validation process.
+
+    This function sets up the argument parser to handle command-line arguments,
+    specifically for specifying the output CSV file name. It then calls the
+    test_tool_calls function with the provided output file name to perform
+    the validation of tool calls and save the results.
+
+    The function is designed to be the entry point when the script is run
+    directly from the command line.
+    """
     parser = argparse.ArgumentParser(
         description="Run tool call tests and save results."
     )
@@ -167,4 +181,21 @@ def main():
 
 
 if __name__ == "__main__":
+    """
+    Validate tool calls against expected outcomes and logs the results.
+
+    The script reads a set of prompts and their expected tool calls, executes the tool calls,
+    and compares the actual tool calls made with the expected ones. It logs whether the actual
+    tool calls match the expected ones and saves the results to a CSV file.
+
+    Usage:
+        python validate_tool_calls.py --output <output_csv_file>
+
+    Arguments:
+        --output: The name of the output CSV file where the results will be saved.
+                  Defaults to 'tool_call_evaluation.csv'.
+
+    The script is intended to be run as a standalone module.
+    """
+
     main()

@@ -1,15 +1,15 @@
 import unittest
+
 from neuroagent.scripts.validate_tool_calls import validate_tool
-import pytest
+
 
 class TestValidateTool(unittest.TestCase):
-
     def test_no_tools_called(self):
         result, message = validate_tool(
             required_tools=["tool1", "tool2"],
             actual_tool_calls=[],
             optional_tools=[],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertFalse(result)
         self.assertEqual(message, "Not all required tools were called")
@@ -19,7 +19,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1", "tool2"],
             actual_tool_calls=["tool1", "tool2"],
             optional_tools=[],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
@@ -29,7 +29,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1", "tool2"],
             actual_tool_calls=["tool2", "tool1"],
             optional_tools=[],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertFalse(result)
 
@@ -38,7 +38,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1"],
             actual_tool_calls=["tool1", "tool3"],
             optional_tools=[],
-            forbidden_tools=["tool3"]
+            forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
         self.assertEqual(message, "Forbidden tool called: tool3")
@@ -48,7 +48,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1"],
             actual_tool_calls=["tool1", "tool2"],
             optional_tools=["tool2"],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
@@ -58,7 +58,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1"],
             actual_tool_calls=["tool1", "tool3"],
             optional_tools=[],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertFalse(result)
         self.assertEqual(message, "Unexpected tool called: tool3")
@@ -68,7 +68,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1", "tool2"],
             actual_tool_calls=["tool1", "tool2", "tool3"],
             optional_tools=["tool3"],
-            forbidden_tools=["tool4"]
+            forbidden_tools=["tool4"],
         )
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
@@ -78,7 +78,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=[],
             actual_tool_calls=["tool1", "tool2"],
             optional_tools=[],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertFalse(result)
 
@@ -87,7 +87,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=[],
             actual_tool_calls=["tool1", "tool2"],
             optional_tools=["tool1", "tool2"],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertTrue(result)
 
@@ -96,7 +96,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=[],
             actual_tool_calls=["tool2"],
             optional_tools=["tool2"],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
@@ -106,7 +106,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=[],
             actual_tool_calls=["tool3"],
             optional_tools=[],
-            forbidden_tools=["tool3"]
+            forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
         self.assertEqual(message, "Forbidden tool called: tool3")
@@ -116,7 +116,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1"],
             actual_tool_calls=["tool1", "tool2", "tool3"],
             optional_tools=["tool2"],
-            forbidden_tools=["tool3"]
+            forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
         self.assertEqual(message, "Forbidden tool called: tool3")
@@ -126,7 +126,7 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1", "tool1"],
             actual_tool_calls=["tool1", "tool1"],
             optional_tools=[],
-            forbidden_tools=[]
+            forbidden_tools=[],
         )
         self.assertTrue(result)
         self.assertEqual(message, "All required tools called correctly")
@@ -136,10 +136,11 @@ class TestValidateTool(unittest.TestCase):
             required_tools=["tool1"],
             actual_tool_calls=["tool1", "tool3", "tool3"],
             optional_tools=[],
-            forbidden_tools=["tool3"]
+            forbidden_tools=["tool3"],
         )
         self.assertFalse(result)
         self.assertEqual(message, "Forbidden tool called: tool3")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
