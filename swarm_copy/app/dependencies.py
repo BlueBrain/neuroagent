@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from swarm_copy.app.config import Settings
-from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools import PrintAccountDetailsTool
@@ -145,27 +144,6 @@ async def get_user_id(
             )
     else:
         return "dev"
-
-
-# TEMP function, will get replaced by the CRUDs.
-async def get_thread_id(
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> str:
-    """Temp function to get the thread id."""
-    # for now hard coded temp user_sub and thread_id.
-    user_sub = "dev"
-    thread_id = "dev_thread"
-
-    # check if thread is in DB.
-    thread = await session.get(Threads, thread_id)
-    if not thread:
-        new_thread = Threads(user_id=user_sub, thread_id=thread_id)
-        session.add(new_thread)
-        await session.commit()
-        await session.refresh(new_thread)
-        thread = new_thread
-
-    return thread.thread_id
 
 
 def get_context_variables(

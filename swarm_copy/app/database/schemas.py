@@ -24,8 +24,8 @@ class MessagesRead(BaseModel):
     message_id: str
     order: int
     creation_date: datetime.datetime
-    content: str
-    entity: Literal["user", "ai_message"]
+    msg_content: str
+    msg_entity: Literal["user", "ai_message"]
 
 
 class ToolCallSchema(BaseModel):

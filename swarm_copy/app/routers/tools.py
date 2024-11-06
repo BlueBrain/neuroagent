@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,23 +33,41 @@ async def get_tool_calls(
         .where(Messages.thread.has(user_id=user_id), Messages.thread_id == thread_id)
         .order_by(Messages.order)
     )
-    messages_result = messages_result.scalars().all()
+    db_messages = messages_result.scalars().all()
 
     # Find the message of interest.
-    message_id_order = None
-    for msg in messages_result:
-        if msg.message_id == message_id:
-            message_id_order = msg.order
+    try:
+        relevant_message = next(
+            (
+                i
+                for i, message in enumerate(db_messages)
+                if message.message_id == message_id
+            )
+        )
+    except StopIteration:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "detail": "Message not found.",
+            },
+        )
 
-    # Find the AI call that calls tools.
-    AI_tool_call = None
-    for i in range(message_id_order - 1, 0, -1):
-        if json.loads(messages_result[i].content)["role"] == "assistant":
-            AI_tool_call = messages_result[i].order
-            break
+    # If not an AI response, there is no tool call associated.
+    if db_messages[relevant_message].entity.value != "ai_message":
+        return []
 
+    # Get the nearest previous message that called the tools.
+    previous_content_message = next(
+        (
+            i
+            for i, message in reversed(list(enumerate(db_messages[:relevant_message])))
+            if message.entity.value == "ai_tool"
+        )
+    )
+
+    # We should maybe give back the messag_id, for easier search after.
     tool_calls = []
-    tool_calls_dict = json.loads(messages_result[AI_tool_call].content)
+    tool_calls_dict = json.loads(db_messages[previous_content_message].content)
     for tool in tool_calls_dict["tool_calls"]:
         tool_calls.append(
             ToolCallSchema(
@@ -74,14 +92,20 @@ async def get_tool_returns(
 
     messages_result = await session.execute(
         select(Messages)
-        .where(Messages.thread.has(user_id=user_id), Messages.thread_id == thread_id)
+        .where(
+            Messages.thread.has(user_id=user_id),
+            Messages.thread_id == thread_id,
+            Messages.entity == "TOOL",
+        )
         .order_by(Messages.order)
     )
-    messages_result = messages_result.scalars().all()
+    tool_messages = messages_result.scalars().all()
 
     tool_output = []
 
-    for msg in messages_result:
+    # We search all tool messages for matching tool_call id.
+    # Maybe we should add also the arguments here ?
+    for msg in tool_messages:
         if json.loads(msg.content).get("tool_call_id") == tool_call_id:
             tool_output.append(json.loads(msg.content))
 

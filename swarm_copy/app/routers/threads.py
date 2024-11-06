@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,8 +67,8 @@ async def get_messages(
         if msg.entity.value in ("user", "ai_message"):
             messages.append(
                 MessagesRead(
-                    entity=msg.entity.value,
-                    content=json.loads(msg.content)["content"],
+                    msg_entity=msg.entity.value,
+                    msg_content=json.loads(msg.content)["content"],
                     **msg.__dict__,
                 )
             )
@@ -84,19 +84,9 @@ async def update_thread_title(
     thread_id: str,
 ) -> ThreadsRead:
     """Update thread."""
-    thread_result = await session.execute(
-        select(Threads).where(
-            Threads.user_id == user_id, Threads.thread_id == thread_id
-        )
+    thread_to_update = await get_thread(
+        user_id=user_id, thread_id=thread_id, session=session
     )
-    thread_to_update = thread_result.scalar_one_or_none()
-    if not thread_to_update:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "detail": "Thread not found.",
-            },
-        )
     thread_to_update.title = new_title
     await session.commit()
     await session.refresh(thread_to_update)
@@ -110,19 +100,9 @@ async def delete_thread(
     thread_id: str,
 ) -> dict[str, str]:
     """Delete the specified thread."""
-    thread_result = await session.execute(
-        select(Threads).where(
-            Threads.user_id == user_id, Threads.thread_id == thread_id
-        )
+    thread_to_delete = await get_thread(
+        user_id=user_id, thread_id=thread_id, session=session
     )
-    thread_to_delete = thread_result.scalar_one_or_none()
-    if not thread_to_delete:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "detail": "Thread not found.",
-            },
-        )
     await session.delete(thread_to_delete)
     await session.commit()
     return {"Acknowledged": "true"}
