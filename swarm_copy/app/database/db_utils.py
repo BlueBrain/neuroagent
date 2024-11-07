@@ -1,12 +1,36 @@
 """Utilities for the agent's database."""
 
 import json
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from swarm_copy.app.database.sql_schemas import Entity, Messages, utc_now
-from swarm_copy.app.dependencies import get_thread
+from swarm_copy.app.database.sql_schemas import Entity, Messages, Threads, utc_now
+from swarm_copy.app.dependencies import get_session, get_user_id
+
+
+async def get_thread(
+    user_id: Annotated[str, Depends(get_user_id)],
+    thread_id: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> Threads:
+    """Check if the current thread / user matches."""
+    thread_result = await session.execute(
+        select(Threads).where(
+            Threads.user_id == user_id, Threads.thread_id == thread_id
+        )
+    )
+    thread = thread_result.scalars().one_or_none()
+    if not thread:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "detail": "Thread not found.",
+            },
+        )
+    return thread
 
 
 async def put_messages_in_db(
@@ -18,12 +42,14 @@ async def put_messages_in_db(
 ) -> None:
     """Add the new messages in the database."""
     for i, messages in enumerate(history):
-        if messages["role"] != "assistant":
-            entity = str(messages["role"]).upper()
+        if messages["role"] == "user":
+            entity = Entity.USER
+        elif messages["role"] == "tool":
+            entity = Entity.TOOL
         elif messages["content"]:
-            entity = Entity.AI_MESSAGE.value.upper()
+            entity = Entity.AI_MESSAGE
         else:
-            entity = Entity.AI_TOOL.value.upper()
+            entity = Entity.AI_TOOL
 
         new_msg = Messages(
             order=i + offset,
@@ -40,11 +66,13 @@ async def put_messages_in_db(
 
 
 async def get_messages_from_db(
-    user_id: str, thread_id: str, session: AsyncSession
+    thread: Annotated[Threads, Depends(get_thread)],
 ) -> list[dict[str, Any]]:
     """Retreive the message history from the DB."""
-    thread = await get_thread(user_id=user_id, thread_id=thread_id, session=session)
-    db_messages = thread.messages
+    db_messages: list[Messages] = await thread.awaitable_attrs.messages
+    db_messages.sort(
+        key=lambda x: x.order
+    )  # could not find a nice way to do it in SQL :/
 
     messages = []
     if db_messages:

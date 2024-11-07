@@ -8,9 +8,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from swarm_copy.app.database.db_utils import get_thread
 from swarm_copy.app.database.schemas import MessagesRead, ThreadsRead, ThreadUpdate
-from swarm_copy.app.database.sql_schemas import Threads
-from swarm_copy.app.dependencies import get_session, get_thread, get_user_id
+from swarm_copy.app.database.sql_schemas import Entity, Messages, Threads
+from swarm_copy.app.dependencies import get_session, get_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -47,21 +48,27 @@ async def get_threads(
 
 @router.get("/{thread_id}")
 async def get_messages(
+    session: Annotated[AsyncSession, Depends(get_session)],
     thread: Annotated[Threads, Depends(get_thread)],
 ) -> list[MessagesRead]:
     """Get all mesaages of the thread."""
-    db_messages = thread.messages
+    messages_result = await session.execute(
+        select(Messages).where(
+            Messages.thread_id == thread.thread_id,
+            Messages.entity.in_([Entity.USER, Entity.AI_MESSAGE]),
+        )
+    )
+    db_messages = messages_result.scalars().all()
 
     messages = []
     for msg in db_messages:
-        if msg.entity.value in ("user", "ai_message"):
-            messages.append(
-                MessagesRead(
-                    msg_entity=msg.entity.value,
-                    msg_content=json.loads(msg.content)["content"],
-                    **msg.__dict__,
-                )
+        messages.append(
+            MessagesRead(
+                msg_entity=msg.entity.value,
+                msg_content=json.loads(msg.content)["content"],
+                **msg.__dict__,
             )
+        )
 
     return messages
 

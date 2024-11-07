@@ -5,6 +5,7 @@ import enum
 import uuid
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -22,7 +23,7 @@ class Entity(enum.Enum):
     AI_MESSAGE = "ai_message"
 
 
-class Base(DeclarativeBase):
+class Base(AsyncAttrs, DeclarativeBase):
     """Base declarative base for SQLAlchemy."""
 
 
@@ -48,7 +49,6 @@ class Threads(Base):
         "Messages",
         back_populates="thread",
         cascade="all, delete-orphan",
-        lazy="selectin",  # To allow thread.messsages.
     )
 
 

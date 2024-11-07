@@ -47,13 +47,9 @@ async def run_chat_agent(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     thread_id: str,
+    messages: Annotated[list[dict[str, Any]], Depends(get_messages_from_db)],
 ) -> AgentResponse:
     """Run a single agent query."""
-    messages = await get_messages_from_db(
-        user_id=user_id,
-        thread_id=thread_id,
-        session=session,
-    )
     messages.append({"role": "user", "content": user_request.query})
     response = await agent_routine.arun(agent, messages, context_variables)
     await put_messages_in_db(
@@ -75,13 +71,9 @@ async def stream_chat_agent(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     thread_id: str,
+    messages: Annotated[list[dict[str, Any]], Depends(get_messages_from_db)],
 ) -> StreamingResponse:
     """Run a single agent query in a streamed fashion."""
-    messages = await get_messages_from_db(
-        user_id=user_id,
-        thread_id=thread_id,
-        session=session,
-    )
     messages.append({"role": "user", "content": user_request.query})
     stream_generator = stream_agent_response(
         agents_routine,
