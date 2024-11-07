@@ -18,6 +18,12 @@ class ThreadsRead(BaseModel):
     update_date: datetime.datetime
 
 
+class ThreadUpdate(BaseModel):
+    """Data class for the update of a thread."""
+
+    title: str
+
+
 class MessagesRead(BaseModel):
     """Output of the conversation listing crud."""
 

@@ -48,6 +48,7 @@ class Threads(Base):
         "Messages",
         back_populates="thread",
         cascade="all, delete-orphan",
+        lazy="selectin",  # To allow thread.messsages.
     )
 
 

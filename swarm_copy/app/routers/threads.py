@@ -8,10 +8,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from swarm_copy.app.database.db_utils import get_thread
-from swarm_copy.app.database.schemas import MessagesRead, ThreadsRead
-from swarm_copy.app.database.sql_schemas import Messages, Threads
-from swarm_copy.app.dependencies import get_session, get_user_id
+from swarm_copy.app.database.schemas import MessagesRead, ThreadsRead, ThreadUpdate
+from swarm_copy.app.database.sql_schemas import Threads
+from swarm_copy.app.dependencies import get_session, get_thread, get_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ router = APIRouter(prefix="/threads", tags=["Threads' CRUD"])
 async def create_thread(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
-    title: str = "title",
+    title: str = "New chat",
 ) -> ThreadsRead:
     """Create thread."""
     new_thread = Threads(user_id=user_id, title=title)
@@ -48,19 +47,10 @@ async def get_threads(
 
 @router.get("/{thread_id}")
 async def get_messages(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    user_id: Annotated[str, Depends(get_user_id)],
-    thread_id: str,
+    thread: Annotated[Threads, Depends(get_thread)],
 ) -> list[MessagesRead]:
     """Get all mesaages of the thread."""
-    await get_thread(user_id=user_id, thread_id=thread_id, session=session)
-
-    messages_result = await session.execute(
-        select(Messages)
-        .where(Messages.thread.has(user_id=user_id), Messages.thread_id == thread_id)
-        .order_by(Messages.order)
-    )
-    db_messages = messages_result.scalars().all()
+    db_messages = thread.messages
 
     messages = []
     for msg in db_messages:
@@ -79,30 +69,25 @@ async def get_messages(
 @router.patch("/{thread_id}")
 async def update_thread_title(
     session: Annotated[AsyncSession, Depends(get_session)],
-    new_title: str,
-    user_id: Annotated[str, Depends(get_user_id)],
-    thread_id: str,
+    update_thread: ThreadUpdate,
+    thread: Annotated[Threads, Depends(get_thread)],
 ) -> ThreadsRead:
     """Update thread."""
-    thread_to_update = await get_thread(
-        user_id=user_id, thread_id=thread_id, session=session
-    )
-    thread_to_update.title = new_title
+    thread_data = update_thread.model_dump(exclude_unset=True)
+    for key, value in thread_data.items():
+        setattr(thread, key, value)
+    session.add(thread)
     await session.commit()
-    await session.refresh(thread_to_update)
-    return ThreadsRead(**thread_to_update.__dict__)
+    await session.refresh(thread)
+    return ThreadsRead(**thread.__dict__)
 
 
 @router.delete("/{thread_id}")
 async def delete_thread(
     session: Annotated[AsyncSession, Depends(get_session)],
-    user_id: Annotated[str, Depends(get_user_id)],
-    thread_id: str,
+    thread: Annotated[Threads, Depends(get_thread)],
 ) -> dict[str, str]:
     """Delete the specified thread."""
-    thread_to_delete = await get_thread(
-        user_id=user_id, thread_id=thread_id, session=session
-    )
-    await session.delete(thread_to_delete)
+    await session.delete(thread)
     await session.commit()
     return {"Acknowledged": "true"}

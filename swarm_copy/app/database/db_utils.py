@@ -3,29 +3,10 @@
 import json
 from typing import Any
 
-from fastapi import HTTPException
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from swarm_copy.app.database.sql_schemas import Messages, Threads, utc_now
-
-
-async def get_thread(user_id: str, thread_id: str, session: AsyncSession) -> Threads:
-    """Check if the current thread / user matches."""
-    thread_result = await session.execute(
-        select(Threads).where(
-            Threads.user_id == user_id, Threads.thread_id == thread_id
-        )
-    )
-    thread = thread_result.scalars().one_or_none()
-    if not thread:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "detail": "Thread not found.",
-            },
-        )
-    return thread
+from swarm_copy.app.database.sql_schemas import Entity, Messages, utc_now
+from swarm_copy.app.dependencies import get_thread
 
 
 async def put_messages_in_db(
@@ -40,9 +21,9 @@ async def put_messages_in_db(
         if messages["role"] != "assistant":
             entity = str(messages["role"]).upper()
         elif messages["content"]:
-            entity = "AI_MESSAGE"
+            entity = Entity.AI_MESSAGE.value.upper()
         else:
-            entity = "AI_TOOL"
+            entity = Entity.AI_TOOL.value.upper()
 
         new_msg = Messages(
             order=i + offset,
@@ -62,13 +43,8 @@ async def get_messages_from_db(
     user_id: str, thread_id: str, session: AsyncSession
 ) -> list[dict[str, Any]]:
     """Retreive the message history from the DB."""
-    await get_thread(user_id=user_id, thread_id=thread_id, session=session)
-    messages_result = await session.execute(
-        select(Messages)
-        .where(Messages.thread.has(user_id=user_id), Messages.thread_id == thread_id)
-        .order_by(Messages.order)
-    )
-    db_messages = messages_result.scalars().all()
+    thread = await get_thread(user_id=user_id, thread_id=thread_id, session=session)
+    db_messages = thread.messages
 
     messages = []
     if db_messages:

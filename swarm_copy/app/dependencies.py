@@ -8,10 +8,12 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from openai import AsyncOpenAI
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from swarm_copy.app.config import Settings
+from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools import PrintAccountDetailsTool
@@ -129,21 +131,48 @@ async def get_user_id(
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
 ) -> str:
     """Validate JWT token and returns user ID."""
-    if settings.keycloak.validate_token and settings.keycloak.user_info_endpoint:
-        try:
-            response = await httpx_client.get(
-                settings.keycloak.user_info_endpoint,
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            response.raise_for_status()
-            user_info = response.json()
-            return user_info["sub"]
-        except HTTPStatusError:
+    if settings.keycloak.validate_token:
+        if settings.keycloak.user_info_endpoint:
+            try:
+                response = await httpx_client.get(
+                    settings.keycloak.user_info_endpoint,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                response.raise_for_status()
+                user_info = response.json()
+                return user_info["sub"]
+            except HTTPStatusError:
+                raise HTTPException(
+                    status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
+                )
+        else:
             raise HTTPException(
-                status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
-            )
+                status_code=HTTP_401_UNAUTHORIZED, detail="No credentials provided."
+            )  # Not sure if the best error to raise.
     else:
         return "dev"
+
+
+async def get_thread(
+    user_id: Annotated[str, Depends(get_user_id)],
+    thread_id: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> Threads:
+    """Check if the current thread / user matches."""
+    thread_result = await session.execute(
+        select(Threads).where(
+            Threads.user_id == user_id, Threads.thread_id == thread_id
+        )
+    )
+    thread = thread_result.scalars().one_or_none()
+    if not thread:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "detail": "Thread not found.",
+            },
+        )
+    return thread
 
 
 def get_context_variables(
