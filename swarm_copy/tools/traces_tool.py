@@ -1,7 +1,6 @@
 """Traces tool."""
 
 import logging
-import pathlib
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
@@ -47,7 +46,7 @@ class GetTracesMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     trace_search_size: int
-    brainregion_path: pathlib.Path | str
+    brainregion_path: str
 
 
 class GetTracesTool(BaseTool):
@@ -70,10 +69,6 @@ class GetTracesTool(BaseTool):
     The trace ID is in the form of an HTTP(S) link such as 'https://bbp.epfl.ch/neurosciencegraph/data/traces...'."""
     input_schema: GetTracesInput
     metadata: GetTracesMetadata
-
-    def run(self) -> list[TracesOutput]:  # type: ignore
-        """Not implemented yet."""
-        pass
 
     async def arun(self) -> list[TracesOutput]:
         """From a brain region ID, extract traces."""

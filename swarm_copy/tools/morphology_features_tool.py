@@ -52,10 +52,6 @@ class MorphologyFeatureTool(BaseTool):
     input_schema: MorphologyFeatureInput
     metadata: MorphologyFeatureMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> list[MorphologyFeatureOutput]:
         """Give features about morphology."""
         logger.info(

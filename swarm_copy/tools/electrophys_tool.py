@@ -127,6 +127,7 @@ class ElectrophysInput(BaseModel):
         )
     )
     stimuli_types: STIMULI_TYPES | None = Field(
+        default=None,
         description=(
             "Type of stimuli requested by the user. Should be one of 'spontaneous',"
             " 'idrest', 'idthres', 'apwaveform', 'iv', 'step', 'spontaps',"
@@ -134,9 +135,10 @@ class ElectrophysInput(BaseModel):
             " 'delta', 'sahp', 'idhyperpol', 'irdepol', 'irhyperpol','iddepol', 'ramp',"
             " 'ap_thresh', 'hyperdepol', 'negcheops', 'poscheops',"
             " 'spikerec', 'sinespec'."
-        )
+        ),
     )
     calculated_feature: CALCULATED_FEATURES | None = Field(
+        default=None,
         description=(
             "Feature requested by the user. Should be one of 'spike_count',"
             "'time_to_first_spike', 'time_to_last_spike',"
@@ -149,9 +151,10 @@ class ElectrophysInput(BaseModel):
             "'voltage_after_stim', 'ohmic_input_resistance_vb_ssse',"
             "'steady_state_voltage_stimend', 'sag_amplitude',"
             "'decay_time_constant_after_stim', 'depol_block_bool'"
-        )
+        ),
     )
     amplitude: AmplitudeInput | None = Field(
+        default=None,
         description=(
             "Amplitude of the protocol (should be specified in nA)."
             "Can be a range of amplitudes with min and max values"
@@ -191,24 +194,20 @@ class ElectrophysFeatureTool(BaseTool):
     input_schema: ElectrophysInput
     metadata: ElectrophysMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(self) -> FeatureOutput:
         """Give features about trace."""
         logger.info(
             f"Entering electrophys tool. Inputs: {self.input_schema.trace_id=}, {self.input_schema.calculated_feature=},"
             f" {self.input_schema.amplitude=}, {self.input_schema.stimuli_types=}"
         )
-        stimuli_types: list[str] | STIMULI_TYPES
+
         # Deal with cases where user did not specify stimulus type or/and feature
         if not self.input_schema.stimuli_types:
             # Default to IDRest if protocol not specified
             logger.warning("No stimulus type specified. Defaulting to IDRest.")
             stimuli_types = ["idrest"]
         else:
-            stimuli_types = self.input_schema.stimuli_types
+            stimuli_types = self.input_schema.stimuli_types  # type: ignore
 
         if not self.input_schema.calculated_feature:
             # Compute ALL of the available features if not specified

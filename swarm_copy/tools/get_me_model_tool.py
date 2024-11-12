@@ -1,7 +1,6 @@
 """Module defining the Get ME Model tool."""
 
 import logging
-import pathlib
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
@@ -35,8 +34,8 @@ class GetMEModelMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     me_model_search_size: int
-    brainregion_path: pathlib.Path | str
-    celltypes_path: pathlib.Path | str
+    brainregion_path: str
+    celltypes_path: str
 
 
 class MEModelOutput(BaseModel):
@@ -75,10 +74,6 @@ class GetMEModelTool(BaseTool):
     The model ID is in the form of an HTTP(S) link such as 'https://bbp.epfl.ch/data/bbp/mmb-point-neuron-framework-model/...'."""
     input_schema: GetMEModelInput
     metadata: GetMEModelMetadata
-
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
 
     async def arun(self) -> list[MEModelOutput]:
         """From a brain region ID, extract ME models."""

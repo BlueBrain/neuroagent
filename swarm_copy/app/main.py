@@ -76,7 +76,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
             await conn.run_sync(Base.metadata.create_all)
 
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
-    logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
+    logging.getLogger("swarm_copy").setLevel(app_settings.logging.level.upper())
     logging.getLogger("bluepyefe").setLevel("CRITICAL")
 
     if app_settings.knowledge_graph.download_hierarchy:

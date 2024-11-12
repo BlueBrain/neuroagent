@@ -1,7 +1,6 @@
 """KG Morpho Feature tool."""
 
 import logging
-import pathlib
 from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -146,13 +145,13 @@ class KGMorphoFeatureInput(BaseModel):
     )
 
 
-class KGFeatureMetadata(BaseMetadata):
+class KGMorphoFeatureMetadata(BaseMetadata):
     """Metadata class for the morpho features tool."""
 
     knowledge_graph_url: str
     token: str
     kg_morpho_feature_search_size: int
-    brainregion_path: pathlib.Path | str
+    brainregion_path: str
 
 
 class KGMorphoFeatureOutput(BaseModel):
@@ -185,11 +184,7 @@ class KGMorphoFeatureTool(BaseTool):
     - The list of features of the morphology.
     If a given feature has multiple statistics (e.g. mean, min, max, median...), please return only its mean unless specified differently by the user."""
     input_schema: KGMorphoFeatureInput
-    metadata: KGFeatureMetadata
-
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
+    metadata: KGMorphoFeatureMetadata
 
     async def arun(self) -> list[KGMorphoFeatureOutput]:
         """Run the tool async.

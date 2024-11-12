@@ -1,7 +1,6 @@
 """Get Morpho tool."""
 
 import logging
-import pathlib
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
@@ -31,8 +30,8 @@ class GetMorphoMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     morpho_search_size: int
-    brainregion_path: pathlib.Path | str
-    celltypes_path: pathlib.Path | str
+    brainregion_path: str
+    celltypes_path: str
 
 
 class KnowledgeGraphOutput(BaseModel):
@@ -41,7 +40,7 @@ class KnowledgeGraphOutput(BaseModel):
     morphology_id: str
     morphology_name: str | None
     morphology_description: str | None
-    mtype: str | None
+    mtype: list[str] | None
 
     brain_region_id: str
     brain_region_label: str | None
@@ -70,10 +69,6 @@ class GetMorphoTool(BaseTool):
     The morphology ID is in the form of an HTTP(S) link such as 'https://bbp.epfl.ch/neurosciencegraph/data/neuronmorphologies...'."""
     input_schema: GetMorphoInput
     metadata: GetMorphoMetadata
-
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
 
     async def arun(self) -> list[KnowledgeGraphOutput]:
         """From a brain region ID, extract morphologies.
@@ -186,7 +181,7 @@ class GetMorphoTool(BaseTool):
         Parameters
         ----------
         output
-            Raw output of the _arun method, which comes from the KG
+            Raw output of the arun method, which comes from the KG
 
         Returns
         -------
@@ -198,8 +193,10 @@ class GetMorphoTool(BaseTool):
                 morphology_name=res["_source"].get("name"),
                 morphology_description=res["_source"].get("description"),
                 mtype=(
-                    res["_source"]["mType"].get("label")
-                    if "mType" in res["_source"]
+                    [res["_source"]["mType"].get("label")]
+                    if isinstance(res["_source"].get("mType"), dict)
+                    else [item.get("label") for item in res["_source"]["mType"]]
+                    if isinstance(res["_source"].get("mType"), list)
                     else None
                 ),
                 brain_region_id=res["_source"]["brainRegion"]["@id"],

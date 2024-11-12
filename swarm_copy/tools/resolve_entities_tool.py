@@ -84,10 +84,6 @@ class ResolveEntitiesTool(BaseTool):
     input_schema: ResolveBRInput
     metadata: ResolveBRMetadata
 
-    def run(self) -> None:
-        """Not implemented yet."""
-        pass
-
     async def arun(
         self,
     ) -> list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput]:
