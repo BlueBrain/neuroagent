@@ -83,12 +83,9 @@
       },
       {
           "tool_name": "get-traces-tool"
-      },
-      {
-          "tool_name": "electrophys-features-tool"
       }
     ],
-    "optional_tools": ["literature-search-tool"],
+    "optional_tools": ["literature-search-tool","electrophys-features-tool"],
     "forbidden_tools": ["get-morpho-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {

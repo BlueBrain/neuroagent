@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
 import pandas as pd
@@ -17,10 +17,10 @@ logging.basicConfig(
 
 async def fetch_tool_call(
     session: aiohttp.ClientSession,
-    query: Dict[str, Any],
+    query: dict[str, Any],
     base_url: str,
     semaphore: asyncio.Semaphore,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Fetch the tool call results for a given test case.
 
@@ -53,7 +53,6 @@ async def fetch_tool_call(
             headers={"Content-Type": "application/json"},
             json={
                 "query": prompt,
-                "messages": [{"role": "user", "content": prompt}],
             },
         ) as response:
             if response.status == 200:
@@ -65,7 +64,7 @@ async def fetch_tool_call(
                     tool_call.get("tool_name", None)
                     for tool_call in expected_tool_calls
                 ]
-                match, _ = validate_tool(
+                match, reason = validate_tool(
                     expected_tool_names,
                     called_tool_names,
                     optional_tools=optional_tools,
@@ -78,11 +77,19 @@ async def fetch_tool_call(
                     "Optional": optional_tools,
                     "Forbidden": forbidden_tools,
                     "Match": "Yes" if match else "No",
+                    "Reason": reason if not match else "N/A",
                 }
             else:
+                # Attempt to parse the error message from the response content
+                try:
+                    error_content = await response.json()
+                    error_message = error_content.get("content", "Unknown error")
+                except Exception as e:
+                    error_message = f"Failed to parse error message: {str(e)}"
+
                 error_info = {
                     "status_code": response.status,
-                    "response_content": await response.text(),
+                    "response_content": error_message,
                 }
                 logging.error(
                     f"API call failed for prompt: {prompt} with error: {error_info}"
@@ -94,8 +101,8 @@ async def fetch_tool_call(
                     "Optional": optional_tools,
                     "Forbidden": forbidden_tools,
                     "Match": "No",
+                    "Reason": f"API call failed: {error_info}",
                 }
-
 
 async def validate_tool_calls_async(
     base_url: str,
@@ -199,9 +206,9 @@ def main() -> None:
         description="Run tool call tests and save results."
     )
     parser.add_argument(
-        "--base",
+        "--base_url",
         type=str,
-        default="localhost",
+        default="http://localhost",
         help="Base URL for the API",
     )
     parser.add_argument(
@@ -225,9 +232,8 @@ def main() -> None:
     args = parser.parse_args()
 
     # Construct the full base URL
-    base_url = f"http://{args.base}:{args.port}"
-
-    asyncio.run(validate_tool_calls_async(base_url, args.data, args.output))
+    full_url = f"{args.base_url}:{args.port}"
+    asyncio.run(validate_tool_calls_async(full_url, args.data, args.output))
 
 
 if __name__ == "__main__":
