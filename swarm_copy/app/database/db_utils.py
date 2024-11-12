@@ -33,7 +33,7 @@ async def get_thread(
     return thread
 
 
-async def put_messages_in_db(
+async def save_history(
     history: list[dict[str, Any]],
     user_id: str,
     thread_id: str,
@@ -67,7 +67,7 @@ async def put_messages_in_db(
     await session.commit()
 
 
-async def get_messages_from_db(
+async def get_history(
     thread: Annotated[Threads, Depends(get_thread)],
 ) -> list[dict[str, Any]]:
     """Retreive the message history from the DB."""

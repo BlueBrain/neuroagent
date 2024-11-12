@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from swarm_copy.app.database.db_utils import Entity
+
 
 class ThreadsRead(BaseModel):
     """Data class to read chatbot conversations in the db."""
@@ -31,7 +33,7 @@ class MessagesRead(BaseModel):
     order: int
     creation_date: datetime.datetime
     msg_content: str
-    msg_entity: Literal["user", "ai_message"]
+    entity: Literal[Entity.USER, Entity.AI_MESSAGE]
 
 
 class ToolCallSchema(BaseModel):

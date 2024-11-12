@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from swarm_copy.app.database.db_utils import get_messages_from_db, put_messages_in_db
+from swarm_copy.app.database.db_utils import get_history, save_history
 from swarm_copy.app.dependencies import (
     get_agents_routine,
     get_context_variables,
@@ -47,12 +47,12 @@ async def run_chat_agent(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     thread_id: str,
-    messages: Annotated[list[dict[str, Any]], Depends(get_messages_from_db)],
+    messages: Annotated[list[dict[str, Any]], Depends(get_history)],
 ) -> AgentResponse:
     """Run a single agent query."""
     messages.append({"role": "user", "content": user_request.query})
     response = await agent_routine.arun(agent, messages, context_variables)
-    await put_messages_in_db(
+    await save_history(
         user_id=user_id,
         history=response.messages,
         offset=len(messages) - 1,
@@ -71,7 +71,7 @@ async def stream_chat_agent(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     thread_id: str,
-    messages: Annotated[list[dict[str, Any]], Depends(get_messages_from_db)],
+    messages: Annotated[list[dict[str, Any]], Depends(get_history)],
 ) -> StreamingResponse:
     """Run a single agent query in a streamed fashion."""
     messages.append({"role": "user", "content": user_request.query})

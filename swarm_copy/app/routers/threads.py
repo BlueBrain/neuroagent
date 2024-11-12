@@ -9,8 +9,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from neuroagent.app.app_utils import validate_project
-from neuroagent.app.config import Settings
+from swarm_copy.app.app_utils import validate_project
+from swarm_copy.app.config import Settings
 from swarm_copy.app.database.db_utils import get_thread
 from swarm_copy.app.database.schemas import MessagesRead, ThreadsRead, ThreadUpdate
 from swarm_copy.app.database.sql_schemas import Entity, Messages, Threads
@@ -47,7 +47,12 @@ async def create_thread(
         token=token,
         vlab_project_url=settings.virtual_lab.get_project_url,
     )
-    new_thread = Threads(user_id=user_id, title=title)
+    new_thread = Threads(
+        user_id=user_id,
+        title=title,
+        virtual_lab_id=virtual_lab_id,
+        project_id=project_id,
+    )
     session.add(new_thread)
     await session.commit()
     await session.refresh(new_thread)
@@ -71,13 +76,14 @@ async def get_threads(
 @router.get("/{thread_id}")
 async def get_messages(
     session: Annotated[AsyncSession, Depends(get_session)],
-    thread: Annotated[Threads, Depends(get_thread)],
+    _: Annotated[Threads, Depends(get_thread)],  # to check if thread exist
+    thread_id: str,
 ) -> list[MessagesRead]:
-    """Get all mesaages of the thread."""
+    """Get all messages of the thread."""
     messages_result = await session.execute(
         select(Messages)
         .where(
-            Messages.thread_id == thread.thread_id,
+            Messages.thread_id == thread_id,
             Messages.entity.in_([Entity.USER, Entity.AI_MESSAGE]),
         )
         .order_by(Messages.order)
@@ -88,7 +94,6 @@ async def get_messages(
     for msg in db_messages:
         messages.append(
             MessagesRead(
-                msg_entity=msg.entity.value,
                 msg_content=json.loads(msg.content)["content"],
                 **msg.__dict__,
             )
