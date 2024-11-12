@@ -85,7 +85,7 @@ jobs:
           pip install --upgrade pip
           pip install mypy==1.8.0
           pip install ".[dev]"
-      - name: Running mypy and swarm_copy_tests
+      - name: Running mypy and tests
         run: |
           mypy src/ swarm_copy/
           # Include src/ directory in Python path to prioritize local files in pytest
