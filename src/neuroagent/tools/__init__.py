@@ -1,7 +1,7 @@
 """Tools folder."""
 
 from neuroagent.tools.bluenaas_tool import BlueNaaSTool
-from neuroagent.tools.electrophys_tool import ElectrophysFeatureTool, FeaturesOutput
+from neuroagent.tools.electrophys_tool import ElectrophysFeatureTool, FeatureOutput
 from neuroagent.tools.get_me_model_tool import GetMEModelTool
 from neuroagent.tools.get_morpho_tool import GetMorphoTool, KnowledgeGraphOutput
 from neuroagent.tools.kg_morpho_features_tool import (
@@ -26,7 +26,7 @@ __all__ = [
     "BlueNaaSTool",
     "BRResolveOutput",
     "ElectrophysFeatureTool",
-    "FeaturesOutput",
+    "FeatureOutput",
     "GetMorphoTool",
     "GetTracesTool",
     "KGMorphoFeatureOutput",
