@@ -162,7 +162,7 @@ class InputElectrophys(BaseModel):
     )
 
 
-class FeaturesOutput(BaseToolOutput):
+class FeatureOutput(BaseToolOutput):
     """Output schema for the neurom tool."""
 
     brain_region: str
@@ -193,7 +193,7 @@ class ElectrophysFeatureTool(BasicTool):
         calculated_feature: CALCULATED_FEATURES | None = None,
         stimuli_types: STIMULI_TYPES | None = None,
         amplitude: AmplitudeInput | None = None,
-    ) -> FeaturesOutput | dict[str, str]:
+    ) -> FeatureOutput | dict[str, str]:
         """Give features about trace.
 
         Parameters
@@ -327,7 +327,7 @@ class ElectrophysFeatureTool(BasicTool):
                     output_features[protocol_name]["stimulus_current"] = (
                         f"{protocol_def['step']['amp']} nA"
                     )
-            return FeaturesOutput(
+            return FeatureOutput(
                 brain_region=metadata.brain_region, feature_dict=output_features
             )
         except Exception as e:

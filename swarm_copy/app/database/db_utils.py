@@ -46,10 +46,12 @@ async def put_messages_in_db(
             entity = Entity.USER
         elif messages["role"] == "tool":
             entity = Entity.TOOL
-        elif messages["content"]:
+        elif messages["role"] == "assistant" and messages["content"]:
             entity = Entity.AI_MESSAGE
-        else:
+        elif messages["role"] == "assistant" and not messages["content"]:
             entity = Entity.AI_TOOL
+        else:
+            raise HTTPException(status_code=500, detail="Unknown message entity.")
 
         new_msg = Messages(
             order=i + offset,
@@ -70,9 +72,6 @@ async def get_messages_from_db(
 ) -> list[dict[str, Any]]:
     """Retreive the message history from the DB."""
     db_messages: list[Messages] = await thread.awaitable_attrs.messages
-    db_messages.sort(
-        key=lambda x: x.order
-    )  # could not find a nice way to do it in SQL :/
 
     messages = []
     if db_messages:

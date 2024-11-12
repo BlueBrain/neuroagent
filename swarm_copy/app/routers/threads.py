@@ -75,10 +75,12 @@ async def get_messages(
 ) -> list[MessagesRead]:
     """Get all mesaages of the thread."""
     messages_result = await session.execute(
-        select(Messages).where(
+        select(Messages)
+        .where(
             Messages.thread_id == thread.thread_id,
             Messages.entity.in_([Entity.USER, Entity.AI_MESSAGE]),
         )
+        .order_by(Messages.order)
     )
     db_messages = messages_result.scalars().all()
 
@@ -105,7 +107,6 @@ async def update_thread_title(
     thread_data = update_thread.model_dump(exclude_unset=True)
     for key, value in thread_data.items():
         setattr(thread, key, value)
-    session.add(thread)
     await session.commit()
     await session.refresh(thread)
     return ThreadsRead(**thread.__dict__)

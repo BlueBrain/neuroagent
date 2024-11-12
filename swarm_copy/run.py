@@ -19,7 +19,7 @@ from swarm_copy.new_types import (
     Response,
     Result,
 )
-from swarm_copy.tools import BaseTool
+from swarm_copy.tools.base_tool import BaseTool
 from swarm_copy.utils import merge_chunk
 
 
@@ -178,7 +178,6 @@ class AgentsRoutine:
     ) -> Response:
         """Run the agent main loop."""
         active_agent = agent
-        context_variables = copy.deepcopy(context_variables)
         history = copy.deepcopy(messages)
         init_len = len(messages)
 

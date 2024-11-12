@@ -48,6 +48,7 @@ class Threads(Base):
     messages: Mapped[list["Messages"]] = relationship(
         "Messages",
         back_populates="thread",
+        order_by="Messages.order",  # get messages in order.
         cascade="all, delete-orphan",
     )
 

@@ -5,7 +5,7 @@ import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from swarm_copy.app.database.db_utils import get_thread
@@ -27,9 +27,11 @@ async def get_tool_calls(
     """Get tool calls of a specific message."""
     # Find relevant messages
     relevant_message_result = await session.execute(
-        select(Messages).where(
+        select(Messages)
+        .where(
             Messages.thread_id == thread.thread_id, Messages.message_id == message_id
         )
+        .order_by(Messages.order)
     )
     relevant_message = relevant_message_result.scalar_one_or_none()
 
@@ -52,12 +54,12 @@ async def get_tool_calls(
             Messages.order < relevant_message.order,
             Messages.entity == Entity.USER,
         )
-        .order_by(Messages.order)
+        .order_by(desc(Messages.order))
+        .limit(1)
     )
-    previous_user_message = previous_user_message_result.scalars().all()
+    previous_user_message = previous_user_message_result.scalars().one_or_none()
     if not previous_user_message:
         return []
-    last_user_message = previous_user_message[-1]
 
     # Get all the "AI_TOOL" messsages in between.
     tool_call_result = await session.execute(
@@ -65,7 +67,7 @@ async def get_tool_calls(
         .where(
             Messages.thread_id == thread.thread_id,
             Messages.order < relevant_message.order,
-            Messages.order > last_user_message.order,
+            Messages.order > previous_user_message.order,
             Messages.entity == Entity.AI_TOOL,
         )
         .order_by(Messages.order)
@@ -99,7 +101,7 @@ async def get_tool_returns(
         select(Messages)
         .where(
             Messages.thread_id == thread.thread_id,
-            Messages.entity == "TOOL",
+            Messages.entity == Entity.AI_TOOL,
         )
         .order_by(Messages.order)
     )
