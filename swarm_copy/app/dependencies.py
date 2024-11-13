@@ -9,9 +9,11 @@ from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from openai import AsyncOpenAI
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from swarm_copy.app.app_utils import validate_project
 from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.cell_types import CellTypesMeta
@@ -49,6 +51,19 @@ def get_settings() -> Settings:
     """Get the global settings."""
     logger.info("Reading the environment and instantiating settings")
     return Settings()
+
+
+async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
+    """Manage the httpx client for the request."""
+    client = AsyncClient(
+        timeout=None,
+        verify=False,
+        headers={"x-request-id": request.headers["x-request-id"]},
+    )
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 
 async def get_openai_client(
@@ -110,7 +125,108 @@ async def get_session(
         yield session
 
 
+async def get_user_id(
+    token: Annotated[str, Depends(auth)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> str:
+    """Validate JWT token and returns user ID."""
+    if settings.keycloak.validate_token:
+        if settings.keycloak.user_info_endpoint:
+            try:
+                response = await httpx_client.get(
+                    settings.keycloak.user_info_endpoint,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                response.raise_for_status()
+                user_info = response.json()
+                return user_info["sub"]
+            except HTTPStatusError:
+                raise HTTPException(
+                    status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
+                )
+        else:
+            raise HTTPException(status_code=404, detail="user info url not provided.")
+    else:
+        return "dev"
+
+
+def get_kg_token(
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str | None, Depends(auth)],
+) -> str:
+    """Get a Knowledge graph token using Keycloak."""
+    if token:
+        return token
+    else:
+        instance = KeycloakOpenID(
+            server_url=settings.keycloak.server_url,
+            realm_name=settings.keycloak.realm,
+            client_id=settings.keycloak.client_id,
+        )
+        return instance.token(
+            username=settings.keycloak.username,
+            password=settings.keycloak.password.get_secret_value(),  # type: ignore
+        )["access_token"]
+
+
+async def get_vlab_and_project(
+    user_id: Annotated[str, Depends(get_user_id)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    token: Annotated[str, Depends(get_kg_token)],
+) -> dict[str, str]:
+    """Get the current vlab and project ID."""
+    if "x-project-id" in request.headers and "x-virtual-lab-id" in request.headers:
+        vlab_and_project = {
+            "vlab_id": request.headers["x-virtual-lab-id"],
+            "project_id": request.headers["x-project-id"],
+        }
+    elif not settings.keycloak.validate_token:
+        vlab_and_project = {
+            "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
+            "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
+        }
+    else:
+        thread_id = request.path_params.get("thread_id")
+        thread_result = await session.execute(
+            select(Threads).where(
+                Threads.user_id == user_id, Threads.thread_id == thread_id
+            )
+        )
+        thread = thread_result.scalars().one_or_none()
+        if not thread:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "detail": "Thread not found.",
+                },
+            )
+        if thread and thread.vlab_id and thread.project_id:
+            vlab_and_project = {
+                "vlab_id": thread.vlab_id,
+                "project_id": thread.project_id,
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="thread not found when trying to validate project ID.",
+            )
+
+    await validate_project(
+        httpx_client=httpx_client,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
+    )
+    return vlab_and_project
+
+
 def get_starting_agent(
+    _: Annotated[None, Depends(get_vlab_and_project)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Agent:
     """Get the starting agent."""
@@ -133,82 +249,6 @@ def get_starting_agent(
         model=settings.openai.model,
     )
     return agent
-
-
-async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
-    """Manage the httpx client for the request."""
-    client = AsyncClient(
-        timeout=None,
-        verify=False,
-        headers={"x-request-id": request.headers["x-request-id"]},
-    )
-    try:
-        yield client
-    finally:
-        await client.aclose()
-
-
-def get_kg_token(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str | None, Depends(auth)],
-) -> str:
-    """Get a Knowledge graph token using Keycloak."""
-    if token:
-        return token
-    else:
-        instance = KeycloakOpenID(
-            server_url=settings.keycloak.server_url,
-            realm_name=settings.keycloak.realm,
-            client_id=settings.keycloak.client_id,
-        )
-        return instance.token(
-            username=settings.keycloak.username,
-            password=settings.keycloak.password.get_secret_value(),  # type: ignore
-        )["access_token"]
-
-
-async def get_user_id(
-    token: Annotated[str, Depends(auth)],
-    settings: Annotated[Settings, Depends(get_settings)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> str:
-    """Validate JWT token and returns user ID."""
-    if settings.keycloak.validate_token and settings.keycloak.user_info_endpoint:
-        try:
-            response = await httpx_client.get(
-                settings.keycloak.user_info_endpoint,
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            response.raise_for_status()
-            user_info = response.json()
-            return user_info["sub"]
-        except HTTPStatusError:
-            raise HTTPException(
-                status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
-            )
-    else:
-        return "dev"
-
-
-# TEMP function, will get replaced by the CRUDs.
-async def get_thread_id(
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> str:
-    """Temp function to get the thread id."""
-    # for now hard coded temp user_sub and thread_id.
-    user_sub = "dev"
-    thread_id = "dev_thread"
-
-    # check if thread is in DB.
-    thread = await session.get(Threads, thread_id)
-    if not thread:
-        new_thread = Threads(user_id=user_sub, thread_id=thread_id)
-        session.add(new_thread)
-        await session.commit()
-        await session.refresh(new_thread)
-        thread = new_thread
-
-    return thread.thread_id
 
 
 def get_context_variables(
