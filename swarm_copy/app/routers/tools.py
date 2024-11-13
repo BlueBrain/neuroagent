@@ -20,20 +20,14 @@ router = APIRouter(prefix="/tools", tags=["Tool's CRUD"])
 
 @router.get("/{thread_id}/{message_id}")
 async def get_tool_calls(
-    thread: Annotated[Threads, Depends(get_thread)],
+    _: Annotated[Threads, Depends(get_thread)],  # to check if thread exist
     session: Annotated[AsyncSession, Depends(get_session)],
+    thread_id: str,
     message_id: str,
 ) -> list[ToolCallSchema]:
     """Get tool calls of a specific message."""
     # Find relevant messages
-    relevant_message_result = await session.execute(
-        select(Messages)
-        .where(
-            Messages.thread_id == thread.thread_id, Messages.message_id == message_id
-        )
-        .order_by(Messages.order)
-    )
-    relevant_message = relevant_message_result.scalar_one_or_none()
+    relevant_message = await session.get(Messages, message_id)
 
     # Check if message exists, and if of right type.
     if not relevant_message:
@@ -50,7 +44,7 @@ async def get_tool_calls(
     previous_user_message_result = await session.execute(
         select(Messages)
         .where(
-            Messages.thread_id == thread.thread_id,
+            Messages.thread_id == thread_id,
             Messages.order < relevant_message.order,
             Messages.entity == Entity.USER,
         )
@@ -65,7 +59,7 @@ async def get_tool_calls(
     tool_call_result = await session.execute(
         select(Messages)
         .where(
-            Messages.thread_id == thread.thread_id,
+            Messages.thread_id == thread_id,
             Messages.order < relevant_message.order,
             Messages.order > previous_user_message.order,
             Messages.entity == Entity.AI_TOOL,
@@ -92,15 +86,16 @@ async def get_tool_calls(
 
 @router.get("/output/{thread_id}/{tool_call_id}")
 async def get_tool_returns(
+    _: Annotated[Threads, Depends(get_thread)],  # to check if thread exist
     session: Annotated[AsyncSession, Depends(get_session)],
-    thread: Annotated[Threads, Depends(get_thread)],
+    thread_id: str,
     tool_call_id: str,
 ) -> list[dict[str, Any] | str]:
     """Given a tool id, return its output."""
     messages_result = await session.execute(
         select(Messages)
         .where(
-            Messages.thread_id == thread.thread_id,
+            Messages.thread_id == thread_id,
             Messages.entity == Entity.AI_TOOL,
         )
         .order_by(Messages.order)
