@@ -50,7 +50,7 @@ async def create_thread(
     new_thread = Threads(
         user_id=user_id,
         title=title,
-        virtual_lab_id=virtual_lab_id,
+        vlab_id=virtual_lab_id,
         project_id=project_id,
     )
     session.add(new_thread)
