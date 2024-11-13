@@ -96,7 +96,7 @@ async def get_tool_returns(
         select(Messages)
         .where(
             Messages.thread_id == thread_id,
-            Messages.entity == Entity.AI_TOOL,
+            Messages.entity == Entity.TOOL,
         )
         .order_by(Messages.order)
     )
@@ -104,7 +104,8 @@ async def get_tool_returns(
 
     tool_output = []
     for msg in tool_messages:
-        if json.loads(msg.content).get("tool_call_id") == tool_call_id:
-            tool_output.append(json.loads(msg.content))
+        msg_content = json.loads(msg.content)
+        if msg_content.get("tool_call_id") == tool_call_id:
+            tool_output.append(msg_content)
 
     return tool_output
