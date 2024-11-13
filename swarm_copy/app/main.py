@@ -21,7 +21,7 @@ from swarm_copy.app.dependencies import (
     get_settings,
     get_update_kg_hierarchy,
 )
-from swarm_copy.app.routers import qa
+from swarm_copy.app.routers import qa, threads, tools
 
 LOGGING = {
     "version": 1,
@@ -125,6 +125,8 @@ app.add_middleware(
 
 
 app.include_router(qa.router)
+app.include_router(threads.router)
+app.include_router(tools.router)
 
 
 @app.get("/healthz")

@@ -5,7 +5,7 @@ from typing import Any, AsyncIterator
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from swarm_copy.app.database.db_utils import put_messages_in_db
+from swarm_copy.app.database.db_utils import save_history
 from swarm_copy.new_types import Agent, Response
 from swarm_copy.run import AgentsRoutine
 
@@ -15,6 +15,7 @@ async def stream_agent_response(
     agent: Agent,
     messages: list[dict[str, str]],
     context_variables: dict[str, Any],
+    user_id: str,
     thread_id: str,
     session: AsyncSession,
 ) -> AsyncIterator[str]:
@@ -35,7 +36,8 @@ async def stream_agent_response(
         else:
             to_db = chunk
 
-    await put_messages_in_db(
+    await save_history(
+        user_id=user_id,
         history=to_db.messages,
         offset=len(messages) - 1,
         thread_id=thread_id,

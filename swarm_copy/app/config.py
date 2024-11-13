@@ -73,8 +73,8 @@ class SettingsLiterature(BaseModel):
     """Literature search API settings."""
 
     url: str
-    retriever_k: int = 500
-    use_reranker: bool = True
+    retriever_k: int = 8
+    use_reranker: bool = False
     reranker_k: int = 8
 
     model_config = ConfigDict(frozen=True)
