@@ -39,10 +39,10 @@ db_name = os.getenv("NEUROAGENT_DB__NAME", "neuroagent_chat_history")
 # Use synchronous SQLite for Alembic
 if db_prefix.startswith("sqlite"):
     db_prefix = db_prefix.replace("sqlite+aiosqlite", "sqlite")
+    sqlalchemy_url = f"{db_prefix}:///{db_name}"
 elif db_prefix.startswith("postgresql"):
     db_prefix = db_prefix.replace("postgresql+asyncpg", "postgresql")
-
-sqlalchemy_url = f"{db_prefix}{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    sqlalchemy_url = f"{db_prefix}://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 config.set_main_option("sqlalchemy.url", sqlalchemy_url)
 print(f"Sql Alchemy Url was set to: {sqlalchemy_url}")
