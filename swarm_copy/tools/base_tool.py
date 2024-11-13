@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Literal
 
 from httpx import AsyncClient
-from openai.lib._tools import pydantic_function_tool
+from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel, ConfigDict
 

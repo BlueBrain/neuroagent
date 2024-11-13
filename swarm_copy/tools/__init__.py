@@ -1,5 +1,6 @@
 """Tools package."""
 
+from swarm_copy.tools.bluenaas_scs_post import SCSPostTool
 from swarm_copy.tools.electrophys_tool import ElectrophysFeatureTool, FeatureOutput
 from swarm_copy.tools.get_me_model_tool import GetMEModelTool
 from swarm_copy.tools.get_morpho_tool import GetMorphoTool, KnowledgeGraphOutput
@@ -22,6 +23,7 @@ from swarm_copy.tools.resolve_entities_tool import (
 from swarm_copy.tools.traces_tool import GetTracesTool, TracesOutput
 
 __all__ = [
+    "SCSPostTool",
     "BRResolveOutput",
     "ElectrophysFeatureTool",
     "FeatureOutput",
