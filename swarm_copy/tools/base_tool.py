@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Literal
 
 from httpx import AsyncClient
-from openai import pydantic_function_tool
 from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel, ConfigDict
 
@@ -74,11 +73,18 @@ class BaseTool(BaseModel, ABC):
     @classmethod
     def pydantic_to_openai_schema(cls) -> ChatCompletionToolParam:
         """Convert pydantic schema to OpenAI json."""
-        return pydantic_function_tool(
-            model=cls.__annotations__["input_schema"],
-            name=cls.name,
-            description=cls.description,
-        )
+        new_retval = {
+            "type": "function",
+            "function": {
+                "name": cls.name,
+                "description": cls.description,
+                "strict": False,
+                "parameters": cls.__annotations__["input_schema"].model_json_schema(),
+            },
+        }
+        new_retval["function"]["parameters"]["additionalProperties"] = False
+
+        return new_retval
 
     @abstractmethod
     async def arun(self) -> Any:

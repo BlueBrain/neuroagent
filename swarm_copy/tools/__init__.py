@@ -1,5 +1,9 @@
 """Tools package."""
 
+from swarm_copy.tools.bluenaas_memodel_getall import MEModelGetAllTool
+from swarm_copy.tools.bluenaas_memodel_getone import MEModelGetOneTool
+from swarm_copy.tools.bluenaas_scs_getall import SCSGetAllTool
+from swarm_copy.tools.bluenaas_scs_getone import SCSGetOneTool
 from swarm_copy.tools.bluenaas_scs_post import SCSPostTool
 from swarm_copy.tools.electrophys_tool import ElectrophysFeatureTool, FeatureOutput
 from swarm_copy.tools.get_me_model_tool import GetMEModelTool
@@ -23,6 +27,8 @@ from swarm_copy.tools.resolve_entities_tool import (
 from swarm_copy.tools.traces_tool import GetTracesTool, TracesOutput
 
 __all__ = [
+    "SCSGetAllTool",
+    "SCSGetOneTool",
     "SCSPostTool",
     "BRResolveOutput",
     "ElectrophysFeatureTool",
@@ -33,6 +39,8 @@ __all__ = [
     "KGMorphoFeatureTool",
     "KnowledgeGraphOutput",
     "LiteratureSearchTool",
+    "MEModelGetAllTool",
+    "MEModelGetOneTool",
     "MorphologyFeatureOutput",
     "MorphologyFeatureTool",
     "ParagraphMetadata",
