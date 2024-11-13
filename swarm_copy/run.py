@@ -3,8 +3,10 @@
 import asyncio
 import copy
 import json
+import logging
 from collections import defaultdict
 from typing import Any, AsyncIterator
+from phantasmpy import Phantasm
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
@@ -142,31 +144,50 @@ class AgentsRoutine:
             return response, None
 
         tool_metadata = tool.__annotations__["metadata"](**context_variables)
-        tool_instance = tool(input_schema=input_schema, metadata=tool_metadata)
-        # pass context_variables to agent functions
-        try:
-            raw_result = await tool_instance.arun()
-        except Exception as err:
+
+        logging.info("Calling tool: {}".format(name))
+        parameters = {
+            "brain region": input_schema.brain_region,
+            "mtype": input_schema.mtype,
+            "etype": input_schema.etype
+        }
+        phantasm = Phantasm(
+            host="localhost",
+            port=2505,
+        )
+        response = phantasm.get_approval(
+            name="Resolve Entities",
+            parameters=parameters
+        )
+        if response.approved:
+            logging.error(f"Usage of tool {name} was approved.")
+            tool_instance = tool(input_schema=input_schema, metadata=tool_metadata)
+            # pass context_variables to agent functions
+            try:
+                raw_result = await tool_instance.arun()
+            except Exception as err:
+                response = {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "tool_name": name,
+                    "content": str(err),
+                }
+                return response, None
+
+            result: Result = self.handle_function_result(raw_result)
             response = {
                 "role": "tool",
                 "tool_call_id": tool_call.id,
                 "tool_name": name,
-                "content": str(err),
+                "content": result.value,
             }
-            return response, None
-
-        result: Result = self.handle_function_result(raw_result)
-        response = {
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "tool_name": name,
-            "content": result.value,
-        }
-        if result.agent:
-            agent = result.agent
+            if result.agent:
+                agent = result.agent
+            else:
+                agent = None
+            return response, agent
         else:
-            agent = None
-        return response, agent
+            logging.error(f"Usage of tool {name} was NOT approved.")
 
     async def arun(
         self,
