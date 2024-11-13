@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - LLM evaluation logic
+- Integrated Alembic for managing chat history migrations
 - Tool implementations without langchain or langgraph dependencies
+- CRUDs.
 
 ## [0.3.3] - 30.10.2024
 
@@ -43,7 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Swarm copy POC.
 - Agent memory.
-- CRUDs.
 
 
 ## [0.2.0] - 22.10.2024
