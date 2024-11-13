@@ -11,7 +11,7 @@ from neuroagent.tools import ElectrophysFeatureTool
 from neuroagent.tools.electrophys_tool import (
     CALCULATED_FEATURES,
     AmplitudeInput,
-    FeaturesOutput,
+    FeatureOutput,
 )
 
 
@@ -60,7 +60,7 @@ class TestElectrophysTool:
                 "mean_frequency",
             ],
         )
-        assert isinstance(response, FeaturesOutput)
+        assert isinstance(response, FeatureOutput)
         assert isinstance(response.feature_dict, dict)
         assert len(response.feature_dict.keys()) == 1
         assert (
@@ -79,7 +79,7 @@ class TestElectrophysTool:
             ],
             amplitude=AmplitudeInput(min_value=-0.5, max_value=1),
         )
-        assert isinstance(response, FeaturesOutput)
+        assert isinstance(response, FeatureOutput)
         assert isinstance(response.feature_dict, dict)
         assert len(response.feature_dict.keys()) == 1
         assert (
@@ -95,7 +95,7 @@ class TestElectrophysTool:
             ],
             calculated_feature=[],
         )
-        assert isinstance(response, FeaturesOutput)
+        assert isinstance(response, FeatureOutput)
         assert isinstance(response.feature_dict, dict)
         assert len(response.feature_dict.keys()) == 1
         assert (
