@@ -190,8 +190,8 @@ async def get_vlab_and_project(
         }
     elif not settings.keycloak.validate_token:
         vlab_and_project = {
-            "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
-            "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
+            "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",
+            "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",
         }
     else:
         thread_id = request.path_params.get("thread_id")
@@ -269,8 +269,8 @@ def get_context_variables(
     return {
         "starting_agent": starting_agent,
         "token": token,
-        "vlab_id": "d04ca8d9-bc76-4093-9a71-29b10fc4345c",
-        "project_id": "cb986056-c944-4563-8ef7-9a42d95e28b8",
+        "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",  # New god account vlab. Replaced by actual id in endpoint for now. Meant for usage without history
+        "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",  # New god account proj. Replaced by actual id in endpoint for now. Meant for usage without history
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,

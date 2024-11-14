@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Literal
 
 from httpx import AsyncClient
-from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
@@ -71,9 +70,9 @@ class BaseTool(BaseModel, ABC):
     input_schema: BaseModel
 
     @classmethod
-    def pydantic_to_openai_schema(cls) -> ChatCompletionToolParam:
+    def pydantic_to_openai_schema(cls) -> dict[str, Any]:
         """Convert pydantic schema to OpenAI json."""
-        new_retval = {
+        new_retval: dict[str, Any] = {
             "type": "function",
             "function": {
                 "name": cls.name,

@@ -6,7 +6,6 @@ from swarm_copy.tools.bluenaas_scs_getall import SCSGetAllTool
 from swarm_copy.tools.bluenaas_scs_getone import SCSGetOneTool
 from swarm_copy.tools.bluenaas_scs_post import SCSPostTool
 from swarm_copy.tools.electrophys_tool import ElectrophysFeatureTool, FeatureOutput
-from swarm_copy.tools.get_me_model_tool import GetMEModelTool
 from swarm_copy.tools.get_morpho_tool import GetMorphoTool, KnowledgeGraphOutput
 from swarm_copy.tools.kg_morpho_features_tool import (
     KGMorphoFeatureOutput,
@@ -46,5 +45,4 @@ __all__ = [
     "ParagraphMetadata",
     "ResolveEntitiesTool",
     "TracesOutput",
-    "GetMEModelTool",
 ]
