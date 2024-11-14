@@ -10,7 +10,7 @@ from swarm_copy.tools.base_tool import (
     ETYPE_IDS,
     BaseMetadata,
     BaseTool,
-    EtypesLiteral,
+    EtypesLiteral, HILToolOutput,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,21 +41,21 @@ class ResolveBRInput(BaseModel):
     )
 
 
-class BRResolveOutput(BaseModel):
+class BRResolveOutput(HILToolOutput):
     """Output schema for the Brain region resolver."""
 
     brain_region_name: str
     brain_region_id: str
 
 
-class MTypeResolveOutput(BaseModel):
+class MTypeResolveOutput(HILToolOutput):
     """Output schema for the Mtype resolver."""
 
     mtype_name: str
     mtype_id: str
 
 
-class EtypeResolveOutput(BaseModel):
+class EtypeResolveOutput(HILToolOutput):
     """Output schema for the Mtype resolver."""
 
     etype_name: str

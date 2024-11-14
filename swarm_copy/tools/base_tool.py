@@ -83,3 +83,7 @@ class BaseTool(BaseModel, ABC):
     @abstractmethod
     async def arun(self) -> Any:
         """Run the tool."""
+
+
+class HILToolOutput(BaseModel):
+    status: str = "approved"

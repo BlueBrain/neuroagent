@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool, HILToolOutput
 from swarm_copy.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class GetTracesInput(BaseModel):
     )
 
 
-class TracesOutput(BaseModel):
+class TracesOutput(HILToolOutput):
     """Output schema for the traces."""
 
     trace_id: str
