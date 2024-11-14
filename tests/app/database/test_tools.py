@@ -53,15 +53,12 @@ async def test_get_tool_calls(
         message_id = messages[-1]["message_id"]
         tool_calls = app_client.get(f"/tools/{thread_id}/{message_id}").json()
 
-    assert (
-        tool_calls[0]
-        == ToolCallSchema(
-            call_id="call_zHhwfNLSvGGHXMoILdIYtDVI",
-            name="get-morpho-tool",
-            arguments={
-                "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/549"
-            },
-        ).model_dump()
+    assert tool_calls[0] == ToolCallSchema(
+        call_id="call_zHhwfNLSvGGHXMoILdIYtDVI",
+        name="get-morpho-tool",
+        arguments={
+            "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/549"
+        },
     )
 
 
