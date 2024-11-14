@@ -106,16 +106,16 @@ async def test_get_thread(
         messages = app_client.get(f"/threads/{thread_id}").json()
 
     assert messages == [
-        GetThreadsOutput(
-            message_id=messages[0]["message_id"],
-            entity="Human",
-            message="This is my query",
-        ),
-        GetThreadsOutput(
-            message_id="run-42768b30-044a-4263-8c5c-da61429aa9da-0",
-            entity="AI",
-            message="Great answer",
-        ),
+        {
+            "message_id": messages[0]["message_id"],
+            "entity": "Human",
+            "message": "This is my query",
+        },
+        {
+            "message_id": "run-42768b30-044a-4263-8c5c-da61429aa9da-0",
+            "entity": "AI",
+            "message": "Great answer",
+        }
     ]
 
 
