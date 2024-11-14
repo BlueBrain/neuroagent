@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from swarm_copy.new_types import (
     Agent,
+    HILResponse,
     Response,
     Result,
 )
@@ -104,8 +105,18 @@ class AgentsRoutine:
             agent = next((agent for agent in reversed(agents) if agent is not None))
         except StopIteration:
             agent = None
+
+        history_messages = [msg for msg in messages if not isinstance(msg, HILResponse)]
+        hil_messages = [msg for msg in messages if isinstance(msg, HILResponse)]
+
+        if history_messages and hil_messages:
+            history_messages = []
+
         response = Response(
-            messages=messages, agent=agent, context_variables=context_variables
+            messages=history_messages,
+            agent=agent,
+            context_variables=context_variables,
+            hil_messages=hil_messages,
         )
         return response
 
@@ -130,6 +141,12 @@ class AgentsRoutine:
         kwargs = json.loads(tool_call.function.arguments)
 
         tool = tool_map[name]
+        if tool.hil and not tool_call.model_dump()["function"].get("validated"):
+            return HILResponse(
+                message="Please validate the following inputs before proceeding.",
+                inputs=kwargs,
+                tool_call_id=tool_call.id,
+            ), None
         try:
             input_schema = tool.__annotations__["input_schema"](**kwargs)
         except ValidationError as err:
@@ -183,16 +200,19 @@ class AgentsRoutine:
 
         while len(history) - init_len < max_turns and active_agent:
             # get completion with current history, agent
-            completion = await self.get_chat_completion(
-                agent=active_agent,
-                history=history,
-                context_variables=context_variables,
-                model_override=model_override,
-                stream=False,
-            )
-            message = completion.choices[0].message  # type: ignore
-            message.sender = active_agent.name
-            history.append(json.loads(message.model_dump_json()))
+            if not history[-1]["role"] == "assistant" or not history[-1]["tool_calls"]:
+                completion = await self.get_chat_completion(
+                    agent=active_agent,
+                    history=history,
+                    context_variables=context_variables,
+                    model_override=model_override,
+                    stream=False,
+                )
+                message = completion.choices[0].message  # type: ignore
+                message.sender = active_agent.name
+                history.append(message.model_dump())
+            else:
+                message = ChatCompletionMessage(**history[-1])
 
             if not message.tool_calls:
                 break
@@ -201,16 +221,18 @@ class AgentsRoutine:
             partial_response = await self.execute_tool_calls(
                 message.tool_calls, active_agent.tools, context_variables
             )
+
             history.extend(partial_response.messages)
             context_variables.update(partial_response.context_variables)
             if partial_response.agent:
                 active_agent = partial_response.agent
 
-        return Response(
-            messages=history[init_len - 1 :],
-            agent=active_agent,
-            context_variables=context_variables,
-        )
+            # Break the while loop to ask for human validation
+            return Response(
+                messages=history[init_len - 1 :],
+                agent=active_agent,
+                context_variables=context_variables,
+            ), partial_response.hil_messages
 
     async def astream(
         self,
