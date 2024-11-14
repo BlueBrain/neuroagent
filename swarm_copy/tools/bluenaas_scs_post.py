@@ -87,7 +87,7 @@ class SCSPostTool(BaseTool):
 
     name: ClassVar[str] = "scspost-tool"
     description: ClassVar[str] = """Runs a single-neuron simulation.
-    Requires a "me_model_id" which must be fetched through the 'memodelgetall-tool'.
+    Requires a "me_model_id" which must be fetched through the 'memodelgetall-tool' or directly provided by the user.
     Optionally, the user can specify simulation parameters.
     Returns the id of the simulation along with metadatas to fetch the simulation result and analyse it at a later stage.
     """

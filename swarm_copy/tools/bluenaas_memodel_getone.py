@@ -33,7 +33,8 @@ class MEModelGetOneTool(BaseTool):
     """Class defining the MEModelGetOne tool."""
 
     name: ClassVar[str] = "memodelgetone-tool"
-    description: ClassVar[str] = "Get one specific me model from a user."
+    description: ClassVar[str] = """Get one specific me model from a user.
+    The id can be retrieved using the 'memodelgetall-tool' or directly specified by the user."""
     metadata: MEModelGetOneMetadata
     input_schema: InputMEModelGetOne
 

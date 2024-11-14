@@ -23,7 +23,9 @@ class SCSGetOneMetadata(BaseMetadata):
 class InputSCSGetOne(BaseModel):
     """Inputs for the BlueNaaS single-neuron simulation."""
 
-    simulation_id: str = Field(description="ID of the simulation to retrieve.")
+    simulation_id: str = Field(
+        description="ID of the simulation to retrieve. Should be an https link."
+    )
 
 
 class SCSGetOneTool(BaseTool):
@@ -33,7 +35,7 @@ class SCSGetOneTool(BaseTool):
     description: ClassVar[
         str
     ] = """Get one specific simulations from a user based on its id.
-    The id can be retrieved using the 'scsgetall-tool'."""
+    The id can be retrieved using the 'scsgetall-tool' or directly specified by the user."""
     metadata: SCSGetOneMetadata
     input_schema: InputSCSGetOne
 
