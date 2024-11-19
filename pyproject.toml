@@ -28,7 +28,7 @@ dependencies = [
     "pydantic-settings",
     "python-dotenv",
     "python-keycloak",
-    "redispy",
+    "redis",
     "sqlalchemy[asyncio]",
     "uvicorn",
     ]

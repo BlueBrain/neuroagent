@@ -6,6 +6,7 @@ import json
 from collections import defaultdict
 from typing import Any, AsyncIterator
 
+import redis.asyncio as redis
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import (
@@ -26,7 +27,10 @@ from swarm_copy.utils import merge_chunk
 class AgentsRoutine:
     """Agents routine class. Wrapper for all the functions running the agent."""
 
-    def __init__(self, client: AsyncOpenAI | None = None) -> None:
+    def __init__(
+        self, redis_client: redis.Redis, client: AsyncOpenAI | None = None
+    ) -> None:
+        self.redis_client = redis_client
         if not client:
             client = AsyncOpenAI()
         self.client = client

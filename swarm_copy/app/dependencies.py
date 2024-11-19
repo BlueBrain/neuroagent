@@ -293,11 +293,25 @@ def get_context_variables(
     }
 
 
+async def get_redis_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AsyncIterator[redis.Redis]:
+    """Get the Redis client."""
+    pool = redis.ConnectionPool.from_url(settings.hil.redis_uri)
+    client = redis.Redis.from_pool(pool)
+
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
 def get_agents_routine(
     openai: Annotated[AsyncOpenAI | None, Depends(get_openai_client)],
+    redis_client: Annotated[redis.Redis, Depends(get_redis_client)],
 ) -> AgentsRoutine:
     """Get the AgentRoutine client."""
-    return AgentsRoutine(openai)
+    return AgentsRoutine(redis_client=redis_client, client=openai)
 
 
 async def get_update_kg_hierarchy(
@@ -338,16 +352,3 @@ async def get_cell_types_kg_hierarchy(
     celltypesmeta = CellTypesMeta.from_dict(hierarchy)
     celltypesmeta.save_config(settings.knowledge_graph.ct_saving_path)
     logger.info("Knowledge Graph Cell Types Hierarchy file updated.")
-
-
-async def get_redis_client(
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> AsyncGenerator[redis.Redis, None]:
-    """Get the Redis client."""
-    pool = redis.ConnectionPool.from_url(settings.hil.redis_uri)
-    client = redis.Redis.from_pool(pool)
-
-    try:
-        yield client
-    finally:
-        await client.aclose()
