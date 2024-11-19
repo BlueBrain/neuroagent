@@ -165,7 +165,7 @@ class AgentsRoutine:
             # Create initial approval entry
             approval_data = {
                 "status": "pending",
-                "kwargs": input_schema.model_dump_json(),
+                "parameters": input_schema.model_dump_json(),
             }
             await self.redis_client.set(
                 approval_key, json.dumps(approval_data), ex=self.ttl
