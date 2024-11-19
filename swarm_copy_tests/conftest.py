@@ -18,6 +18,27 @@ from neuroagent.app.main import app
 from neuroagent.tools import GetMorphoTool
 
 
+@pytest.fixture(name="settings")
+def settings():
+    return Settings(
+        tools={
+            "literature": {
+                "url": "fake_literature_url",
+            },
+        },
+        knowledge_graph={
+            "base_url": "https://fake_url/api/nexus/v1",
+        },
+        openai={
+            "token": "fake_token",
+        },
+        keycloak={
+            "username": "fake_username",
+            "password": "fake_password",
+        },
+    )
+
+
 @pytest.fixture(name="app_client")
 def client_fixture():
     """Get client and clear app dependency_overrides."""
