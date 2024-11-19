@@ -23,6 +23,7 @@ class ApprovalContent(BaseModel):
 
     status: Literal["approved", "declined", "pending"]
     parameters: str
+    tool_name: str
 
 
 class ApprovalOut(BaseModel):
@@ -123,9 +124,11 @@ async def update_approval(
     current_value = await redis_client.get(key)
     current_content = json.loads(current_value.decode("utf-8"))
 
-    # Update status while preserving kwargs
+    # Update status while preserving kwargs and tool_name
     new_content = ApprovalContent(
-        status=update.status, parameters=current_content["parameters"]
+        status=update.status,
+        parameters=current_content["parameters"],
+        tool_name=current_content["tool_name"],
     )
 
     # Save updated content and restore TTL

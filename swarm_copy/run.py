@@ -166,6 +166,7 @@ class AgentsRoutine:
             approval_data = {
                 "status": "pending",
                 "parameters": input_schema.model_dump_json(),
+                "tool_name": name,
             }
             await self.redis_client.set(
                 approval_key, json.dumps(approval_data), ex=self.ttl
