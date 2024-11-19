@@ -268,6 +268,7 @@ def get_context_variables(
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    user_id: Annotated[str, Depends(get_user_id)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {
@@ -275,6 +276,7 @@ def get_context_variables(
         "token": token,
         "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",  # New god account vlab. Replaced by actual id in endpoint for now. Meant for usage without history
         "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",  # New god account proj. Replaced by actual id in endpoint for now. Meant for usage without history
+        "user_id": user_id,
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,

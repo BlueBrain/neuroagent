@@ -159,7 +159,7 @@ class AgentsRoutine:
 
         if tool.hil:
             approval_id = str(uuid.uuid4())
-            user_id = context_variables.get("user_id", "default")
+            user_id = context_variables["user_id"]
             approval_key = f"approval:{user_id}:{approval_id}"
 
             # Create initial approval entry
