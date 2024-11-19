@@ -1,102 +1,129 @@
 [
-    {
-      "prompt": "What are the morphological features of neurons in the thalamus?",
-      "expected_tool_calls": [
-        {
-          "tool_name": "resolve-entities-tool",
-          "arguments": {"brain_region": "thalamus"}
-        },
-        {
-          "tool_name": "get-morpho-tool",
-          "arguments": {"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}
-        }
-      ]
-    },
-    {
-      "prompt": "Find me articles about the role of the hippocampus in memory formation.",
-      "expected_tool_calls": [
-        {
-          "tool_name": "literature-search-tool",
-          "arguments": {
-            "query": "hippocampus memory formation"
-          }
-        }
-      ]
-    },
   {
-      "prompt": "Retrieve electrophysiological features of cortical neurons.",
-      "expected_tool_calls": [
-        {
-          "tool_name": "resolve-entities-tool",
+    "prompt": "What are the morphological features of neurons in the thalamus?",
+    "expected_tools": [
+      {
+        "tool_name": "resolve-entities-tool",
+        "arguments": {"brain_region": "thalamus"}
+      },
+      {
+        "tool_name": "get-morpho-tool",
+        "arguments": {"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}
+      }
+    ],
+    "optional_tools": ["literature-search-tool"],
+    "forbidden_tools": ["get-traces-tool", "electrophys-features-tool", "get-me-model-tool", "bluenaas-tool"]
+  },
+  {
+    "prompt": "Find me articles about the role of the hippocampus in memory formation.",
+    "expected_tools": [
+      {
+        "tool_name": "literature-search-tool",
+        "arguments": {
+          "query": "hippocampus memory formation"
+        }
+      }
+    ],
+    "optional_tools": ["resolve-entities-tool"],
+    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-features-tool", "get-me-model-tool", "bluenaas-tool"]
+  },
+  {
+    "prompt": "Retrieve electrophysiological features of cortical neurons.",
+    "expected_tools": [
+      {
+        "tool_name": "resolve-entities-tool",
+        "arguments": {
+            "brain_region": "cortex"
+        }
+      },
+      {
+        "tool_name": "get-traces-tool",
+        "arguments": {
+            "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/134"
+        }
+      },    
+      {
+          "tool_name": "electrophys-features-tool",
           "arguments": {
               "brain_region": "cortex"
           }
-        },
-        {
+      }
+    ],
+    "optional_tools": ["literature-search-tool"],
+    "forbidden_tools": ["get-morpho-tool", "get-me-model-tool", "bluenaas-tool"]
+  },
+  {
+    "prompt": "Get traces for neurons in the hippocampus.",
+    "expected_tools": [
+      {
+          "tool_name": "resolve-entities-tool",
+          "arguments": {
+            "brain_region": "hippocampus"}
+      },
+      {
           "tool_name": "get-traces-tool",
           "arguments": {
               "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/134"
           }
-        },    
-        {
-            "tool_name": "electrophys-feature-tool",
-            "arguments": {
-                "brain_region": "cortex"
-            }
-        }
-      ]
+      },
+      {
+          "tool_name": "electrophys-features-tool"
+      }
+    ],
+    "optional_tools": ["literature-search-tool"],
+    "forbidden_tools": ["get-morpho-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
-      "prompt": "Get traces for neurons in the hippocampus.",
-      "expected_tool_calls": [
-        {
-            "tool_name": "resolve-entities-tool",
-            "arguments": {
-              "brain_region": "hippocampus"}
-        },
-        {
-            "tool_name": "get-traces-tool",
-            "arguments": {
-                "brain_region_id": "http://api.brain-map.org/api/v2/data/Structure/134"
-            }
-        },
-        {
-            "tool_name": "electrophys-features-tool"
-        }
-      ]
+    "prompt": "Get traces for neurons in the primary somatosensory area.",
+    "expected_tools": [
+      {
+          "tool_name": "resolve-entities-tool",
+          "arguments": {
+            "brain_region": "primary somatosensory area"}
+      },
+      {
+          "tool_name": "get-traces-tool"
+      }
+    ],
+    "optional_tools": ["literature-search-tool","electrophys-features-tool"],
+    "forbidden_tools": ["get-morpho-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
-      "prompt": "Search for literature on synaptic plasticity.",
-      "expected_tool_calls": [
-        {
-            "tool_name": "literature-search-tool",
-            "arguments": {
-                "query": "synaptic plasticity"
-            }
-        }
-      ]
+    "prompt": "Search for literature on synaptic plasticity.",
+    "expected_tools": [
+      {
+          "tool_name": "literature-search-tool",
+          "arguments": {
+              "query": "synaptic plasticity"
+          }
+      }
+    ],
+    "optional_tools": ["resolve-entities-tool"],
+    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-features-tool", "get-me-model-tool", "bluenaas-tool"]
   },
   {
     "prompt": "Run 1000 ms of simulation of a me model from somatosensory cortex with 34 degree temperature, current clamp stimulation mode with step current for fire pattern detection. use 1 number of step and 0.05 nA current stimulation. Record from soma.",
-    "expected_tool_calls": [
-        {
-            "tool_name": "resolve-entities-tool",
-            "arguments": {
-                "brain_region": "somatosensory area"
-            }
-        },
-        {
-          "tool_name": "literature-search-tool"
-        },
-        {
-          "tool_name": "get-me-model-tool",
+    "expected_tools": [
+      {
+          "tool_name": "resolve-entities-tool",
           "arguments": {
-              "brain_region_id" : "http://api.brain-map.org/api/v2/data/Structure/322"
+              "brain_region": "somatosensory area"
           }
-        },
-        {
-          "tool_name": "bluenaas-tool"
+      },
+      {
+        "tool_name": "literature-search-tool"
+      },
+      {
+        "tool_name": "get-me-model-tool",
+        "arguments": {
+            "brain_region_id" : "http://api.brain-map.org/api/v2/data/Structure/322"
         }
-    ]
-}
+      },
+      {
+        "tool_name": "bluenaas-tool"
+      }
+    ],
+    "optional_tools": [],
+    "forbidden_tools": ["get-morpho-tool", "get-traces-tool", "electrophys-features-tool"]
+  }
 ]
