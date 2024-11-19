@@ -233,7 +233,7 @@ async def get_vlab_and_project(
 
 
 def get_starting_agent(
-    _: Annotated[None, Depends(get_vlab_and_project)],
+    # _: Annotated[None, Depends(get_vlab_and_project)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Agent:
     """Get the starting agent."""
@@ -309,9 +309,15 @@ async def get_redis_client(
 def get_agents_routine(
     openai: Annotated[AsyncOpenAI | None, Depends(get_openai_client)],
     redis_client: Annotated[redis.Redis, Depends(get_redis_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AgentsRoutine:
     """Get the AgentRoutine client."""
-    return AgentsRoutine(redis_client=redis_client, client=openai)
+    return AgentsRoutine(
+        redis_client=redis_client,
+        client=openai,
+        poll_interval=settings.hil.poll_interval,
+        ttl=settings.hil.ttl,
+    )
 
 
 async def get_update_kg_hierarchy(

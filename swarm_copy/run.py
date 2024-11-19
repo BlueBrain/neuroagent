@@ -3,8 +3,10 @@
 import asyncio
 import copy
 import json
+import logging
 from collections import defaultdict
 from typing import Any, AsyncIterator
+import uuid
 
 import redis.asyncio as redis
 from openai import AsyncOpenAI
@@ -23,17 +25,25 @@ from swarm_copy.new_types import (
 from swarm_copy.tools.base_tool import BaseTool
 from swarm_copy.utils import merge_chunk
 
+logger = logging.getLogger(__name__)
+
 
 class AgentsRoutine:
     """Agents routine class. Wrapper for all the functions running the agent."""
 
     def __init__(
-        self, redis_client: redis.Redis, client: AsyncOpenAI | None = None
+        self,
+        redis_client: redis.Redis,
+        client: AsyncOpenAI | None = None,
+        poll_interval: int = 5,
+        ttl: int = 600,
     ) -> None:
         self.redis_client = redis_client
         if not client:
             client = AsyncOpenAI()
         self.client = client
+        self.poll_interval = poll_interval
+        self.ttl = ttl
 
     async def get_chat_completion(
         self,
@@ -146,6 +156,49 @@ class AgentsRoutine:
             return response, None
 
         tool_metadata = tool.__annotations__["metadata"](**context_variables)
+
+        if tool.hil:
+            approval_id = str(uuid.uuid4())
+            user_id = context_variables.get("user_id", "default")
+            approval_key = f"approval:{user_id}:{approval_id}"
+
+            # Create initial approval entry
+            approval_data = {
+                "status": "pending",
+                "kwargs": input_schema.model_dump_json(),
+            }
+            await self.redis_client.set(
+                approval_key, json.dumps(approval_data), ex=self.ttl
+            )
+            logger.info(f"Created approval request for {approval_key}")
+
+            # Poll for approval
+            while True:
+                await asyncio.sleep(self.poll_interval)
+                # Get both value and TTL in a single round trip
+                pipe = self.redis_client.pipeline()
+                pipe.get(approval_key)
+                pipe.ttl(approval_key)
+                approval_json, ttl_remaining = await pipe.execute()
+
+                logger.info(
+                    f"Polling for approval for {approval_key} (TTL: {ttl_remaining}s)"
+                )
+
+                if not approval_json:
+                    continue
+
+                approval = json.loads(approval_json)
+                if approval["status"] == "approved":
+                    break
+                elif approval["status"] == "declined":
+                    return {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "tool_name": name,
+                        "content": "Tool execution was declined by user.",
+                    }, None
+
         tool_instance = tool(input_schema=input_schema, metadata=tool_metadata)
         # pass context_variables to agent functions
         try:
