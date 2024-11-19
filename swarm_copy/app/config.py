@@ -21,8 +21,8 @@ class SettingsHIL(BaseModel):
     """Agent setting."""
 
     redis_uri: str
-    poll_interval: int = 5
-    ttl_seconds: int = 600  # 10 minutes
+    poll_interval: int = 5  # in seconds
+    ttl: int = 600  # in seconds
 
     model_config = ConfigDict(frozen=True)
 
