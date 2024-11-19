@@ -186,7 +186,12 @@ class AgentsRoutine:
                 )
 
                 if not approval_json:
-                    continue
+                    return {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "tool_name": name,
+                        "content": "Tool execution was cancelled due to timeout.",
+                    }, None
 
                 approval = json.loads(approval_json)
                 if approval["status"] == "approved":
