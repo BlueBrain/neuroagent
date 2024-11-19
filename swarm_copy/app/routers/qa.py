@@ -56,10 +56,14 @@ async def run_chat_agent(
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
-    thread_id: str,
+    thread: Annotated[Threads, Depends(get_thread)],
     messages: Annotated[list[dict[str, Any]], Depends(get_history)],
 ) -> AgentResponse | list[HILResponse]:
     """Run a single agent query."""
+    # Temporary solution
+    context_variables["vlab_id"] = thread.vlab_id
+    context_variables["project_id"] = thread.project_id
+
     not_ai_tool = not messages or not (
         messages[-1]["role"] == "assistant" and messages[-1]["tool_calls"]
     )
@@ -74,7 +78,7 @@ async def run_chat_agent(
         user_id=user_id,
         history=response.messages if not_ai_tool else response.messages[1:],
         offset=offset,
-        thread_id=thread_id,
+        thread_id=thread.thread_id,
         session=session,
     )
     if hil_messages:
@@ -90,10 +94,14 @@ async def stream_chat_agent(
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
-    thread_id: str,
+    thread: Annotated[Threads, Depends(get_thread)],
     messages: Annotated[list[dict[str, Any]], Depends(get_history)],
 ) -> StreamingResponse:
     """Run a single agent query in a streamed fashion."""
+    # Temporary solution
+    context_variables["vlab_id"] = thread.vlab_id
+    context_variables["project_id"] = thread.project_id
+
     not_ai_tool = not messages or not (
         messages[-1]["role"] == "assistant" and messages[-1]["tool_calls"]
     )
@@ -105,7 +113,7 @@ async def stream_chat_agent(
         messages,
         context_variables,
         user_id,
-        thread_id,
+        thread.thread_id,
         session,
         not_ai_tool,
     )
