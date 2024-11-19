@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tool implementations without langchain or langgraph dependencies
 - CRUDs.
 - BlueNaas CRUD tools
+- HIL (redis)
 
 ## [0.3.3] - 30.10.2024
 
