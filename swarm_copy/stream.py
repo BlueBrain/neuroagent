@@ -1,12 +1,14 @@
 """Wrapper around streaming methods to reinitiate connections due to the way fastAPI StreamingResponse works."""
 
+import json
 from typing import Any, AsyncIterator
 
+from httpx import AsyncClient
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from swarm_copy.app.database.db_utils import save_history
-from swarm_copy.new_types import Agent, Response
+from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 
 
@@ -18,6 +20,7 @@ async def stream_agent_response(
     user_id: str,
     thread_id: str,
     session: AsyncSession,
+    not_ai_tool: bool,
 ) -> AsyncIterator[str]:
     """Redefine fastAPI connections to enable streaming."""
     if isinstance(agents_routine.client, AsyncOpenAI):
@@ -26,20 +29,26 @@ async def stream_agent_response(
         )
     else:
         connected_agents_routine = AgentsRoutine(client=None)
+    context_variables["httpx_client"] = AsyncClient(timeout=None, verify=False)
 
     iterator = connected_agents_routine.astream(agent, messages, context_variables)
     async for chunk in iterator:
         # To stream to the user
-        if not isinstance(chunk, Response):
+        if not isinstance(chunk, tuple):
             yield chunk
         # Final chunk that contains the whole response
         else:
-            to_db = chunk
+            if chunk[1]:
+                yield "\n<requires_human_approval>\n"
+                for tools in chunk[1]:
+                    yield json.dumps(tools.model_dump())
+            to_db = chunk[0]
 
+    offset = len(messages) - 1 if not_ai_tool else len(messages)
     await save_history(
         user_id=user_id,
-        history=to_db.messages,
-        offset=len(messages) - 1,
+        history=to_db.messages if not_ai_tool else to_db.messages[1:],
+        offset=offset,
         thread_id=thread_id,
         session=session,
     )

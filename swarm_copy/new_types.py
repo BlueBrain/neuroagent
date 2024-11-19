@@ -45,8 +45,9 @@ class AgentRequest(BaseModel):
 class HILValidation(BaseModel):
     """Class to send the validated json to the api."""
 
-    json: dict[str, Any]
+    validated_inputs: dict[str, Any]
     tool_call_id: str
+    is_validated: bool = False
 
 
 class AgentResponse(BaseModel):

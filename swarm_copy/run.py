@@ -109,6 +109,7 @@ class AgentsRoutine:
         history_messages = [msg for msg in messages if not isinstance(msg, HILResponse)]
         hil_messages = [msg for msg in messages if isinstance(msg, HILResponse)]
 
+        # If we get both HIL and non-HIL, we don't want to save to DB.
         if history_messages and hil_messages:
             history_messages = []
 
@@ -141,12 +142,23 @@ class AgentsRoutine:
         kwargs = json.loads(tool_call.function.arguments)
 
         tool = tool_map[name]
-        if tool.hil and not tool_call.model_dump()["function"].get("validated"):
-            return HILResponse(
-                message="Please validate the following inputs before proceeding.",
-                inputs=kwargs,
-                tool_call_id=tool_call.id,
-            ), None
+        if tool.hil:
+            # If key does not exist, it has not yet been verified
+            if "validated" not in tool_call.model_dump()["function"]:
+                return HILResponse(
+                    message="Please validate the following inputs before proceeding.",
+                    inputs=kwargs,
+                    tool_call_id=tool_call.id,
+                ), None
+            # If false the user refused the tool call
+            elif not tool_call.model_dump()["function"]["validated"]:
+                return {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "tool_name": name,
+                    "content": "This tool call has been invalidated by the user",
+                }, None
+            # else the tool has been validated, we can proceed normally.
         try:
             input_schema = tool.__annotations__["input_schema"](**kwargs)
         except ValidationError as err:
@@ -228,11 +240,18 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
             # Break the while loop to ask for human validation
-            return Response(
-                messages=history[init_len - 1 :],
-                agent=active_agent,
-                context_variables=context_variables,
-            ), partial_response.hil_messages
+            if partial_response.hil_messages:
+                return Response(
+                    messages=history[init_len - 1 :],
+                    agent=active_agent,
+                    context_variables=context_variables,
+                ), partial_response.hil_messages
+
+        return Response(
+            messages=history[init_len - 1 :],
+            agent=active_agent,
+            context_variables=context_variables,
+        ), []
 
     async def astream(
         self,
@@ -244,7 +263,7 @@ class AgentsRoutine:
     ) -> AsyncIterator[str | Response]:
         """Stream the agent response."""
         active_agent = agent
-        context_variables = copy.deepcopy(context_variables)
+
         history = copy.deepcopy(messages)
         init_len = len(messages)
         is_streaming = False
@@ -263,40 +282,42 @@ class AgentsRoutine:
                     }
                 ),
             }
+            if not history[-1]["role"] == "assistant" or not history[-1]["tool_calls"]:
+                # get completion with current history, agent
+                completion = await self.get_chat_completion(
+                    agent=active_agent,
+                    history=history,
+                    context_variables=context_variables,
+                    model_override=model_override,
+                    stream=True,
+                )
+                async for chunk in completion:  # type: ignore
+                    delta = json.loads(chunk.choices[0].delta.json())
 
-            # get completion with current history, agent
-            completion = await self.get_chat_completion(
-                agent=active_agent,
-                history=history,
-                context_variables=context_variables,
-                model_override=model_override,
-                stream=True,
-            )
-            async for chunk in completion:  # type: ignore
-                delta = json.loads(chunk.choices[0].delta.json())
+                    # Check for tool calls
+                    if delta["tool_calls"]:
+                        tool = delta["tool_calls"][0]["function"]
+                        if tool["name"]:
+                            yield f"\nCalling tool : {tool['name']} with arguments : "
+                        if tool["arguments"]:
+                            yield tool["arguments"]
 
-                # Check for tool calls
-                if delta["tool_calls"]:
-                    tool = delta["tool_calls"][0]["function"]
-                    if tool["name"]:
-                        yield f"\nCalling tool : {tool['name']} with arguments : "
-                    if tool["arguments"]:
-                        yield tool["arguments"]
+                    # Check for content
+                    if delta["content"]:
+                        if not is_streaming:
+                            yield "\n<begin_llm_response>\n"
+                            is_streaming = True
+                        yield delta["content"]
 
-                # Check for content
-                if delta["content"]:
-                    if not is_streaming:
-                        yield "\n<begin_llm_response>\n"
-                        is_streaming = True
-                    yield delta["content"]
+                    delta.pop("role", None)
+                    merge_chunk(message, delta)
 
-                delta.pop("role", None)
-                merge_chunk(message, delta)
-
-            message["tool_calls"] = list(message.get("tool_calls", {}).values())
-            if not message["tool_calls"]:
-                message["tool_calls"] = None
-            history.append(message)
+                message["tool_calls"] = list(message.get("tool_calls", {}).values())
+                if not message["tool_calls"]:
+                    message["tool_calls"] = None
+                history.append(message)
+            else:
+                message = history[-1]
 
             if not message["tool_calls"]:
                 break
@@ -304,12 +325,20 @@ class AgentsRoutine:
             # convert tool_calls to objects
             tool_calls = []
             for tool_call in message["tool_calls"]:
-                function = Function(
-                    arguments=tool_call["function"]["arguments"],
-                    name=tool_call["function"]["name"],
-                )
+                # This is done to not have the "validated" field if not needed.
+                # Since I check for it in `handle_tool_calls`
+                function_args = {
+                    "arguments": tool_call["function"]["arguments"],
+                    "name": tool_call["function"]["name"],
+                }
+                if "validated" in tool_call["function"]:
+                    function_args["validated"] = tool_call["function"]["validated"]
+                function = Function(**function_args)
+
                 tool_call_object = ChatCompletionMessageToolCall(
-                    id=tool_call["id"], function=function, type=tool_call["type"]
+                    id=tool_call["id"],
+                    function=function,
+                    type=tool_call["type"],
                 )
                 tool_calls.append(tool_call_object)
 
@@ -322,8 +351,23 @@ class AgentsRoutine:
             if partial_response.agent:
                 active_agent = partial_response.agent
 
-        yield Response(
-            messages=history[init_len - 1 :],
-            agent=active_agent,
-            context_variables=context_variables,
+            # Break the while loop to ask for human validation
+            if partial_response.hil_messages:
+                yield (
+                    Response(
+                        messages=history[init_len - 1 :],
+                        agent=active_agent,
+                        context_variables=context_variables,
+                    ),
+                    partial_response.hil_messages,
+                )
+                break
+
+        yield (
+            Response(
+                messages=history[init_len - 1 :],
+                agent=active_agent,
+                context_variables=context_variables,
+            ),
+            [],
         )

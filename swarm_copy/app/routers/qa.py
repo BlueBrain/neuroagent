@@ -94,7 +94,11 @@ async def stream_chat_agent(
     messages: Annotated[list[dict[str, Any]], Depends(get_history)],
 ) -> StreamingResponse:
     """Run a single agent query in a streamed fashion."""
-    messages.append({"role": "user", "content": user_request.query})
+    not_ai_tool = not messages or not (
+        messages[-1]["role"] == "assistant" and messages[-1]["tool_calls"]
+    )
+    if not_ai_tool:
+        messages.append({"role": "user", "content": user_request.query})
     stream_generator = stream_agent_response(
         agents_routine,
         agent,
@@ -103,6 +107,7 @@ async def stream_chat_agent(
         user_id,
         thread_id,
         session,
+        not_ai_tool,
     )
     return StreamingResponse(stream_generator, media_type="text/event-stream")
 
@@ -115,6 +120,7 @@ async def validate_input(
     thread_id: str,
 ) -> ToolCallSchema:
     """Validate HIL inputs."""
+    # We first find the AI TOOL message to modify.
     response = await session.execute(
         select(Messages)
         .where(Messages.thread_id == thread_id, Messages.entity == Entity.AI_TOOL)
@@ -124,6 +130,8 @@ async def validate_input(
     last_message_calling_tools = response.scalars().one_or_none()
     if not last_message_calling_tools:
         raise HTTPException(status_code=404, detail="Specified tool call not found.")
+
+    # If the message exists, we try to find the relevant tool call.
     last_message_calling_tools_content = json.loads(last_message_calling_tools.content)
     tool_calls = last_message_calling_tools_content["tool_calls"]
     try:
@@ -139,14 +147,16 @@ async def validate_input(
 
     # Replace the function call with the (potentially) modified one
     tool_calls[relevant_tool_call_index]["function"]["arguments"] = json.dumps(
-        user_request.json
+        user_request.validated_inputs
     )
-    tool_calls[relevant_tool_call_index]["function"]["validated"] = True
+    tool_calls[relevant_tool_call_index]["function"]["validated"] = (
+        user_request.is_validated
+    )
     last_message_calling_tools_content["tool_calls"] = tool_calls
     last_message_calling_tools.content = json.dumps(last_message_calling_tools_content)
     await session.commit()
     return ToolCallSchema(
         tool_call_id=tool_calls[relevant_tool_call_index]["id"],
         name=tool_calls[relevant_tool_call_index]["function"]["name"],
-        arguments=user_request.json,
+        arguments=user_request.validated_inputs,
     )

@@ -51,7 +51,6 @@ class MorphologyFeatureTool(BaseTool):
     Soma radius, Soma surface area, Number of neurites, Number of sections, Number of sections per neurite, Section lengths, Segment lengths, Section radial distance, Section path distance, Local bifurcation angles, Remote bifurcation angles."""
     input_schema: MorphologyFeatureInput
     metadata: MorphologyFeatureMetadata
-    hil: ClassVar[bool] = True
 
     async def arun(self) -> list[MorphologyFeatureOutput]:
         """Give features about morphology."""
