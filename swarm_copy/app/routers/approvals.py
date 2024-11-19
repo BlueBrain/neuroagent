@@ -20,12 +20,14 @@ router = APIRouter(prefix="/approvals", tags=["Approvals' CRUD"])
 
 class ApprovalContent(BaseModel):
     """Schema for approval content."""
-    status: Literal["accept", "decline", "pending"]
+
+    status: Literal["approved", "declined", "pending"]
     kwargs: str
 
 
 class ApprovalOut(BaseModel):
     """Schema for approval output."""
+
     approval_id: str
     value: ApprovalContent
     ttl: str
@@ -33,7 +35,8 @@ class ApprovalOut(BaseModel):
 
 class ApprovalUpdate(BaseModel):
     """Schema for updating an approval."""
-    decision: Literal["accept", "decline"]
+
+    status: Literal["approved", "declined"]
 
 
 @router.get("/")
@@ -60,7 +63,7 @@ async def get_approvals(
             approval_id = full_key.split(":")[-1]
             value_dict = json.loads(value.decode("utf-8"))
             content = ApprovalContent(**value_dict)
-            
+
             approvals.append(
                 ApprovalOut(
                     approval_id=approval_id,
@@ -113,22 +116,22 @@ async def update_approval(
     if not exists:
         raise HTTPException(status_code=404, detail="Approval not found")
 
+    # Get current TTL before updating
+    current_ttl = await redis_client.ttl(key)
+
     # Get current value to preserve kwargs
     current_value = await redis_client.get(key)
     current_content = json.loads(current_value.decode("utf-8"))
-    
+
     # Update status while preserving kwargs
     new_content = ApprovalContent(
-        status=update.decision,
-        kwargs=current_content['kwargs']
+        status=update.status, kwargs=current_content["kwargs"]
     )
-    
-    # Save updated content
-    await redis_client.set(key, json.dumps(new_content.model_dump()))
-    ttl = await redis_client.ttl(key)
-    
-    return ApprovalOut(
-        approval_id=approval_id,
-        value=new_content,
-        ttl=str(ttl)
-    )
+
+    # Save updated content and restore TTL
+    pipe = redis_client.pipeline()
+    pipe.set(key, json.dumps(new_content.model_dump()))
+    pipe.expire(key, current_ttl)
+    await pipe.execute()
+
+    return ApprovalOut(approval_id=approval_id, value=new_content, ttl=str(current_ttl))
