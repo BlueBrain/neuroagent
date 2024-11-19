@@ -4,6 +4,7 @@ import logging
 from functools import cache
 from typing import Annotated, Any, AsyncIterator
 
+import redis.asyncio as redis
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
@@ -12,6 +13,7 @@ from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
+
 
 from swarm_copy.app.app_utils import validate_project
 from swarm_copy.app.config import Settings
@@ -334,3 +336,16 @@ async def get_cell_types_kg_hierarchy(
     celltypesmeta = CellTypesMeta.from_dict(hierarchy)
     celltypesmeta.save_config(settings.knowledge_graph.ct_saving_path)
     logger.info("Knowledge Graph Cell Types Hierarchy file updated.")
+
+
+async def get_redis_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AsyncGenerator[redis.Redis, None]:
+    """Get the Redis client."""
+    pool = redis.ConnectionPool.from_url(settings.hil.redis_uri)
+    client = redis.Redis.from_pool(pool)
+
+    try:
+        yield client
+    finally:
+        await client.aclose()
