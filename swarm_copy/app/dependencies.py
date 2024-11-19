@@ -4,6 +4,7 @@ import logging
 from functools import cache
 from typing import Annotated, Any, AsyncIterator
 
+import redis.asyncio as redis
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
@@ -28,6 +29,7 @@ from swarm_copy.tools import (
     MEModelGetAllTool,
     MEModelGetOneTool,
     MorphologyFeatureTool,
+    NowTool,
     ResolveEntitiesTool,
     SCSGetAllTool,
     SCSGetOneTool,
@@ -230,7 +232,7 @@ async def get_vlab_and_project(
 
 
 def get_starting_agent(
-    _: Annotated[None, Depends(get_vlab_and_project)],
+    # _: Annotated[None, Depends(get_vlab_and_project)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Agent:
     """Get the starting agent."""
@@ -253,6 +255,7 @@ def get_starting_agent(
             MorphologyFeatureTool,
             ResolveEntitiesTool,
             GetTracesTool,
+            NowTool,
         ],
         model=settings.openai.model,
     )
@@ -264,6 +267,7 @@ def get_context_variables(
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
     token: Annotated[str, Depends(get_kg_token)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+    user_id: Annotated[str, Depends(get_user_id)],
 ) -> dict[str, Any]:
     """Get the global context variables to feed the tool's metadata."""
     return {
@@ -271,6 +275,7 @@ def get_context_variables(
         "token": token,
         "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",  # New god account vlab. Replaced by actual id in endpoint for now. Meant for usage without history
         "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",  # New god account proj. Replaced by actual id in endpoint for now. Meant for usage without history
+        "user_id": user_id,
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,
@@ -289,11 +294,31 @@ def get_context_variables(
     }
 
 
+async def get_redis_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AsyncIterator[redis.Redis]:
+    """Get the Redis client."""
+    pool = redis.ConnectionPool.from_url(settings.hil.redis_uri)
+    client = redis.Redis.from_pool(pool)
+
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
 def get_agents_routine(
     openai: Annotated[AsyncOpenAI | None, Depends(get_openai_client)],
+    redis_client: Annotated[redis.Redis, Depends(get_redis_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AgentsRoutine:
     """Get the AgentRoutine client."""
-    return AgentsRoutine(openai)
+    return AgentsRoutine(
+        redis_client=redis_client,
+        client=openai,
+        poll_interval=settings.hil.poll_interval,
+        ttl=settings.hil.ttl,
+    )
 
 
 async def get_update_kg_hierarchy(

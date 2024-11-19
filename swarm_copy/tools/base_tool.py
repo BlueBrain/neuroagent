@@ -66,6 +66,7 @@ class BaseTool(BaseModel, ABC):
 
     name: ClassVar[str]
     description: ClassVar[str]
+    hil: ClassVar[bool] = False
     metadata: BaseMetadata
     input_schema: BaseModel
 

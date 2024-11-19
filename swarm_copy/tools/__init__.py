@@ -19,6 +19,7 @@ from swarm_copy.tools.morphology_features_tool import (
     MorphologyFeatureOutput,
     MorphologyFeatureTool,
 )
+from swarm_copy.tools.now_tool import NowTool
 from swarm_copy.tools.resolve_entities_tool import (
     BRResolveOutput,
     ResolveEntitiesTool,
@@ -42,6 +43,7 @@ __all__ = [
     "MEModelGetOneTool",
     "MorphologyFeatureOutput",
     "MorphologyFeatureTool",
+    "NowTool",
     "ParagraphMetadata",
     "ResolveEntitiesTool",
     "TracesOutput",
