@@ -22,7 +22,7 @@ class ApprovalContent(BaseModel):
     """Schema for approval content."""
 
     status: Literal["approved", "declined", "pending"]
-    kwargs: str
+    parameters: str
 
 
 class ApprovalOut(BaseModel):
@@ -125,7 +125,7 @@ async def update_approval(
 
     # Update status while preserving kwargs
     new_content = ApprovalContent(
-        status=update.status, kwargs=current_content["kwargs"]
+        status=update.status, parameters=current_content["parameters"]
     )
 
     # Save updated content and restore TTL

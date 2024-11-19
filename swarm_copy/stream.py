@@ -21,7 +21,7 @@ async def stream_agent_response(
 ) -> AsyncIterator[str]:
     """Redefine fastAPI connections to enable streaming."""
     if isinstance(agents_routine.client, AsyncOpenAI):
-        connected_agents_routine = AgentsRoutine(
+        connected_agents_routine = AgentsRoutine(  # type: ignore[call-arg]
             client=AsyncOpenAI(api_key=agents_routine.client.api_key)
         )
     else:
