@@ -5,8 +5,8 @@ import logging
 from typing import ClassVar
 
 from pydantic import BaseModel
-from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 
+from swarm_copy.tools.base_tool import BaseMetadata, BaseTool
 
 logger = logging.getLogger(__name__)
 

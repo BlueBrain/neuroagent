@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-
 from swarm_copy.app.app_utils import validate_project
 from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Threads

@@ -21,7 +21,7 @@ from swarm_copy.app.dependencies import (
     get_settings,
     get_update_kg_hierarchy,
 )
-from swarm_copy.app.routers import qa, threads, tools, approvals
+from swarm_copy.app.routers import approvals, qa, threads, tools
 
 LOGGING = {
     "version": 1,

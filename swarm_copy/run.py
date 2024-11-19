@@ -4,9 +4,9 @@ import asyncio
 import copy
 import json
 import logging
+import uuid
 from collections import defaultdict
 from typing import Any, AsyncIterator
-import uuid
 
 import redis.asyncio as redis
 from openai import AsyncOpenAI

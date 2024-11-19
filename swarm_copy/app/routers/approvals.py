@@ -3,9 +3,9 @@
 import json
 import logging
 from typing import Annotated, Literal
-from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from redis.asyncio import Redis
 
 from swarm_copy.app.dependencies import (
