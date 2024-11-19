@@ -17,6 +17,16 @@ class SettingsAgent(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SettingsHIL(BaseModel):
+    """Agent setting."""
+
+    redis_uri: str
+    poll_interval: int = 5
+    ttl_seconds: int = 600  # 10 minutes
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SettingsDB(BaseModel):
     """DB settings for retrieving history."""
 
@@ -213,6 +223,7 @@ class Settings(BaseSettings):
 
     tools: SettingsTools
     knowledge_graph: SettingsKnowledgeGraph
+    hil: SettingsHIL
     agent: SettingsAgent = SettingsAgent()  # has no required
     db: SettingsDB = SettingsDB()  # has no required
     openai: SettingsOpenAI = SettingsOpenAI()  # has no required
