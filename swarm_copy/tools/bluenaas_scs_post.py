@@ -90,6 +90,7 @@ class SCSPostTool(BaseTool):
     Requires a "me_model_id" which must be fetched through the 'memodelgetall-tool' or directly provided by the user.
     Optionally, the user can specify simulation parameters.
     Returns the id of the simulation along with metadatas to fetch the simulation result and analyse it at a later stage.
+    Specify ALL of the parameters everytime you enter this tool.
     """
     hil: ClassVar[bool] = True
     metadata: SCSPostMetadata
@@ -122,6 +123,7 @@ class SCSPostTool(BaseTool):
             json=json_api,
         )
         json_response = response.json()
+
         return SCSPostOutput(
             id=json_response["id"],
             status=json_response["status"],

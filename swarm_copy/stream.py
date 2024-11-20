@@ -1,6 +1,7 @@
 """Wrapper around streaming methods to reinitiate connections due to the way fastAPI StreamingResponse works."""
 
 import json
+import time
 from typing import Any, AsyncIterator
 
 from httpx import AsyncClient
@@ -39,9 +40,9 @@ async def stream_agent_response(
         # Final chunk that contains the whole response
         else:
             if chunk[1]:
-                yield "\n<requires_human_approval>\n"
-                for tools in chunk[1]:
-                    yield json.dumps(tools.model_dump())
+                time.sleep(0.1)
+                tool_valid_list = json.dumps([tool.model_dump() for tool in chunk[1]])
+                yield "\n<requires_human_approval>\n" + tool_valid_list
             to_db = chunk[0]
 
     offset = len(messages) - 1 if not_ai_tool else len(messages)
