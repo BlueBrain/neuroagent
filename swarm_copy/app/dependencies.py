@@ -9,9 +9,11 @@ from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
 from openai import AsyncOpenAI
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from swarm_copy.app.app_utils import validate_project
 from swarm_copy.app.config import Settings
 from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.cell_types import CellTypesMeta
@@ -19,13 +21,17 @@ from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools import (
     ElectrophysFeatureTool,
-    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
     LiteratureSearchTool,
+    MEModelGetAllTool,
+    MEModelGetOneTool,
     MorphologyFeatureTool,
     ResolveEntitiesTool,
+    SCSGetAllTool,
+    SCSGetOneTool,
+    SCSPostTool,
 )
 from swarm_copy.utils import RegionMeta, get_file_from_KG
 
@@ -49,6 +55,19 @@ def get_settings() -> Settings:
     """Get the global settings."""
     logger.info("Reading the environment and instantiating settings")
     return Settings()
+
+
+async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
+    """Manage the httpx client for the request."""
+    client = AsyncClient(
+        timeout=None,
+        verify=False,
+        headers={"x-request-id": request.headers["x-request-id"]},
+    )
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 
 async def get_openai_client(
@@ -110,42 +129,30 @@ async def get_session(
         yield session
 
 
-def get_starting_agent(
+async def get_user_id(
+    token: Annotated[str, Depends(auth)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> Agent:
-    """Get the starting agent."""
-    logger.info(f"Loading model {settings.openai.model}.")
-    agent = Agent(
-        name="Agent",
-        instructions="""You are a helpful assistant helping scientists with neuro-scientific questions.
-                You must always specify in your answers from which brain regions the information is extracted.
-                Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
-        tools=[
-            LiteratureSearchTool,
-            ElectrophysFeatureTool,
-            GetMEModelTool,
-            GetMorphoTool,
-            KGMorphoFeatureTool,
-            MorphologyFeatureTool,
-            ResolveEntitiesTool,
-            GetTracesTool,
-        ],
-        model=settings.openai.model,
-    )
-    return agent
-
-
-async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
-    """Manage the httpx client for the request."""
-    client = AsyncClient(
-        timeout=None,
-        verify=False,
-        headers={"x-request-id": request.headers["x-request-id"]},
-    )
-    try:
-        yield client
-    finally:
-        await client.aclose()
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> str:
+    """Validate JWT token and returns user ID."""
+    if settings.keycloak.validate_token:
+        if settings.keycloak.user_info_endpoint:
+            try:
+                response = await httpx_client.get(
+                    settings.keycloak.user_info_endpoint,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                response.raise_for_status()
+                user_info = response.json()
+                return user_info["sub"]
+            except HTTPStatusError:
+                raise HTTPException(
+                    status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
+                )
+        else:
+            raise HTTPException(status_code=404, detail="user info url not provided.")
+    else:
+        return "dev"
 
 
 def get_kg_token(
@@ -167,48 +174,89 @@ def get_kg_token(
         )["access_token"]
 
 
-async def get_user_id(
-    token: Annotated[str, Depends(auth)],
+async def get_vlab_and_project(
+    user_id: Annotated[str, Depends(get_user_id)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> str:
-    """Validate JWT token and returns user ID."""
-    if settings.keycloak.validate_token and settings.keycloak.user_info_endpoint:
-        try:
-            response = await httpx_client.get(
-                settings.keycloak.user_info_endpoint,
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            response.raise_for_status()
-            user_info = response.json()
-            return user_info["sub"]
-        except HTTPStatusError:
-            raise HTTPException(
-                status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
-            )
+    token: Annotated[str, Depends(get_kg_token)],
+) -> dict[str, str]:
+    """Get the current vlab and project ID."""
+    if "x-project-id" in request.headers and "x-virtual-lab-id" in request.headers:
+        vlab_and_project = {
+            "vlab_id": request.headers["x-virtual-lab-id"],
+            "project_id": request.headers["x-project-id"],
+        }
+    elif not settings.keycloak.validate_token:
+        vlab_and_project = {
+            "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",
+            "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",
+        }
     else:
-        return "dev"
+        thread_id = request.path_params.get("thread_id")
+        thread_result = await session.execute(
+            select(Threads).where(
+                Threads.user_id == user_id, Threads.thread_id == thread_id
+            )
+        )
+        thread = thread_result.scalars().one_or_none()
+        if not thread:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "detail": "Thread not found.",
+                },
+            )
+        if thread and thread.vlab_id and thread.project_id:
+            vlab_and_project = {
+                "vlab_id": thread.vlab_id,
+                "project_id": thread.project_id,
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="thread not found when trying to validate project ID.",
+            )
+
+    await validate_project(
+        httpx_client=httpx_client,
+        vlab_id=vlab_and_project["vlab_id"],
+        project_id=vlab_and_project["project_id"],
+        token=token,
+        vlab_project_url=settings.virtual_lab.get_project_url,
+    )
+    return vlab_and_project
 
 
-# TEMP function, will get replaced by the CRUDs.
-async def get_thread_id(
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> str:
-    """Temp function to get the thread id."""
-    # for now hard coded temp user_sub and thread_id.
-    user_sub = "dev"
-    thread_id = "dev_thread"
-
-    # check if thread is in DB.
-    thread = await session.get(Threads, thread_id)
-    if not thread:
-        new_thread = Threads(user_id=user_sub, thread_id=thread_id)
-        session.add(new_thread)
-        await session.commit()
-        await session.refresh(new_thread)
-        thread = new_thread
-
-    return thread.thread_id
+def get_starting_agent(
+    _: Annotated[None, Depends(get_vlab_and_project)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Agent:
+    """Get the starting agent."""
+    logger.info(f"Loading model {settings.openai.model}.")
+    agent = Agent(
+        name="Agent",
+        instructions="""You are a helpful assistant helping scientists with neuro-scientific questions.
+                You must always specify in your answers from which brain regions the information is extracted.
+                Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
+        tools=[
+            SCSGetAllTool,
+            SCSGetOneTool,
+            SCSPostTool,
+            MEModelGetAllTool,
+            MEModelGetOneTool,
+            LiteratureSearchTool,
+            ElectrophysFeatureTool,
+            GetMorphoTool,
+            KGMorphoFeatureTool,
+            MorphologyFeatureTool,
+            ResolveEntitiesTool,
+            GetTracesTool,
+        ],
+        model=settings.openai.model,
+    )
+    return agent
 
 
 def get_context_variables(
@@ -221,6 +269,8 @@ def get_context_variables(
     return {
         "starting_agent": starting_agent,
         "token": token,
+        "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",  # New god account vlab. Replaced by actual id in endpoint for now. Meant for usage without history
+        "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",  # New god account proj. Replaced by actual id in endpoint for now. Meant for usage without history
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,
@@ -234,6 +284,7 @@ def get_context_variables(
         "trace_search_size": settings.tools.trace.search_size,
         "kg_sparql_url": settings.knowledge_graph.sparql_url,
         "kg_class_view_url": settings.knowledge_graph.class_view_url,
+        "bluenaas_url": settings.tools.bluenaas.url,
         "httpx_client": httpx_client,
     }
 

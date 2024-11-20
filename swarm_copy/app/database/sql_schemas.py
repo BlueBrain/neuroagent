@@ -1,19 +1,30 @@
 """Schemas for the chatbot."""
 
 import datetime
+import enum
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-
-class Base(DeclarativeBase):
-    """Base declarative base for SQLAlchemy."""
 
 
 def utc_now() -> datetime.datetime:
     """Return the utc time."""
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+
+class Entity(enum.Enum):
+    """Calss to restrict entity collumn."""
+
+    USER = "user"
+    AI_TOOL = "ai_tool"
+    TOOL = "tool"
+    AI_MESSAGE = "ai_message"
+
+
+class Base(AsyncAttrs, DeclarativeBase):
+    """Base declarative base for SQLAlchemy."""
 
 
 class Threads(Base):
@@ -37,7 +48,8 @@ class Threads(Base):
     messages: Mapped[list["Messages"]] = relationship(
         "Messages",
         back_populates="thread",
-        cascade="delete, save-update, delete-orphan, merge",
+        order_by="Messages.order",  # get messages in order.
+        cascade="all, delete-orphan",
     )
 
 
@@ -50,6 +62,7 @@ class Messages(Base):
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     creation_date: Mapped[datetime.datetime] = mapped_column(DateTime, default=utc_now)
+    entity: Mapped[Entity] = mapped_column(Enum(Entity), nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)
 
     thread_id: Mapped[str] = mapped_column(
