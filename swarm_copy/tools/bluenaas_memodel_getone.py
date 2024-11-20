@@ -24,7 +24,7 @@ class MEModelGetOneMetadata(BaseMetadata):
 class InputMEModelGetOne(BaseModel):
     """Inputs for the BlueNaaS single-neuron simulation."""
 
-    model_id: str = Field(
+    simulation_id: str = Field(
         description="ID of the model to retrieve. Should be an https link."
     )
 
@@ -45,7 +45,7 @@ class MEModelGetOneTool(BaseTool):
         )
 
         response = await self.metadata.httpx_client.get(
-            url=f"{self.metadata.bluenaas_url}/neuron-model/{self.metadata.vlab_id}/{self.metadata.project_id}/{quote_plus(self.input_schema.model_id)}",
+            url=f"{self.metadata.bluenaas_url}/neuron-model/{self.metadata.vlab_id}/{self.metadata.project_id}/{quote_plus(self.input_schema.simulation_id)}",
             headers={"Authorization": f"Bearer {self.metadata.token}"},
         )
 
