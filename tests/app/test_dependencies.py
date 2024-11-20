@@ -41,7 +41,7 @@ from neuroagent.app.dependencies import (
     get_update_kg_hierarchy,
     get_user_id,
     get_vlab_and_project,
-    validate_project,
+    validate_project
 )
 from neuroagent.app.routers.database.schemas import Base, Threads
 from neuroagent.tools import (
