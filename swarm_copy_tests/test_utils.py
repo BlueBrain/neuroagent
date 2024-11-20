@@ -4,15 +4,10 @@ import json
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
 
-from swarm_copy.schemas import KGMetadata
 from swarm_copy.utils import (
     RegionMeta,
-    get_descendants_id,
-    get_file_from_KG,
-    get_kg_data,
-    is_lnmc,
+    get_descendants_id
 )
 
 

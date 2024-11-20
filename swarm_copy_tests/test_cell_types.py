@@ -1,5 +1,5 @@
 """Test cell types meta functions."""
-
+import logging
 from pathlib import Path
 
 import pytest
@@ -70,6 +70,65 @@ class TestCellTypesMeta:
             "http://bbp.epfl.ch/neurosciencegraph/ontologies/etypes/cACint",
             "http://bbp.epfl.ch/neurosciencegraph/ontologies/mtypes/GCL_GC",
         }
+
+    def test_from_dict(self):
+        test_dict = {
+            "defines": [
+                {
+                    "@id": "id1",
+                    "label": "cell1",
+                    "subClassOf": []
+                },
+                {
+                    "@id": "id2",
+                    "label": "cell2",
+                    "subClassOf": ["id1"]
+                },
+                {
+                    "@id": "id3",
+                    "subClassOf": ["id2"]
+                }
+            ]
+        }
+        cell_meta = CellTypesMeta.from_dict(test_dict)
+        assert isinstance(cell_meta, CellTypesMeta)
+        assert cell_meta.name_ == {"id1": "cell1", "id2": "cell2", "id3": None}
+        assert cell_meta.descendants_ids == {"id1": {"id2", "id3"}, "id2": {"id3"}}
+
+    def test_from_dict_missing_label(self):
+        test_dict = {
+            "defines": [
+                {
+                    "@id": "id1",
+                    "subClassOf": []
+                },
+                {
+                    "@id": "id2",
+                    "subClassOf": ["id1"]
+                }
+            ]
+        }
+        cell_meta = CellTypesMeta.from_dict(test_dict)
+        assert cell_meta.name_ == {"id1": None, "id2": None}
+        assert cell_meta.descendants_ids == {"id1": {"id2"}}
+
+    def test_from_dict_missing_subClassOf(self):
+        test_dict = {
+            "defines": [
+                {
+                    "@id": "id1",
+                    "label": "cell1",
+                },
+                {
+                    "@id": "id2",
+                    "label": "cell2",
+                    "subClassOf": ["id1"]
+                }
+            ]
+        }
+        cell_meta = CellTypesMeta.from_dict(test_dict)
+        assert cell_meta.name_ == {"id1": "cell1", "id2": "cell2"}
+        assert cell_meta.descendants_ids == {"id1": {"id2"}}
 
     @pytest.mark.parametrize(
         "cell_type_id,expected_descendants",
