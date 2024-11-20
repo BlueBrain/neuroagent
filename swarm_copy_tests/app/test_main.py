@@ -1,9 +1,4 @@
-from swarm_copy.app.dependencies import get_settings
-from swarm_copy.app.main import app
-
-
-def test_settings_endpoint(app_client, dont_look_at_env_file):
-    settings = app.dependency_overrides[get_settings]()
+def test_settings_endpoint(app_client, dont_look_at_env_file, settings):
     response = app_client.get("/settings")
 
     replace_secretstr = settings.model_dump()
