@@ -1,7 +1,7 @@
 """Conversation related CRUD operations."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from httpx import AsyncClient
@@ -45,7 +45,7 @@ async def create_thread(
     virtual_lab_id: str,
     project_id: str,
     title: str = "title",
-) -> ThreadsRead:
+) -> dict[str, Any]:
     """Create thread.
     \f
 
@@ -78,14 +78,14 @@ async def create_thread(
     session.add(new_thread)
     await session.commit()
     await session.refresh(new_thread)
-    return ThreadsRead(**new_thread.__dict__)
+    return ThreadsRead(**new_thread.__dict__).model_dump()
 
 
 @router.get("/")
 async def get_threads(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
-) -> list[ThreadsRead]:
+) -> list[dict[str, Any]]:
     """Get threads for a user.
     \f
 
@@ -104,7 +104,7 @@ async def get_threads(
     query = select(Threads).where(Threads.user_sub == user_id)
     results = await session.execute(query)
     threads = results.all()
-    return [ThreadsRead(**thread[0].__dict__) for thread in threads]
+    return [ThreadsRead(**thread[0].__dict__).model_dump() for thread in threads]
 
 
 @router.get("/{thread_id}")
@@ -112,7 +112,7 @@ async def get_thread(
     _: Annotated[Threads, Depends(get_object)],
     memory: Annotated[AsyncSqliteSaver | None, Depends(get_agent_memory)],
     thread_id: str,
-) -> list[GetThreadsOutput]:
+) -> list[dict[str, Any]]:
     """Get thread.
     \f
 
@@ -147,7 +147,7 @@ async def get_thread(
     if not messages:
         return []
 
-    output: list[GetThreadsOutput] = []
+    output: list[dict[str, Any]] = []
     # Reconstruct the conversation. Also output message_id for other endpoints
     for message in messages["channel_values"]["messages"]:
         if isinstance(message, HumanMessage):
@@ -156,7 +156,7 @@ async def get_thread(
                     message_id=message.id,
                     entity="Human",
                     message=message.content,
-                )
+                ).model_dump()
             )
         if isinstance(message, AIMessage) and message.content:
             output.append(
@@ -164,7 +164,7 @@ async def get_thread(
                     message_id=message.id,
                     entity="AI",
                     message=message.content,
-                )
+                ).model_dump()
             )
     return output
 
@@ -174,7 +174,7 @@ async def update_thread_title(
     thread: Annotated[Threads, Depends(get_object)],
     session: Annotated[AsyncSession, Depends(get_session)],
     thread_update: ThreadsUpdate,
-) -> ThreadsRead:
+) -> dict[str, Any]:
     """Update thread.
     \f
 
@@ -199,7 +199,7 @@ async def update_thread_title(
     await session.commit()
     await session.refresh(thread)
     thread_return = ThreadsRead(**thread.__dict__)  # For mypy.
-    return thread_return
+    return thread_return.model_dump()
 
 
 @router.delete("/{thread_id}")
