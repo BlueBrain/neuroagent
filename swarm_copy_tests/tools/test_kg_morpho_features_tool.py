@@ -10,7 +10,7 @@ from swarm_copy.tools import KGMorphoFeatureTool
 from swarm_copy.tools.kg_morpho_features_tool import (
     KGFeatRangeInput,
     KGMorphoFeatureOutput,
-    KGFeatureMetadata, KGFeatureInput, KGMorphoFeatureInput
+    KGMorphoFeatureMetadata, KGFeatureInput, KGMorphoFeatureInput
 )
 
 
@@ -40,7 +40,7 @@ class TestKGMorphoFeaturesTool:
                 brain_region_id="brain_region_id_link/549",
                 features=feature_input
             ),
-            metadata=KGFeatureMetadata(
+            metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
@@ -71,7 +71,7 @@ class TestKGMorphoFeaturesTool:
                 brain_region_id="brain_region_id_link/549",
                 features=feature_input
             ),
-            metadata=KGFeatureMetadata(
+            metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
@@ -99,7 +99,7 @@ class TestKGMorphoFeaturesTool:
                 brain_region_id="",
                 features=feature_input
             ),
-            metadata=KGFeatureMetadata(
+            metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
@@ -184,7 +184,7 @@ class TestKGMorphoFeaturesTool:
                 brain_region_id="",
                 features=feature_input
             ),
-            metadata=KGFeatureMetadata(
+            metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
@@ -278,7 +278,7 @@ class TestKGMorphoFeaturesTool:
                 brain_region_id="",
                 features=feature_input
             ),
-            metadata=KGFeatureMetadata(
+            metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
@@ -373,7 +373,7 @@ class TestKGMorphoFeaturesTool:
                 brain_region_id="",
                 features=feature_input
             ),
-            metadata=KGFeatureMetadata(
+            metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
