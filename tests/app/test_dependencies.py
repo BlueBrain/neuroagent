@@ -574,6 +574,33 @@ def test_get_connection_string_no_prefix(monkeypatch, patch_required_env):
     assert result is None, "should return None when prefix is not set"
 
 
+<<<<<<< Updated upstream
+=======
+def test_get_engine(monkeypatch, patch_required_env):
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
+
+    settings = Settings()
+
+    connection_string = "https://localhost"
+    retval = get_engine(settings=settings, connection_string=connection_string)
+    assert retval is not None
+
+
+@patch("neuroagent.app.dependencies.create_engine")
+def test_get_engine_no_connection_string(
+    create_engine_mock, monkeypatch, patch_required_env
+):
+    create_engine_mock.return_value = Mock()
+
+    monkeypatch.setenv("NEUROAGENT_DB__PREFIX", "prefix")
+
+    settings = Settings()
+
+    retval = get_engine(settings=settings, connection_string=None)
+    assert retval is None
+
+
+>>>>>>> Stashed changes
 @patch("sqlalchemy.orm.Session")
 @pytest.mark.asyncio
 async def test_get_session_success(_):
