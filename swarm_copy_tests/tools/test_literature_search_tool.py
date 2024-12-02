@@ -11,16 +11,11 @@ from swarm_copy.tools.literature_search_tool import ParagraphMetadata, Literatur
 
 class TestLiteratureSearchTool:
     @pytest.mark.asyncio
-    async def test_arun(self):
-        url = "http://fake_url"
+    async def test_arun(self, httpx_mock):
+        url = "http://fake_url?query=covid+19&retriever_k=100&use_reranker=true&reranker_k=5"
         reranker_k = 5
 
-        client = httpx.AsyncClient()
-        client.get = AsyncMock()
-        response = Mock()
-        response.status_code = 200
-        client.get.return_value = response
-        response.json.return_value = [
+        fake_response = [
             {
                 "article_title": "Article title",
                 "article_authors": ["Author1", "Author2"],
@@ -32,11 +27,16 @@ class TestLiteratureSearchTool:
             for _ in range(reranker_k)
         ]
 
+        httpx_mock.add_response(
+            url=url,
+            json=fake_response,
+        )
+
         tool = LiteratureSearchTool(
             input_schema=LiteratureSearchInput(query="covid 19"),
             metadata=LiteratureSearchMetadata(
                 literature_search_url=url,
-                httpx_client=client,
+                httpx_client=httpx.AsyncClient(),
                 token="fake_token",
                 retriever_k=100,
                 use_reranker=True,
