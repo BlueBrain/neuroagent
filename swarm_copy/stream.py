@@ -39,7 +39,7 @@ async def stream_agent_response(
             yield chunk
         # Final chunk that contains the whole response
         else:
-            if chunk[1]:
+            if chunk[1] and chunk[1] != "PLOT":
                 time.sleep(0.1)
                 tool_valid_list = json.dumps([tool.model_dump() for tool in chunk[1]])
                 yield "\n<requires_human_approval>\n" + tool_valid_list

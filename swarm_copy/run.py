@@ -371,3 +371,24 @@ class AgentsRoutine:
             ),
             [],
         )
+
+        # Hack to return a tool message as a user message to have a nice plot.
+        if "scsgetone-tool" == history[-2].get("tool_name"):
+            json_data = json.loads(history[-2]["content"])
+            content_as_str = json.dumps(list(json_data["results"].values()))
+            fake_llm_message = {
+                "content": "PLOT_MESSAGE" + content_as_str,
+                "sender": "Agent",
+                "role": "assistant",
+                "function_call": None,
+                "tool_calls": None,
+            }
+            history.append(fake_llm_message)
+            yield (
+                Response(
+                    messages=history[init_len - 1 :],
+                    agent=active_agent,
+                    context_variables=context_variables,
+                ),
+                "PLOT",
+            )

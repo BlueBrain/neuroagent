@@ -45,9 +45,11 @@ class SCSGetOneTool(BaseTool):
             f"Running SCSGetOne tool with inputs {self.input_schema.model_dump()}"
         )
 
+        # list(response.json()["results"].values())[0][0]["x"]
+
         response = await self.metadata.httpx_client.get(
             url=f"{self.metadata.bluenaas_url}/simulation/single-neuron/{self.metadata.vlab_id}/{self.metadata.project_id}/{self.input_schema.simulation_id}",
             headers={"Authorization": f"Bearer {self.metadata.token}"},
         )
 
-        return SimulationDetailsResponse(**response.json())
+        return SimulationDetailsResponse(**response.json()).model_dump_json()
