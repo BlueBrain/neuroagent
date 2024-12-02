@@ -7,15 +7,13 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from neuroagent.app.config import Settings
-from neuroagent.app.dependencies import get_kg_token, get_settings
-from neuroagent.app.main import app
-from neuroagent.tools import GetMorphoTool
+from swarm_copy.app.config import Settings
+from swarm_copy.app.dependencies import get_kg_token, get_settings
+from swarm_copy.app.main import app
+from swarm_copy.tools import GetMorphoTool
 
 
 @pytest.fixture(name="app_client")
@@ -106,84 +104,3 @@ def brain_region_json_path():
     br_path = Path(__file__).parent / "data" / "brainregion_hierarchy.json"
     return br_path
 
-
-@pytest.fixture
-async def fake_llm_with_tools(brain_region_json_path):
-    class FakeFuntionChatModel(GenericFakeChatModel):
-        def bind_tools(self, functions: list):
-            return self
-
-        def bind_functions(self, **kwargs):
-            return self
-
-    # If you need another fake response to use different tools,
-    # you can do in your test
-    # ```python
-    # llm, _ = await anext(fake_llm_with_tools)
-    # llm.responses = my_fake_responses
-    # ```
-    # and simply bind the corresponding tools
-    fake_responses = [
-        AIMessage(
-            content="",
-            additional_kwargs={
-                "tool_calls": [
-                    {
-                        "index": 0,
-                        "id": "call_zHhwfNLSvGGHXMoILdIYtDVI",
-                        "function": {
-                            "arguments": '{"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}',
-                            "name": "get-morpho-tool",
-                        },
-                        "type": "function",
-                    }
-                ]
-            },
-            response_metadata={"finish_reason": "tool_calls"},
-            id="run-3828644d-197b-401b-8634-e6ecf01c2e7c-0",
-            tool_calls=[
-                {
-                    "name": "get-morpho-tool",
-                    "args": {
-                        "brain_region_id": (
-                            "http://api.brain-map.org/api/v2/data/Structure/549"
-                        )
-                    },
-                    "id": "call_zHhwfNLSvGGHXMoILdIYtDVI",
-                }
-            ],
-        ),
-        AIMessage(
-            content="Great answer",
-            response_metadata={"finish_reason": "stop"},
-            id="run-42768b30-044a-4263-8c5c-da61429aa9da-0",
-        ),
-    ]
-
-    # If you use this tool in your test, DO NOT FORGET to mock the url response with the following snippet:
-    #
-    # ```python
-    # json_path = Path(__file__).resolve().parent.parent / "data" / "knowledge_graph.json"
-    # with open(json_path) as f:
-    #     knowledge_graph_response = json.load(f)
-
-    # httpx_mock.add_response(
-    #     url="http://fake_url",
-    #     json=knowledge_graph_response,
-    # )
-    # ```
-    # The http call is not mocked here because one might want to change the responses
-    # and the tools used.
-    async_client = AsyncClient()
-    tool = GetMorphoTool(
-        metadata={
-            "url": "http://fake_url",
-            "search_size": 2,
-            "httpx_client": async_client,
-            "token": "fake_token",
-            "brainregion_path": brain_region_json_path,
-        }
-    )
-
-    yield FakeFuntionChatModel(messages=iter(fake_responses)), [tool], fake_responses
-    await async_client.aclose()
