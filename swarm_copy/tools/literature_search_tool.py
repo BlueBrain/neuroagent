@@ -61,7 +61,7 @@ class LiteratureSearchTool(BaseTool):
     input_schema: LiteratureSearchInput
     metadata: LiteratureSearchMetadata
 
-    async def arun(self) -> list[ParagraphMetadata]:
+    async def arun(self) -> list[dict[str, Any]]:
         """Async search the scientific literature and returns citations.
 
         Returns
@@ -88,7 +88,7 @@ class LiteratureSearchTool(BaseTool):
             timeout=None,
         )
 
-        return self._process_output(response.json())
+        return [output.model_dump() for output in self._process_output(response.json())]
 
     @staticmethod
     def _process_output(output: list[dict[str, Any]]) -> list[ParagraphMetadata]:

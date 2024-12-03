@@ -70,7 +70,7 @@ class GetTracesTool(BaseTool):
     input_schema: GetTracesInput
     metadata: GetTracesMetadata
 
-    async def arun(self) -> list[TracesOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """From a brain region ID, extract traces."""
         logger.info(
             f"Entering get trace tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.etype_id=}"
@@ -93,7 +93,7 @@ class GetTracesTool(BaseTool):
             headers={"Authorization": f"Bearer {self.metadata.token}"},
             json=entire_query,
         )
-        return self._process_output(response.json())
+        return [output.model_dump() for output in self._process_output(response.json())]
 
     def create_query(
         self,

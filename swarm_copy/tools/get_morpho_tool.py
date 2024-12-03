@@ -70,7 +70,7 @@ class GetMorphoTool(BaseTool):
     input_schema: GetMorphoInput
     metadata: GetMorphoMetadata
 
-    async def arun(self) -> list[KnowledgeGraphOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """From a brain region ID, extract morphologies.
 
         Returns
@@ -107,7 +107,7 @@ class GetMorphoTool(BaseTool):
         )
 
         # Process the output and return.
-        return self._process_output(response.json())
+        return [output.model_dump() for output in self._process_output(response.json())]
 
     def create_query(
         self, brain_regions_ids: set[str], mtype_ids: set[str] | None = None

@@ -186,7 +186,7 @@ class KGMorphoFeatureTool(BaseTool):
     input_schema: KGMorphoFeatureInput
     metadata: KGMorphoFeatureMetadata
 
-    async def arun(self) -> list[KGMorphoFeatureOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """Run the tool async.
 
         Returns
@@ -216,7 +216,7 @@ class KGMorphoFeatureTool(BaseTool):
             json=entire_query,
         )
 
-        return self._process_output(response.json())
+        return [output.model_dump() for output in self._process_output(response.json())]
 
     def create_query(
         self, brain_regions_ids: set[str], features: KGFeatureInput

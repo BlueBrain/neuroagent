@@ -1,7 +1,7 @@
 """Tool to resolve the brain region from natural english to a KG ID."""
 
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -86,7 +86,7 @@ class ResolveEntitiesTool(BaseTool):
 
     async def arun(
         self,
-    ) -> list[BRResolveOutput | MTypeResolveOutput | EtypeResolveOutput]:
+    ) -> list[dict[str, Any]]:
         """Given a brain region in natural language, resolve its ID."""
         logger.info(
             f"Entering Brain Region resolver tool. Inputs: {self.input_schema.brain_region=}, "
@@ -141,4 +141,4 @@ class ResolveEntitiesTool(BaseTool):
                 )
             )
 
-        return output
+        return [out.model_dump() for out in output]
