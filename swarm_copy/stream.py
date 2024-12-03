@@ -2,6 +2,7 @@
 
 from typing import Any, AsyncIterator
 
+from httpx import AsyncClient
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,7 @@ async def stream_agent_response(
         )
     else:
         connected_agents_routine = AgentsRoutine(client=None)
+    context_variables["httpx_client"] = AsyncClient(timeout=None, verify=False)
 
     iterator = connected_agents_routine.astream(agent, messages, context_variables)
     async for chunk in iterator:

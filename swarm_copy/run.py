@@ -222,7 +222,7 @@ class AgentsRoutine:
     ) -> AsyncIterator[str | Response]:
         """Stream the agent response."""
         active_agent = agent
-        context_variables = copy.deepcopy(context_variables)
+
         history = copy.deepcopy(messages)
         init_len = len(messages)
         is_streaming = False
