@@ -29,11 +29,9 @@ class InputMEModelGetAll(BaseModel):
     page_size: int = Field(
         default=20, description="Number of results returned by the API."
     )
-    memodel_type: Literal["single-neuron-simulation", "synaptome-simulation"] = (
-        Field(
-            default="single-neuron-simulation",
-            description="Type of simulation to retrieve.",
-        )
+    memodel_type: Literal["single-neuron-simulation", "synaptome-simulation"] = Field(
+        default="single-neuron-simulation",
+        description="Type of simulation to retrieve.",
     )
 
 
