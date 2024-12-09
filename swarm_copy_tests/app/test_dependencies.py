@@ -8,7 +8,10 @@ from unittest.mock import Mock
 
 import pytest
 from httpx import AsyncClient
+from fastapi import Request, HTTPException
 
+from swarm_copy.app.app_utils import setup_engine
+from swarm_copy.app.database.sql_schemas import Base, Threads
 from swarm_copy.app.dependencies import (
     Settings,
     get_cell_types_kg_hierarchy,
@@ -16,7 +19,7 @@ from swarm_copy.app.dependencies import (
     get_httpx_client,
     get_settings,
     get_update_kg_hierarchy,
-    get_user_id,
+    get_user_id, get_session, get_vlab_and_project,
 )
 
 
@@ -169,3 +172,196 @@ def test_get_connection_string_full(monkeypatch, patch_required_env):
     assert (
         result == "http://John:Doe@localhost:5000/test"
     ), "must return fully formed connection string"
+
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+async def test_get_vlab_and_project(
+    patch_required_env, httpx_mock, db_connection, monkeypatch
+):
+    # Setup DB with one thread to do the tests
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    engine = setup_engine(test_settings, db_connection)
+    session = await anext(get_session(engine))
+    user_id = "Super_user"
+    token = "fake_token"
+    httpx_client = AsyncClient()
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project",
+        json="test_project_ID",
+    )
+
+    # create test thread table
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    new_thread = Threads(
+        user_id=user_id,
+        vlab_id="test_vlab_DB",
+        project_id="project_id_DB",
+        title="test_title",
+    )
+    session.add(new_thread)
+    await session.commit()
+    await session.refresh(new_thread)
+
+    try:
+        # Test with info in headers.
+        good_request_headers = Request(
+            scope={
+                "type": "http",
+                "method": "Get",
+                "url": "http://fake_url/thread_id",
+                "headers": [
+                    (b"x-virtual-lab-id", b"test_vlab"),
+                    (b"x-project-id", b"test_project"),
+                ],
+            },
+        )
+        ids = await get_vlab_and_project(
+            user_id=user_id,
+            session=session,
+            request=good_request_headers,
+            settings=test_settings,
+            token=token,
+            httpx_client=httpx_client,
+        )
+        assert ids == {"vlab_id": "test_vlab", "project_id": "test_project"}
+    finally:
+        # don't forget to close the session, otherwise the tests hangs.
+        await session.close()
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+async def test_get_vlab_and_project_no_info_in_headers(
+    patch_required_env, httpx_mock, db_connection, monkeypatch
+):
+    # Setup DB with one thread to do the tests
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    engine = setup_engine(test_settings, db_connection)
+    session = await anext(get_session(engine))
+    user_id = "Super_user"
+    token = "fake_token"
+    httpx_client = AsyncClient()
+
+    # create test thread table
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    new_thread = Threads(
+        user_id=user_id,
+        vlab_id="test_vlab_DB",
+        project_id="project_id_DB",
+        title="test_title",
+    )
+    session.add(new_thread)
+    await session.commit()
+    await session.refresh(new_thread)
+
+    try:
+        # Test with no infos in headers.
+        bad_request = Request(
+            scope={
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "server": ("example.com", 80),
+                "path_params": {"dummy_patram": "fake_thread_id"},
+                "headers": [
+                    (b"wong_header", b"wrong value"),
+                ],
+            }
+        )
+        with pytest.raises(HTTPException) as error:
+            await get_vlab_and_project(
+                user_id=user_id,
+                session=session,
+                request=bad_request,
+                settings=test_settings,
+                token=token,
+                httpx_client=httpx_client,
+            )
+        assert (
+            error.value.detail == "Thread not found."
+        )
+    finally:
+        # don't forget to close the session, otherwise the tests hangs.
+        await session.close()
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+async def test_get_vlab_and_project_valid_thread_id(
+    patch_required_env, httpx_mock, db_connection, monkeypatch
+):
+    # Setup DB with one thread to do the tests
+    monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    engine = setup_engine(test_settings, db_connection)
+    session = await anext(get_session(engine))
+    user_id = "Super_user"
+    token = "fake_token"
+    httpx_client = AsyncClient()
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project",
+        json="test_project_ID",
+    )
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab_DB/projects/project_id_DB",
+        json="test_project_ID",
+    )
+
+    # create test thread table
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    new_thread = Threads(
+        user_id=user_id,
+        vlab_id="test_vlab_DB",
+        project_id="project_id_DB",
+        title="test_title",
+    )
+    session.add(new_thread)
+    await session.commit()
+    await session.refresh(new_thread)
+
+    try:
+        # Test with no infos in headers, but valid thread_ID.
+        good_request_DB = Request(
+            scope={
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "server": ("example.com", 80),
+                "path_params": {"thread_id": new_thread.thread_id},
+                "headers": [
+                    (b"wong_header", b"wrong value"),
+                ],
+            }
+        )
+        ids_from_DB = await get_vlab_and_project(
+            user_id=user_id,
+            session=session,
+            request=good_request_DB,
+            settings=test_settings,
+            token=token,
+            httpx_client=httpx_client,
+        )
+        assert ids_from_DB == {"vlab_id": "test_vlab_DB", "project_id": "project_id_DB"}
+
+    finally:
+        # don't forget to close the session, otherwise the tests hangs.
+        await session.close()
+        await engine.dispose()

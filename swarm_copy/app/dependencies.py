@@ -195,6 +195,7 @@ async def get_vlab_and_project(
         }
     else:
         thread_id = request.path_params.get("thread_id")
+        logging.error(f"*** Thread id: {thread_id}, User id: {user_id} ***")
         thread_result = await session.execute(
             select(Threads).where(
                 Threads.user_id == user_id, Threads.thread_id == thread_id
@@ -204,9 +205,7 @@ async def get_vlab_and_project(
         if not thread:
             raise HTTPException(
                 status_code=404,
-                detail={
-                    "detail": "Thread not found.",
-                },
+                detail="Thread not found.",
             )
         if thread and thread.vlab_id and thread.project_id:
             vlab_and_project = {
