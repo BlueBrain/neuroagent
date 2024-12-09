@@ -315,13 +315,10 @@ async def test_get_vlab_and_project_valid_thread_id(
     token = "fake_token"
     httpx_client = AsyncClient()
     httpx_mock.add_response(
-        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project",
-        json="test_project_ID",
-    )
-    httpx_mock.add_response(
         url=f"{test_settings.virtual_lab.get_project_url}/test_vlab_DB/projects/project_id_DB",
         json="test_project_ID",
     )
+
 
     # create test thread table
     async with engine.begin() as conn:

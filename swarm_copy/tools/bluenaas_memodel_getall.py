@@ -55,7 +55,7 @@ class MEModelGetAllTool(BaseTool):
         response = await self.metadata.httpx_client.get(
             url=f"{self.metadata.bluenaas_url}/neuron-model/{self.metadata.vlab_id}/{self.metadata.project_id}/me-models",
             params={
-                "simulation_type": self.input_schema.simulation_type,
+                "simulation_type": self.input_schema.memodel_type,
                 "offset": self.input_schema.offset,
                 "page_size": self.input_schema.page_size,
             },
