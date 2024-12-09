@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from typing import AsyncIterator
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -19,7 +19,7 @@ from swarm_copy.app.dependencies import (
     get_httpx_client,
     get_settings,
     get_update_kg_hierarchy,
-    get_user_id, get_session, get_vlab_and_project, get_starting_agent,
+    get_user_id, get_session, get_vlab_and_project, get_starting_agent, get_kg_token,
 )
 from swarm_copy.new_types import Agent
 
@@ -240,7 +240,7 @@ async def test_get_vlab_and_project(
 
 @pytest.mark.asyncio
 async def test_get_vlab_and_project_no_info_in_headers(
-    patch_required_env, httpx_mock, db_connection, monkeypatch
+    patch_required_env, db_connection, monkeypatch
 ):
     # Setup DB with one thread to do the tests
     monkeypatch.setenv("NEUROAGENT_KEYCLOAK__VALIDATE_TOKEN", "true")
@@ -367,8 +367,26 @@ async def test_get_vlab_and_project_valid_thread_id(
         await engine.dispose()
 
 
-def test_get_starting_agent(patch_required_env, monkeypatch):
+def test_get_starting_agent(patch_required_env):
     settings = Settings()
     agent = get_starting_agent(None, settings)
 
     assert isinstance(agent, Agent)
+
+
+@pytest.mark.parametrize(
+    "input_token, expected_token",
+    [
+        ("existing_token", "existing_token"),
+        (None, "new_token"),
+    ],
+)
+def test_get_kg_token(patch_required_env, input_token, expected_token):
+    settings = Settings()
+    mock = Mock()
+    mock.token.return_value = {"access_token": expected_token}
+    with (
+        patch("swarm_copy.app.dependencies.KeycloakOpenID", return_value=mock),
+    ):
+        result = get_kg_token(settings, input_token)
+        assert result == expected_token
