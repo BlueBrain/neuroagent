@@ -19,8 +19,9 @@ from swarm_copy.app.dependencies import (
     get_httpx_client,
     get_settings,
     get_update_kg_hierarchy,
-    get_user_id, get_session, get_vlab_and_project,
+    get_user_id, get_session, get_vlab_and_project, get_starting_agent,
 )
+from swarm_copy.new_types import Agent
 
 
 def test_get_settings(patch_required_env):
@@ -238,7 +239,6 @@ async def test_get_vlab_and_project(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_get_vlab_and_project_no_info_in_headers(
     patch_required_env, httpx_mock, db_connection, monkeypatch
 ):
@@ -365,3 +365,10 @@ async def test_get_vlab_and_project_valid_thread_id(
         # don't forget to close the session, otherwise the tests hangs.
         await session.close()
         await engine.dispose()
+
+
+def test_get_starting_agent(patch_required_env, monkeypatch):
+    settings = Settings()
+    agent = get_starting_agent(None, settings)
+
+    assert isinstance(agent, Agent)
