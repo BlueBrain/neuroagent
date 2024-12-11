@@ -157,3 +157,6 @@ static
 *db
 *.db-shm
 *.db-wal
+
+# ignore csvs in root dir
+*.csv

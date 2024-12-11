@@ -115,7 +115,7 @@ class SettingsGetMEModel(BaseModel):
 class SettingsBlueNaaS(BaseModel):
     """BlueNaaS settings."""
 
-    url: str = "https://openbluebrain.com/api/bluenaas/simulation/single-neuron/run"
+    url: str = "https://openbluebrain.com/api/bluenaas"
     model_config = ConfigDict(frozen=True)
 
 

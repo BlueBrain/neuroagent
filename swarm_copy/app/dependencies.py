@@ -21,13 +21,17 @@ from swarm_copy.new_types import Agent
 from swarm_copy.run import AgentsRoutine
 from swarm_copy.tools import (
     ElectrophysFeatureTool,
-    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
     LiteratureSearchTool,
+    MEModelGetAllTool,
+    MEModelGetOneTool,
     MorphologyFeatureTool,
     ResolveEntitiesTool,
+    SCSGetAllTool,
+    SCSGetOneTool,
+    SCSPostTool,
 )
 from swarm_copy.utils import RegionMeta, get_file_from_KG
 
@@ -186,8 +190,8 @@ async def get_vlab_and_project(
         }
     elif not settings.keycloak.validate_token:
         vlab_and_project = {
-            "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
-            "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
+            "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",
+            "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",
         }
     else:
         thread_id = request.path_params.get("thread_id")
@@ -237,9 +241,13 @@ def get_starting_agent(
                 You must always specify in your answers from which brain regions the information is extracted.
                 Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
         tools=[
+            SCSGetAllTool,
+            SCSGetOneTool,
+            SCSPostTool,
+            MEModelGetAllTool,
+            MEModelGetOneTool,
             LiteratureSearchTool,
             ElectrophysFeatureTool,
-            GetMEModelTool,
             GetMorphoTool,
             KGMorphoFeatureTool,
             MorphologyFeatureTool,
@@ -261,6 +269,8 @@ def get_context_variables(
     return {
         "starting_agent": starting_agent,
         "token": token,
+        "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",  # New god account vlab. Replaced by actual id in endpoint for now. Meant for usage without history
+        "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",  # New god account proj. Replaced by actual id in endpoint for now. Meant for usage without history
         "retriever_k": settings.tools.literature.retriever_k,
         "reranker_k": settings.tools.literature.reranker_k,
         "use_reranker": settings.tools.literature.use_reranker,
@@ -274,6 +284,7 @@ def get_context_variables(
         "trace_search_size": settings.tools.trace.search_size,
         "kg_sparql_url": settings.knowledge_graph.sparql_url,
         "kg_class_view_url": settings.knowledge_graph.class_view_url,
+        "bluenaas_url": settings.tools.bluenaas.url,
         "httpx_client": httpx_client,
     }
 
