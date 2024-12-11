@@ -204,9 +204,7 @@ async def get_vlab_and_project(
         if not thread:
             raise HTTPException(
                 status_code=404,
-                detail={
-                    "detail": "Thread not found.",
-                },
+                detail="Thread not found.",
             )
         if thread and thread.vlab_id and thread.project_id:
             vlab_and_project = {
