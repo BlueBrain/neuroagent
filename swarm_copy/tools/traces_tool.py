@@ -70,7 +70,7 @@ class GetTracesTool(BaseTool):
     input_schema: GetTracesInput
     metadata: GetTracesMetadata
 
-    async def arun(self) -> list[TracesOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """From a brain region ID, extract traces."""
         logger.info(
             f"Entering get trace tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.etype_id=}"
@@ -152,7 +152,7 @@ class GetTracesTool(BaseTool):
         return entire_query
 
     @staticmethod
-    def _process_output(output: Any) -> list[TracesOutput]:
+    def _process_output(output: Any) -> list[dict[str, Any]]:
         """Process output to fit the TracesOutput pydantic class defined above.
 
         Parameters
@@ -189,7 +189,7 @@ class GetTracesTool(BaseTool):
                     if "subjectAge" in res["_source"]
                     else None
                 ),
-            )
+            ).model_dump()
             for res in output["hits"]["hits"]
         ]
         return results

@@ -61,7 +61,7 @@ class LiteratureSearchTool(BaseTool):
     input_schema: LiteratureSearchInput
     metadata: LiteratureSearchMetadata
 
-    async def arun(self) -> list[ParagraphMetadata]:
+    async def arun(self) -> list[dict[str, Any]]:
         """Async search the scientific literature and returns citations.
 
         Returns
@@ -91,7 +91,7 @@ class LiteratureSearchTool(BaseTool):
         return self._process_output(response.json())
 
     @staticmethod
-    def _process_output(output: list[dict[str, Any]]) -> list[ParagraphMetadata]:
+    def _process_output(output: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Process output."""
         paragraphs_metadata = [
             ParagraphMetadata(
@@ -101,7 +101,7 @@ class LiteratureSearchTool(BaseTool):
                 section=paragraph["section"],
                 article_doi=paragraph["article_doi"],
                 journal_issn=paragraph["journal_issn"],
-            )
+            ).model_dump()
             for paragraph in output
         ]
         return paragraphs_metadata

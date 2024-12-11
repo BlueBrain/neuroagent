@@ -1,7 +1,7 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
 import logging
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -29,7 +29,7 @@ class InputMEModelGetAll(BaseModel):
     page_size: int = Field(
         default=20, description="Number of results returned by the API."
     )
-    model_type: Literal["single-neuron-simulation", "synaptome-simulation"] = Field(
+    memodel_type: Literal["single-neuron-simulation", "synaptome-simulation"] = Field(
         default="single-neuron-simulation",
         description="Type of simulation to retrieve.",
     )
@@ -46,7 +46,7 @@ class MEModelGetAllTool(BaseTool):
     metadata: MEModelGetAllMetadata
     input_schema: InputMEModelGetAll
 
-    async def arun(self) -> PaginatedResponseUnionMEModelResponseSynaptomeModelResponse:
+    async def arun(self) -> dict[str, Any]:
         """Run the MEModelGetAll tool."""
         logger.info(
             f"Running MEModelGetAll tool with inputs {self.input_schema.model_dump()}"
@@ -55,7 +55,7 @@ class MEModelGetAllTool(BaseTool):
         response = await self.metadata.httpx_client.get(
             url=f"{self.metadata.bluenaas_url}/neuron-model/{self.metadata.vlab_id}/{self.metadata.project_id}/me-models",
             params={
-                "simulation_type": self.input_schema.model_type,
+                "simulation_type": self.input_schema.memodel_type,
                 "offset": self.input_schema.offset,
                 "page_size": self.input_schema.page_size,
             },
@@ -64,4 +64,4 @@ class MEModelGetAllTool(BaseTool):
         breakpoint()
         return PaginatedResponseUnionMEModelResponseSynaptomeModelResponse(
             **response.json()
-        )
+        ).model_dump()
