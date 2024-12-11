@@ -208,7 +208,6 @@ async def test_get_vlab_and_project(
     )
     session.add(new_thread)
     await session.commit()
-    await session.refresh(new_thread)
 
     try:
         # Test with info in headers.
@@ -265,7 +264,6 @@ async def test_get_vlab_and_project_no_info_in_headers(
     )
     session.add(new_thread)
     await session.commit()
-    await session.refresh(new_thread)
 
     try:
         # Test with no infos in headers.

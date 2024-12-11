@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from neuroagent.app.dependencies import get_settings
-from neuroagent.app.main import app
+from swarm_copy.app.dependencies import get_settings
+from swarm_copy.app.main import app
 
 
 def test_settings_endpoint(app_client, dont_look_at_env_file, settings):
