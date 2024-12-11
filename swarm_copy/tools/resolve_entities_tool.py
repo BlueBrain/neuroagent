@@ -108,7 +108,9 @@ class ResolveEntitiesTool(BaseTool):
         # Extend the resolved BRs.
         output.extend(
             [
-                BRResolveOutput(brain_region_name=br["label"], brain_region_id=br["id"]).model_dump()
+                BRResolveOutput(
+                    brain_region_name=br["label"], brain_region_id=br["id"]
+                ).model_dump()
                 for br in brain_regions
             ]
         )
@@ -127,7 +129,9 @@ class ResolveEntitiesTool(BaseTool):
             # Extend the resolved mtypes.
             output.extend(
                 [
-                    MTypeResolveOutput(mtype_name=mtype["label"], mtype_id=mtype["id"]).model_dump()
+                    MTypeResolveOutput(
+                        mtype_name=mtype["label"], mtype_id=mtype["id"]
+                    ).model_dump()
                     for mtype in mtypes
                 ]
             )
