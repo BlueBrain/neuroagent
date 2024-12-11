@@ -24,7 +24,7 @@ async def get_tool_calls(
     memory: Annotated[AsyncSqliteSaver | None, Depends(get_agent_memory)],
     thread_id: str,
     message_id: str,
-) -> list[dict[str, Any]]:
+) -> list[ToolCallSchema]:
     """Get tool calls of a specific message.
     \f
 
@@ -93,14 +93,14 @@ async def get_tool_calls(
     )
 
     # From sub list, extract tool calls
-    tool_calls: list[dict[str, Any]] = []
+    tool_calls: list[ToolCallSchema] = []
     for message in message_list[previous_content_message + 1 : relevant_message]:
         if isinstance(message, AIMessage):
             tool_calls.extend(
                 [
                     ToolCallSchema(
                         call_id=tool["id"], name=tool["name"], arguments=tool["args"]
-                    ).model_dump()
+                    )
                     for tool in message.tool_calls
                 ]
             )
