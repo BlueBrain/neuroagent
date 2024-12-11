@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from httpx import AsyncClient
@@ -37,7 +37,7 @@ async def create_thread(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
     title: str = "New chat",
-) -> dict[str, Any]:
+) -> ThreadsRead:
     """Create thread."""
     # We first need to check if the combination thread/vlab/project is valid
     await validate_project(
@@ -57,20 +57,20 @@ async def create_thread(
     await session.commit()
     await session.refresh(new_thread)
 
-    return ThreadsRead(**new_thread.__dict__).model_dump()
+    return ThreadsRead(**new_thread.__dict__)
 
 
 @router.get("/")
 async def get_threads(
     session: Annotated[AsyncSession, Depends(get_session)],
     user_id: Annotated[str, Depends(get_user_id)],
-) -> list[dict[str, Any]]:
+) -> list[ThreadsRead]:
     """Get threads for a user."""
     thread_result = await session.execute(
         select(Threads).where(Threads.user_id == user_id)
     )
     threads = thread_result.scalars().all()
-    return [ThreadsRead(**thread.__dict__).model_dump() for thread in threads]
+    return [ThreadsRead(**thread.__dict__) for thread in threads]
 
 
 @router.get("/{thread_id}")
@@ -78,7 +78,7 @@ async def get_messages(
     session: Annotated[AsyncSession, Depends(get_session)],
     _: Annotated[Threads, Depends(get_thread)],  # to check if thread exist
     thread_id: str,
-) -> list[dict[str, Any]]:
+) -> list[MessagesRead]:
     """Get all messages of the thread."""
     messages_result = await session.execute(
         select(Messages)
@@ -96,7 +96,7 @@ async def get_messages(
             MessagesRead(
                 msg_content=json.loads(msg.content)["content"],
                 **msg.__dict__,
-            ).model_dump()
+            )
         )
 
     return messages
@@ -107,14 +107,14 @@ async def update_thread_title(
     session: Annotated[AsyncSession, Depends(get_session)],
     update_thread: ThreadUpdate,
     thread: Annotated[Threads, Depends(get_thread)],
-) -> dict[str, Any]:
+) -> ThreadsRead:
     """Update thread."""
     thread_data = update_thread.model_dump(exclude_unset=True)
     for key, value in thread_data.items():
         setattr(thread, key, value)
     await session.commit()
     await session.refresh(thread)
-    return ThreadsRead(**thread.__dict__).model_dump()
+    return ThreadsRead(**thread.__dict__)
 
 
 @router.delete("/{thread_id}")
