@@ -1,122 +1,112 @@
+import logging
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from swarm_copy.app.database.sql_schemas import utc_now
+from swarm_copy.app.config import Settings
+from swarm_copy.app.dependencies import get_settings
+from swarm_copy.app.main import app
 
 
-@pytest.mark.asyncio
-async def test_create_thread(app_client, settings):
-    mock_validate_project = AsyncMock()
-    mock_session = AsyncMock()
-
-    def add_thread(thread):
-        thread.creation_date = utc_now()
-        thread.update_date = utc_now()
-        thread.thread_id = "thread_id"
-
-    mock_session.add = add_thread
-    user_id = "user_id"
-    token = "token"
-    title = "title"
-    project_id = "project_id"
-    virtual_lab_id = "virtual_lab_id"
-    with patch("swarm_copy.app.app_utils.validate_project", mock_validate_project):
-        from swarm_copy.app.routers.threads import create_thread
-        await create_thread(app_client, settings,
-                            token,
-                            virtual_lab_id,
-                            project_id,
-                            mock_session,
-                            user_id,
-                            title)
-
-    assert mock_session.commit.called
-    assert mock_session.refresh.called
+def test_create_thread(patch_required_env, httpx_mock, app_client, db_connection):
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    app.dependency_overrides[get_settings] = lambda: test_settings
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
+    with app_client as app_client:
+        # Create a thread
+        create_output = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
+    assert create_output["thread_id"]
+    assert create_output["title"] == "New chat"
+    assert create_output["vlab_id"] == "test_vlab"
+    assert create_output["project_id"] == "test_project"
 
 
-@pytest.mark.asyncio
-async def test_get_threads():
-    user_id = "user_id"
-    title = "title"
-    thread_id = "uuid"
-    project_id = "project_id"
-    virtual_lab_id = "virtual_lab_id"
-    creation_date = utc_now()
-    update_date = utc_now()
-    mock_threads = [
-        Mock(user_id=user_id,
-             title=title,
-             vlab_id=virtual_lab_id,
-             project_id=project_id,
-             thread_id=thread_id,
-             creation_date=creation_date,
-             update_date=update_date)
-    ]
-    mock_session = AsyncMock()
-    scalars_mock = Mock()
-    scalars_mock.all.return_value = mock_threads
-    mock_thread_result = Mock()
-    mock_thread_result.scalars.return_value = scalars_mock
-    mock_session.execute.return_value = mock_thread_result
-    from swarm_copy.app.routers.threads import get_threads
-    thread_reads = await get_threads(mock_session, user_id)
-    thread_read = thread_reads[0]
-    assert thread_read.thread_id == thread_id
-    assert thread_read.user_id == user_id
-    assert thread_read.vlab_id == virtual_lab_id
-    assert thread_read.project_id == project_id
-    assert thread_read.title == title
-    assert thread_read.creation_date == creation_date
-    assert thread_read.update_date == update_date
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+def test_get_threads(patch_required_env, httpx_mock, app_client, db_connection):
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    app.dependency_overrides[get_settings] = lambda: test_settings
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
+    with app_client as app_client:
+        threads = app_client.get("/threads/").json()
+        assert not threads
+        create_output_1 = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
+        create_output_2 = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
+        threads = app_client.get("/threads/").json()
+
+    assert len(threads) == 2
+    assert threads[0] == create_output_1
+    assert threads[1] == create_output_2
 
 
-@pytest.mark.asyncio
-async def test_update_thread_title():
-    user_id = "user_id"
-    title = "title"
-    thread_id = "uuid"
-    project_id = "project_id"
-    virtual_lab_id = "virtual_lab_id"
-    creation_date = utc_now()
-    update_date = utc_now()
-    mock_session = AsyncMock()
-    mock_thread_result = Mock()
-    mock_session.execute.return_value = mock_thread_result
-    mock_update_thread = Mock()
-    mock_update_thread.model_dump.return_value = {
-        "user_id": user_id,
-        "title": title,
-        "vlab_id": virtual_lab_id,
-        "project_id": project_id,
-        "thread_id": thread_id,
-        "creation_date": creation_date,
-        "update_date": update_date
-    }
-    mock_thread = Mock()
-    from swarm_copy.app.routers.threads import update_thread_title
-    thread_read = await update_thread_title(mock_session, mock_update_thread, mock_thread)
-    assert mock_session.commit.called
-    assert mock_session.refresh.called
-    assert thread_read.thread_id == thread_id
-    assert thread_read.user_id == user_id
-    assert thread_read.vlab_id == virtual_lab_id
-    assert thread_read.project_id == project_id
-    assert thread_read.title == title
-    assert thread_read.creation_date == creation_date
-    assert thread_read.update_date == update_date
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+def test_update_thread_title(patch_required_env, httpx_mock, app_client, db_connection):
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    app.dependency_overrides[get_settings] = lambda: test_settings
+
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
+    with app_client as app_client:
+        threads = app_client.get("/threads/").json()
+        assert not threads
+
+        create_thread_response = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
+        thread_id = create_thread_response["thread_id"]
+
+        updated_title = "Updated Thread Title"
+        update_response = app_client.patch(
+            f"/threads/{thread_id}", json={"title": updated_title}
+        ).json()
+
+        assert update_response["title"] == updated_title
 
 
-@pytest.mark.asyncio
-async def test_delete_thread():
-    mock_session = AsyncMock()
-    mock_thread_result = Mock()
-    mock_session.execute.return_value = mock_thread_result
-    mock_thread = Mock()
-    from swarm_copy.app.routers.threads import delete_thread
-    await delete_thread(mock_session, mock_thread)
-    assert mock_session.delete.called
-    assert mock_session.commit.called
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+def test_delete_thread(patch_required_env, httpx_mock, app_client, db_connection):
+    test_settings = Settings(
+        db={"prefix": db_connection},
+    )
+    app.dependency_overrides[get_settings] = lambda: test_settings
+
+    httpx_mock.add_response(
+        url=f"{test_settings.virtual_lab.get_project_url}/test_vlab/projects/test_project"
+    )
+    with app_client as app_client:
+        threads = app_client.get("/threads/").json()
+        assert not threads
+
+        create_thread_response = app_client.post(
+            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
+        ).json()
+        thread_id = create_thread_response["thread_id"]
+
+        threads = app_client.get("/threads/").json()
+        assert len(threads) == 1
+        assert threads[0]["thread_id"] == thread_id
+
+        delete_response = app_client.delete(f"/threads/{thread_id}").json()
+        assert delete_response["Acknowledged"] == "true"
+
+        threads = app_client.get("/threads/").json()
+        assert not threads
 
 
 @pytest.fixture(autouse=True)
