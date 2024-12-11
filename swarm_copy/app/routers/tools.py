@@ -24,7 +24,7 @@ async def get_tool_calls(
     session: Annotated[AsyncSession, Depends(get_session)],
     thread_id: str,
     message_id: str,
-) -> list[dict[str, Any]]:
+) -> list[ToolCallSchema]:
     """Get tool calls of a specific message."""
     # Find relevant messages
     relevant_message = await session.get(Messages, message_id)
@@ -78,7 +78,7 @@ async def get_tool_calls(
                     tool_call_id=tool["id"],
                     name=tool["function"]["name"],
                     arguments=json.loads(tool["function"]["arguments"]),
-                ).model_dump()
+                )
             )
 
     return tool_calls_response
