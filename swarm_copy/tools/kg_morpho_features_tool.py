@@ -186,7 +186,7 @@ class KGMorphoFeatureTool(BaseTool):
     input_schema: KGMorphoFeatureInput
     metadata: KGMorphoFeatureMetadata
 
-    async def arun(self) -> list[KGMorphoFeatureOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """Run the tool async.
 
         Returns
@@ -319,7 +319,7 @@ class KGMorphoFeatureTool(BaseTool):
         return entire_query
 
     @staticmethod
-    def _process_output(output: Any) -> list[KGMorphoFeatureOutput]:
+    def _process_output(output: Any) -> list[dict[str, Any]]:
         """Process output.
 
         Parameters
@@ -347,7 +347,7 @@ class KGMorphoFeatureTool(BaseTool):
                     morphology_id=morpho_source["neuronMorphology"]["@id"],
                     morphology_name=morpho_source["neuronMorphology"].get("name"),
                     features=feature_output,
-                )
+                ).model_dump()
             )
 
         return formatted_output

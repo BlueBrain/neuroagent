@@ -194,7 +194,7 @@ class ElectrophysFeatureTool(BaseTool):
     input_schema: ElectrophysInput
     metadata: ElectrophysMetadata
 
-    async def arun(self) -> FeatureOutput:
+    async def arun(self) -> dict[str, Any]:
         """Give features about trace."""
         logger.info(
             f"Entering electrophys tool. Inputs: {self.input_schema.trace_id=}, {self.input_schema.calculated_feature=},"
@@ -329,4 +329,4 @@ class ElectrophysFeatureTool(BaseTool):
                 )
         return FeatureOutput(
             brain_region=metadata.brain_region, feature_dict=output_features
-        )
+        ).model_dump()

@@ -94,7 +94,7 @@ class SCSPostTool(BaseTool):
     metadata: SCSPostMetadata
     input_schema: InputSCSPost
 
-    async def arun(self) -> SCSPostOutput:
+    async def arun(self) -> dict[str, Any]:
         """Run the SCSPost tool."""
         logger.info(
             f"Running SCSPost tool with inputs {self.input_schema.model_dump()}"
@@ -126,7 +126,7 @@ class SCSPostTool(BaseTool):
             status=json_response["status"],
             name=json_response["name"],
             error=json_response["error"],
-        )
+        ).model_dump()
 
     @staticmethod
     def create_json_api(
