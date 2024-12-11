@@ -42,9 +42,9 @@ def test_lifespan(caplog, monkeypatch, tmp_path, patch_required_env, db_connecti
             f.write("test_text")
 
     with (
-        patch("neuroagent.app.main.get_update_kg_hierarchy", new=save_dummy),
-        patch("neuroagent.app.main.get_cell_types_kg_hierarchy", new=save_dummy),
-        patch("neuroagent.app.main.get_kg_token", new=lambda *args, **kwargs: "dev"),
+        patch("swarm_copy.app.main.get_update_kg_hierarchy", new=save_dummy),
+        patch("swarm_copy.app.main.get_cell_types_kg_hierarchy", new=save_dummy),
+        patch("swarm_copy.app.main.get_kg_token", new=lambda *args, **kwargs: "dev"),
     ):
         # The with statement triggers the startup.
         with TestClient(app) as test_client:
@@ -53,12 +53,12 @@ def test_lifespan(caplog, monkeypatch, tmp_path, patch_required_env, db_connecti
     assert save_path_brainregion.exists()
 
     assert caplog.record_tuples[0][::2] == (
-        "neuroagent.app.dependencies",
+        "swarm_copy.app.dependencies",
         "Reading the environment and instantiating settings",
     )
 
     assert (
-        logging.getLevelName(logging.getLogger("neuroagent").getEffectiveLevel())
+        logging.getLevelName(logging.getLogger("swarm_copy").getEffectiveLevel())
         == "INFO"
     )
     assert (
