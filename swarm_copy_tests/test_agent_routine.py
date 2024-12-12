@@ -80,16 +80,11 @@ class TestAgentsRoutine:
         assert response.choices[0].message.content == "sample response content"
 
         # Test with tools
-        def agent_instruction(context_variables):
-            twng = context_variables.get("twng")
-            mrt = context_variables.get("mrt")
-            return f"This is your new instructions with {twng} and {mrt}."
-
         agent = Agent(tools=[get_weather_tool])
         response = await routine.get_chat_completion(
             agent=agent,
             history=[{"role": "user", "content": "Hello !"}],
-            context_variables={"mrt": "Great mrt", "twng": "Bad twng"},
+            context_variables={},
             model_override=None,
         )
         mock_openai_client.assert_create_called_with(
