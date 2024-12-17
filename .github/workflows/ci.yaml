@@ -90,4 +90,4 @@ jobs:
           mypy src/ swarm_copy/
           # Include src/ directory in Python path to prioritize local files in pytest
           export PYTHONPATH=$(pwd)/src:$PYTHONPATH
-          pytest --color=yes
+          pytest --color=yes tests/ swarm_copy_tests/
