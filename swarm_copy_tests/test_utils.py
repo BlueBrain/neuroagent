@@ -7,8 +7,76 @@ import pytest
 
 from swarm_copy.utils import (
     RegionMeta,
-    get_descendants_id
+    get_descendants_id,
+    merge_chunk,
+    merge_fields,
 )
+
+
+def test_merge_fields_str():
+    target = {"key_1": "abc", "key_2": ""}
+    source = {"key_1": "def"}
+    merge_fields(target, source)
+    assert target == {"key_1": "abcdef", "key_2": ""}
+
+    source = {"key_1": "", "key_2": ""}
+    target = {"key_1": "value_1"}
+    with pytest.raises(KeyError):
+        merge_fields(target, source)
+
+
+def test_merge_fields_dict():
+    target = {"key_1": "abc", "key_2": {"sub_key_1": "", "sub_key_2": "abc"}}
+    source = {"key_1": "def", "key_2": {"sub_key_1": "hello", "sub_key_2": "cba"}}
+    merge_fields(target, source)
+    assert target == {
+        "key_1": "abcdef",
+        "key_2": {"sub_key_1": "hello", "sub_key_2": "abccba"},
+    }
+
+
+def test_merge_chunk():
+    message = {
+        "content": "",
+        "sender": "test agent",
+        "role": "assistant",
+        "function_call": None,
+        "tool_calls": [
+            {
+                "function": {"arguments": "", "name": ""},
+                "id": "",
+                "type": "",
+            }
+        ],
+    }
+    delta = {
+        "content": "Great content",
+        "function_call": None,
+        "refusal": None,
+        "role": "assistant",
+        "tool_calls": [
+            {
+                "index": 0,
+                "id": "call_NDiPAjDW4oLef44xIptVSAZC",
+                "function": {"arguments": "Thalamus", "name": "resolve-entities-tool"},
+                "type": "function",
+            }
+        ],
+    }
+    merge_chunk(message, delta)
+    assert message == {
+        "content": "Great content",
+        "sender": "test agent",
+        "role": "assistant",
+        "function_call": None,
+        "tool_calls": [
+            {
+                "function": {"arguments": "Thalamus", "name": "resolve-entities-tool"},
+                "id": "call_NDiPAjDW4oLef44xIptVSAZC",
+                "type": "function",
+            }
+        ],
+    }
 
 
 @pytest.mark.parametrize(
