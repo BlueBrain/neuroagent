@@ -6,14 +6,12 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from swarm_copy.app.config import Settings
 from swarm_copy.app.dependencies import get_kg_token, get_settings
 from swarm_copy.app.main import app
-from swarm_copy.tools import GetMorphoTool
 
 
 @pytest.fixture(name="settings")
