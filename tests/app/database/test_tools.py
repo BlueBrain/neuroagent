@@ -14,7 +14,7 @@ async def test_get_tool_calls(
     patch_required_env, fake_llm_with_tools, httpx_mock, app_client, db_connection
 ):
     # Put data in the db
-    llm, _, _ = await anext(fake_llm_with_tools)
+    llm, _, _ = fake_llm_with_tools
     app.dependency_overrides[get_language_model] = lambda: llm
     test_settings = Settings(
         db={"prefix": db_connection},
@@ -75,7 +75,7 @@ async def test_get_tool_output(
     db_connection,
 ):
     # Put data in the db
-    llm, _, _ = await anext(fake_llm_with_tools)
+    llm, _, _ = fake_llm_with_tools
     app.dependency_overrides[get_language_model] = lambda: llm
 
     test_settings = Settings(
