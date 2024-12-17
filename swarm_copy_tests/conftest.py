@@ -45,7 +45,6 @@ def client_fixture():
     yield app_client
     app.dependency_overrides.clear()
 
-
 @pytest.fixture
 def mock_openai_client():
     """Fake openai client."""
@@ -108,7 +107,6 @@ def agent_handoff_tool():
             return self.metadata.to_agent
 
     return HandoffTool
-
 
 @pytest.fixture(autouse=True, scope="session")
 def dont_look_at_env_file():
