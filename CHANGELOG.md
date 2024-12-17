@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CRUDs.
 - BlueNaas CRUD tools
 - Tests for threads module
+- Unit tests for database
 
 ### Fixed
 - Migrate LLM Evaluation logic to scripts and add tests
