@@ -55,7 +55,7 @@ async def test_summarizer_node(fake_llm_with_tools):
         ]
     )
 
-    mock_llm, _, _ = await anext(fake_llm_with_tools)
+    mock_llm, _, _ = fake_llm_with_tools
     agent = SupervisorMultiAgent(agents=[("agent1", [])], llm=mock_llm)
 
     mock_message = SystemMessage(
@@ -73,7 +73,7 @@ async def test_summarizer_node(fake_llm_with_tools):
 
 @pytest.mark.asyncio
 async def test_create_graph(fake_llm_with_tools):
-    mock_llm, _, _ = await anext(fake_llm_with_tools)
+    mock_llm, _, _ = fake_llm_with_tools
     agent = SupervisorMultiAgent(agents=[("agent1", [])], llm=mock_llm)
     result = agent.create_graph()
     nodes = result.nodes
