@@ -107,7 +107,7 @@ def brain_region_json_path():
     return br_path
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def fake_llm_with_tools(brain_region_json_path):
     class FakeFuntionChatModel(GenericFakeChatModel):
         def bind_tools(self, functions: list):
@@ -119,7 +119,7 @@ async def fake_llm_with_tools(brain_region_json_path):
     # If you need another fake response to use different tools,
     # you can do in your test
     # ```python
-    # llm, _ = await anext(fake_llm_with_tools)
+    # llm, _ = fake_llm_with_tools
     # llm.responses = my_fake_responses
     # ```
     # and simply bind the corresponding tools

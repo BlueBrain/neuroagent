@@ -18,10 +18,9 @@ from swarm_copy_tests.mock_client import create_mock_response
 
 class TestAgentsRoutine:
     @pytest.mark.asyncio
-    async def test_get_chat_completion(self, mock_openai_client, get_weather_tool):
+    async def test_get_chat_completion_simple_message(self, mock_openai_client):
         routine = AgentsRoutine(client=mock_openai_client)
 
-        # Test without context variables nor tools
         agent = Agent()
         response = await routine.get_chat_completion(
             agent=agent,
@@ -42,11 +41,13 @@ class TestAgentsRoutine:
             }
         )
 
-        # assert response content
         assert response.choices[0].message.role == "assistant"
         assert response.choices[0].message.content == "sample response content"
 
-        # Test with context variables for system prompt but no tools
+    @pytest.mark.asyncio
+    async def test_get_chat_completion_callable_sys_prompt(self, mock_openai_client):
+        routine = AgentsRoutine(client=mock_openai_client)
+
         def agent_instruction(context_variables):
             twng = context_variables.get("twng")
             mrt = context_variables.get("mrt")
@@ -75,11 +76,15 @@ class TestAgentsRoutine:
             }
         )
 
-        # assert response content
         assert response.choices[0].message.role == "assistant"
         assert response.choices[0].message.content == "sample response content"
 
-        # Test with tools
+    @pytest.mark.asyncio
+    async def test_get_chat_completion_tools(
+        self, mock_openai_client, get_weather_tool
+    ):
+        routine = AgentsRoutine(client=mock_openai_client)
+
         agent = Agent(tools=[get_weather_tool])
         response = await routine.get_chat_completion(
             agent=agent,
@@ -119,7 +124,6 @@ class TestAgentsRoutine:
             }
         )
 
-        # assert response content
         assert response.choices[0].message.role == "assistant"
         assert response.choices[0].message.content == "sample response content"
 
@@ -144,12 +148,11 @@ class TestAgentsRoutine:
         assert result == Result(value=str(raw_result))
 
     @pytest.mark.asyncio
-    async def test_execute_tool_calls(
+    async def test_execute_tool_calls_simple(
         self, mock_openai_client, get_weather_tool, agent_handoff_tool
     ):
         routine = AgentsRoutine(client=mock_openai_client)
 
-        # Test tool execution with simple tool call
         mock_openai_client.set_response(
             create_mock_response(
                 message={"role": "assistant", "content": ""},
@@ -185,7 +188,12 @@ class TestAgentsRoutine:
         assert tool_calls_result.agent is None
         assert tool_calls_result.context_variables == context_variables
 
-        # Test tool execution with multiple tool call + context_variables
+    @pytest.mark.asyncio
+    async def test_execute_multiple_tool_calls(
+        self, mock_openai_client, get_weather_tool, agent_handoff_tool
+    ):
+        routine = AgentsRoutine(client=mock_openai_client)
+
         mock_openai_client.set_response(
             create_mock_response(
                 message={"role": "assistant", "content": ""},
@@ -229,7 +237,12 @@ class TestAgentsRoutine:
         assert tool_calls_result.agent is None
         assert tool_calls_result.context_variables == context_variables
 
-        # Test tool execution with agent handoff
+    @pytest.mark.asyncio
+    async def test_execute_tool_calls_handoff(
+        self, mock_openai_client, get_weather_tool, agent_handoff_tool
+    ):
+        routine = AgentsRoutine(client=mock_openai_client)
+
         mock_openai_client.set_response(
             create_mock_response(
                 message={"role": "assistant", "content": ""},
@@ -268,12 +281,11 @@ class TestAgentsRoutine:
         assert tool_calls_result.context_variables == context_variables
 
     @pytest.mark.asyncio
-    async def test_handle_tool_call(
+    async def test_handle_tool_call_simple(
         self, mock_openai_client, get_weather_tool, agent_handoff_tool
     ):
         routine = AgentsRoutine(client=mock_openai_client)
 
-        # Test tool execution with simple tool call
         mock_openai_client.set_response(
             create_mock_response(
                 message={"role": "assistant", "content": ""},
@@ -306,7 +318,12 @@ class TestAgentsRoutine:
             None,
         )
 
-        # Test tool execution with context_variables
+    @pytest.mark.asyncio
+    async def test_handle_tool_call_context_var(
+        self, mock_openai_client, get_weather_tool, agent_handoff_tool
+    ):
+        routine = AgentsRoutine(client=mock_openai_client)
+
         mock_openai_client.set_response(
             create_mock_response(
                 message={"role": "assistant", "content": ""},
@@ -339,7 +356,12 @@ class TestAgentsRoutine:
             None,
         )
 
-        # Test tool execution with agent handoff
+    @pytest.mark.asyncio
+    async def test_handle_tool_call_handoff(
+        self, mock_openai_client, get_weather_tool, agent_handoff_tool
+    ):
+        routine = AgentsRoutine(client=mock_openai_client)
+
         mock_openai_client.set_response(
             create_mock_response(
                 message={"role": "assistant", "content": ""},
