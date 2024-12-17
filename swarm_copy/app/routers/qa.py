@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from swarm_copy.agent_routine import AgentsRoutine
 from swarm_copy.app.database.db_utils import get_history, get_thread, save_history
 from swarm_copy.app.database.sql_schemas import Threads
 from swarm_copy.app.dependencies import (
@@ -17,7 +18,6 @@ from swarm_copy.app.dependencies import (
     get_user_id,
 )
 from swarm_copy.new_types import Agent, AgentRequest, AgentResponse
-from swarm_copy.run import AgentsRoutine
 from swarm_copy.stream import stream_agent_response
 
 router = APIRouter(prefix="/qa", tags=["Run the agent"])

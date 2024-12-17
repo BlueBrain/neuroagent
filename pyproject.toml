@@ -75,6 +75,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
+"swarm_copy_tests/*" = ["D"]
 
 [tool.mypy]
 mypy_path = "src"
