@@ -14,6 +14,27 @@ from swarm_copy.app.dependencies import get_kg_token, get_settings
 from swarm_copy.app.main import app
 
 
+@pytest.fixture(name="settings")
+def settings():
+    return Settings(
+        tools={
+            "literature": {
+                "url": "fake_literature_url",
+            },
+        },
+        knowledge_graph={
+            "base_url": "https://fake_url/api/nexus/v1",
+        },
+        openai={
+            "token": "fake_token",
+        },
+        keycloak={
+            "username": "fake_username",
+            "password": "fake_password",
+        },
+    )
+
+
 @pytest.fixture(name="app_client")
 def client_fixture():
     """Get client and clear app dependency_overrides."""
