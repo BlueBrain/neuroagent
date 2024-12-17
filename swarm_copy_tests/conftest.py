@@ -167,3 +167,24 @@ def get_resolve_query_output():
 def brain_region_json_path():
     br_path = Path(__file__).parent / "data" / "brainregion_hierarchy.json"
     return br_path
+
+
+@pytest.fixture(name="settings")
+def settings():
+    return Settings(
+        tools={
+            "literature": {
+                "url": "fake_literature_url",
+            },
+        },
+        knowledge_graph={
+            "base_url": "https://fake_url/api/nexus/v1",
+        },
+        openai={
+            "token": "fake_token",
+        },
+        keycloak={
+            "username": "fake_username",
+            "password": "fake_password",
+        },
+    )
