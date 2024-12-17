@@ -13,7 +13,7 @@ from neuroagent.agents import AgentOutput, AgentStep, SimpleChatAgent
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_arun(fake_llm_with_tools, httpx_mock):
-    llm, tools, fake_responses = await anext(fake_llm_with_tools)
+    llm, tools, fake_responses = fake_llm_with_tools
     json_path = Path(__file__).resolve().parent.parent / "data" / "knowledge_graph.json"
     with open(json_path) as f:
         knowledge_graph_response = json.load(f)
@@ -69,7 +69,7 @@ async def test_arun(fake_llm_with_tools, httpx_mock):
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 @pytest.mark.asyncio
 async def test_astream(fake_llm_with_tools, httpx_mock):
-    llm, tools, fake_responses = await anext(fake_llm_with_tools)
+    llm, tools, fake_responses = fake_llm_with_tools
     json_path = Path(__file__).resolve().parent.parent / "data" / "knowledge_graph.json"
     with open(json_path) as f:
         knowledge_graph_response = json.load(f)
