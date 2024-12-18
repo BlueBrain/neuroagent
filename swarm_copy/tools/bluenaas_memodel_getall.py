@@ -1,7 +1,7 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
 import logging
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -46,7 +46,7 @@ class MEModelGetAllTool(BaseTool):
     metadata: MEModelGetAllMetadata
     input_schema: InputMEModelGetAll
 
-    async def arun(self) -> PaginatedResponseUnionMEModelResponseSynaptomeModelResponse:
+    async def arun(self) -> dict[str, Any]:
         """Run the MEModelGetAll tool."""
         logger.info(
             f"Running MEModelGetAll tool with inputs {self.input_schema.model_dump()}"
@@ -61,7 +61,6 @@ class MEModelGetAllTool(BaseTool):
             },
             headers={"Authorization": f"Bearer {self.metadata.token}"},
         )
-        breakpoint()
         return PaginatedResponseUnionMEModelResponseSynaptomeModelResponse(
             **response.json()
-        )
+        ).model_dump()
