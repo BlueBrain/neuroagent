@@ -74,27 +74,27 @@ async def test_arun(httpx_mock, get_resolve_query_output):
         BRResolveOutput(
             brain_region_name="Field CA1",
             brain_region_id="http://api.brain-map.org/api/v2/data/Structure/382",
-        ),
+        ).model_dump(),
         BRResolveOutput(
             brain_region_name="Field CA2",
             brain_region_id="http://api.brain-map.org/api/v2/data/Structure/423",
-        ),
+        ).model_dump(),
         BRResolveOutput(
             brain_region_name="Field CA3",
             brain_region_id="http://api.brain-map.org/api/v2/data/Structure/463",
-        ),
+        ).model_dump(),
         MTypeResolveOutput(
             mtype_name="Interneuron", mtype_id="https://neuroshapes.org/Interneuron"
-        ),
+        ).model_dump(),
         MTypeResolveOutput(
             mtype_name="Hippocampus CA3 Oriens Interneuron",
             mtype_id="http://uri.interlex.org/base/ilx_0105044",
-        ),
+        ).model_dump(),
         MTypeResolveOutput(
             mtype_name="Spinal Cord Ventral Horn Interneuron IA",
             mtype_id="http://uri.interlex.org/base/ilx_0110929",
-        ),
+        ).model_dump(),
         EtypeResolveOutput(
             etype_name="bAC", etype_id="http://uri.interlex.org/base/ilx_0738199"
-        ),
+        ).model_dump(),
     ]

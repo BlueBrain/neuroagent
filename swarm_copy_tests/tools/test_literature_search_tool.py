@@ -46,4 +46,4 @@ class TestLiteratureSearchTool:
         response = await tool.arun()
         assert isinstance(response, list)
         assert len(response) == reranker_k
-        assert isinstance(response[0], ParagraphMetadata)
+        assert isinstance(response[0], dict)

@@ -40,8 +40,8 @@ class TestTracesTool:
         response = await tool.arun()
         assert isinstance(response, list)
         assert len(response) == 2
-        assert isinstance(response[0], TracesOutput)
-        assert isinstance(response[0], TracesOutput)
+        assert isinstance(response[0], dict)
+        assert isinstance(response[0], dict)
 
     @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
     @pytest.mark.asyncio
@@ -71,7 +71,7 @@ class TestTracesTool:
         response = await tool.arun()
         assert isinstance(response, list)
         assert len(response) == 2
-        assert isinstance(response[0], TracesOutput)
+        assert isinstance(response[0], dict)
 
     @pytest.mark.asyncio
     async def test_arun_errors(self, httpx_mock, brain_region_json_path):

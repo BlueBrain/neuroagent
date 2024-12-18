@@ -17,7 +17,6 @@ class CellTypesMeta:
     """
 
     def __init__(self) -> None:
-        self.name_: dict[str, str | None] = {}
         self.name_: dict[Any, Any | None] = {}
         self.descendants_ids: dict[str, set[str]] = {}
 
