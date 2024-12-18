@@ -61,7 +61,6 @@ class MEModelGetAllTool(BaseTool):
             },
             headers={"Authorization": f"Bearer {self.metadata.token}"},
         )
-        breakpoint()
         return PaginatedResponseUnionMEModelResponseSynaptomeModelResponse(
             **response.json()
         ).model_dump()
