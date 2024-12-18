@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for the migrated tools
 - CRUDs.
 - BlueNaas CRUD tools
+- Cell types, resolving and utils tests
 - app unit tests
 - Tests of AgentsRoutine.
 - Unit tests for database
