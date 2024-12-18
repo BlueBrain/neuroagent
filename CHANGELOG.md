@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tool implementations without langchain or langgraph dependencies
 - CRUDs.
 - BlueNaas CRUD tools
+- Cell types, resolving and utils tests
 - app unit tests
 - Tests of AgentsRoutine.
 - Unit tests for database
