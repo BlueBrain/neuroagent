@@ -52,7 +52,7 @@ class MorphologyFeatureTool(BaseTool):
     input_schema: MorphologyFeatureInput
     metadata: MorphologyFeatureMetadata
 
-    async def arun(self) -> list[MorphologyFeatureOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """Give features about morphology."""
         logger.info(
             f"Entering morphology feature tool. Inputs: {self.input_schema.morphology_id=}"
@@ -71,7 +71,7 @@ class MorphologyFeatureTool(BaseTool):
         return [
             MorphologyFeatureOutput(
                 brain_region=metadata.brain_region, feature_dict=features
-            )
+            ).model_dump()
         ]
 
     def get_features(self, morphology_content: bytes, reader: str) -> dict[str, Any]:

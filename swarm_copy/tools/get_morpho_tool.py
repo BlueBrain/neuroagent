@@ -71,7 +71,7 @@ class GetMorphoTool(BaseTool):
     input_schema: GetMorphoInput
     metadata: GetMorphoMetadata
 
-    async def arun(self) -> list[KnowledgeGraphOutput]:
+    async def arun(self) -> list[dict[str, Any]]:
         """From a brain region ID, extract morphologies.
 
         Returns
@@ -176,7 +176,7 @@ class GetMorphoTool(BaseTool):
         return entire_query
 
     @staticmethod
-    def _process_output(output: Any) -> list[KnowledgeGraphOutput]:
+    def _process_output(output: Any) -> list[dict[str, Any]]:
         """Process output to fit the KnowledgeGraphOutput pydantic class defined above.
 
         Parameters
@@ -212,7 +212,7 @@ class GetMorphoTool(BaseTool):
                     if "subjectAge" in res["_source"]
                     else None
                 ),
-            )
+            ).model_dump()
             for res in output["hits"]["hits"]
         ]
         return formatted_output
