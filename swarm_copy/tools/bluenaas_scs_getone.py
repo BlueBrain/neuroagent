@@ -1,7 +1,7 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -39,7 +39,7 @@ class SCSGetOneTool(BaseTool):
     metadata: SCSGetOneMetadata
     input_schema: InputSCSGetOne
 
-    async def arun(self) -> SimulationDetailsResponse:
+    async def arun(self) -> dict[str, Any]:
         """Run the SCSGetOne tool."""
         logger.info(
             f"Running SCSGetOne tool with inputs {self.input_schema.model_dump()}"
@@ -50,4 +50,4 @@ class SCSGetOneTool(BaseTool):
             headers={"Authorization": f"Bearer {self.metadata.token}"},
         )
 
-        return SimulationDetailsResponse(**response.json())
+        return SimulationDetailsResponse(**response.json()).model_dump()

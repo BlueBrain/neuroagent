@@ -1,7 +1,7 @@
 """BlueNaaS single cell stimulation, simulation and synapse placement tool."""
 
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 from urllib.parse import quote_plus
 
 from pydantic import BaseModel, Field
@@ -38,7 +38,7 @@ class MEModelGetOneTool(BaseTool):
     metadata: MEModelGetOneMetadata
     input_schema: InputMEModelGetOne
 
-    async def arun(self) -> MEModelResponse:
+    async def arun(self) -> dict[str, Any]:
         """Run the MEModelGetOne tool."""
         logger.info(
             f"Running MEModelGetOne tool with inputs {self.input_schema.model_dump()}"
@@ -49,4 +49,4 @@ class MEModelGetOneTool(BaseTool):
             headers={"Authorization": f"Bearer {self.metadata.token}"},
         )
 
-        return MEModelResponse(**response.json())
+        return MEModelResponse(**response.json()).model_dump()
