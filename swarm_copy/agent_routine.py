@@ -222,7 +222,7 @@ class AgentsRoutine:
     ) -> AsyncIterator[str | Response]:
         """Stream the agent response."""
         active_agent = agent
-        context_variables = copy.deepcopy(context_variables)
+
         history = copy.deepcopy(messages)
         init_len = len(messages)
         is_streaming = False
@@ -251,7 +251,7 @@ class AgentsRoutine:
                 stream=True,
             )
             async for chunk in completion:  # type: ignore
-                delta = json.loads(chunk.choices[0].delta.json())
+                delta = json.loads(chunk.choices[0].delta.model_dump_json())
 
                 # Check for tool calls
                 if delta["tool_calls"]:

@@ -5,9 +5,9 @@ from typing import Any, AsyncIterator
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from swarm_copy.agent_routine import AgentsRoutine
 from swarm_copy.app.database.db_utils import save_history
 from swarm_copy.new_types import Agent, Response
-from swarm_copy.run import AgentsRoutine
 
 
 async def stream_agent_response(

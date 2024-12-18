@@ -19,7 +19,7 @@ async def test_simple_agent_arun(fake_llm_with_tools, httpx_mock):
         json=knowledge_graph_response,
     )
 
-    llm, tools, _ = await anext(fake_llm_with_tools)
+    llm, tools, _ = fake_llm_with_tools
     simple_agent = SimpleAgent(llm=llm, tools=tools)
 
     response = await simple_agent.arun(query="Call get_morpho with thalamus.")
@@ -44,7 +44,7 @@ async def test_simple_agent_astream(fake_llm_with_tools, httpx_mock):
         json=knowledge_graph_response,
     )
 
-    llm, tools, _ = await anext(fake_llm_with_tools)
+    llm, tools, _ = fake_llm_with_tools
     simple_agent = SimpleAgent(llm=llm, tools=tools)
 
     response_chunks = simple_agent.astream("Call get_morpho with thalamus.")
