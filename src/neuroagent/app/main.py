@@ -10,7 +10,9 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import AsyncClient
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from neuroagent import __version__
 from neuroagent.app.app_utils import setup_engine
 from neuroagent.app.config import Settings
 from neuroagent.app.database.sql_schemas import Base
@@ -21,6 +23,7 @@ from neuroagent.app.dependencies import (
     get_settings,
     get_update_kg_hierarchy,
 )
+from neuroagent.app.middleware import strip_path_prefix
 from neuroagent.app.routers import qa, threads, tools
 
 LOGGING = {
@@ -75,6 +78,21 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
+    prefix = app_settings.misc.application_prefix
+    fastapi_app.openapi_url = f"{prefix}/openapi.json"
+    fastapi_app.servers = [{"url": prefix}]
+
+    # Do not rely on the middleware order in the list "fastapi_app.user_middleware" since this is subject to changes.
+    try:
+        cors_middleware = filter(
+            lambda x: x.__dict__["cls"] == CORSMiddleware, fastapi_app.user_middleware
+        ).__next__()
+        cors_middleware.kwargs["allow_origins"] = (
+            app_settings.misc.cors_origins.replace(" ", "").split(",")
+        )
+    except StopIteration:
+        pass
+
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
     logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
     logging.getLogger("bluepyefe").setLevel("CRITICAL")
@@ -103,7 +121,7 @@ app = FastAPI(
         "Use an AI agent to answer queries based on the knowledge graph, literature"
         " search and neuroM."
     ),
-    version="0.0.0",
+    version=__version__,
     swagger_ui_parameters={"tryItOutEnabled": True},
     lifespan=lifespan,
 )
@@ -122,7 +140,7 @@ app.add_middleware(
     generator=lambda: uuid4().hex,
     transformer=lambda a: a,
 )
-
+app.add_middleware(BaseHTTPMiddleware, dispatch=strip_path_prefix)
 
 app.include_router(qa.router)
 app.include_router(threads.router)
