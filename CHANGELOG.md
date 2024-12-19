@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - app unit tests
 - Tests of AgentsRoutine.
 - Unit tests for database
+- Tests for tool CRUD endpoints.
 
 ### Fixed
 - Migrate LLM Evaluation logic to scripts and add tests
