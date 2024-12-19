@@ -106,6 +106,6 @@ async def get_tool_returns(
     for msg in tool_messages:
         msg_content = json.loads(msg.content)
         if msg_content.get("tool_call_id") == tool_call_id:
-            tool_output.append(msg_content)
+            tool_output.append(msg_content["content"])
 
     return tool_output
