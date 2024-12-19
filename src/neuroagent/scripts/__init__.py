@@ -1,1 +1,1 @@
-"""Neuroagent scripts."""
+"""Scripts."""

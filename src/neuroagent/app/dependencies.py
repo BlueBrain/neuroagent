@@ -1,4 +1,4 @@
-"""Dependencies."""
+"""App dependencies."""
 
 import logging
 from functools import cache
@@ -8,35 +8,30 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from httpx import AsyncClient, HTTPStatusError
 from keycloak import KeycloakOpenID
-from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.base import BaseCheckpointSaver
+from openai import AsyncOpenAI
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from neuroagent.agents import (
-    BaseAgent,
-    SimpleAgent,
-    SimpleChatAgent,
-)
-from neuroagent.agents.base_agent import (
-    AsyncPostgresSaverWithPrefix,
-    AsyncSqliteSaverWithPrefix,
-)
+from neuroagent.agent_routine import AgentsRoutine
 from neuroagent.app.app_utils import validate_project
 from neuroagent.app.config import Settings
-from neuroagent.app.routers.database.schemas import Threads
+from neuroagent.app.database.sql_schemas import Threads
 from neuroagent.cell_types import CellTypesMeta
-from neuroagent.multi_agents import BaseMultiAgent, SupervisorMultiAgent
+from neuroagent.new_types import Agent
 from neuroagent.tools import (
-    BlueNaaSTool,
     ElectrophysFeatureTool,
-    GetMEModelTool,
     GetMorphoTool,
     GetTracesTool,
     KGMorphoFeatureTool,
     LiteratureSearchTool,
+    MEModelGetAllTool,
+    MEModelGetOneTool,
     MorphologyFeatureTool,
     ResolveEntitiesTool,
+    SCSGetAllTool,
+    SCSGetOneTool,
+    SCSPostTool,
 )
 from neuroagent.utils import RegionMeta, get_file_from_KG
 
@@ -57,10 +52,7 @@ auth = HTTPBearerDirect(auto_error=False)
 
 @cache
 def get_settings() -> Settings:
-    """Load all parameters.
-
-    Note that this function is cached and environment will be read just once.
-    """
+    """Get the global settings."""
     logger.info("Reading the environment and instantiating settings")
     return Settings()
 
@@ -72,7 +64,24 @@ async def get_httpx_client(request: Request) -> AsyncIterator[AsyncClient]:
         verify=False,
         headers={"x-request-id": request.headers["x-request-id"]},
     )
-    yield client
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+async def get_openai_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AsyncIterator[AsyncOpenAI | None]:
+    """Get the OpenAi Async client."""
+    if not settings.openai.token:
+        yield None
+    else:
+        try:
+            client = AsyncOpenAI(api_key=settings.openai.token.get_secret_value())
+            yield client
+        finally:
+            await client.close()
 
 
 def get_connection_string(
@@ -126,19 +135,22 @@ async def get_user_id(
     httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
 ) -> str:
     """Validate JWT token and returns user ID."""
-    if settings.keycloak.validate_token and settings.keycloak.user_info_endpoint:
-        try:
-            response = await httpx_client.get(
-                settings.keycloak.user_info_endpoint,
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            response.raise_for_status()
-            user_info = response.json()
-            return user_info["sub"]
-        except HTTPStatusError:
-            raise HTTPException(
-                status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
-            )
+    if settings.keycloak.validate_token:
+        if settings.keycloak.user_info_endpoint:
+            try:
+                response = await httpx_client.get(
+                    settings.keycloak.user_info_endpoint,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                response.raise_for_status()
+                user_info = response.json()
+                return user_info["sub"]
+            except HTTPStatusError:
+                raise HTTPException(
+                    status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token."
+                )
+        else:
+            raise HTTPException(status_code=404, detail="user info url not provided.")
     else:
         return "dev"
 
@@ -162,214 +174,6 @@ def get_kg_token(
         )["access_token"]
 
 
-def get_bluenaas_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> BlueNaaSTool:
-    """Load BlueNaaS tool."""
-    tool = BlueNaaSTool(
-        metadata={
-            "url": settings.tools.bluenaas.url,
-            "token": token,
-            "httpx_client": httpx_client,
-        }
-    )
-    return tool
-
-
-def get_literature_tool(
-    token: Annotated[str, Depends(get_kg_token)],
-    settings: Annotated[Settings, Depends(get_settings)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> LiteratureSearchTool:
-    """Load literature tool."""
-    tool = LiteratureSearchTool(
-        metadata={
-            "url": settings.tools.literature.url,
-            "httpx_client": httpx_client,
-            "token": token,
-            "retriever_k": settings.tools.literature.retriever_k,
-            "reranker_k": settings.tools.literature.reranker_k,
-            "use_reranker": settings.tools.literature.use_reranker,
-        }
-    )
-    return tool
-
-
-def get_entities_resolver_tool(
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> ResolveEntitiesTool:
-    """Load resolve brain region tool."""
-    tool = ResolveEntitiesTool(
-        metadata={
-            "token": token,
-            "httpx_client": httpx_client,
-            "kg_sparql_url": settings.knowledge_graph.sparql_url,
-            "kg_class_view_url": settings.knowledge_graph.class_view_url,
-        }
-    )
-    return tool
-
-
-def get_morpho_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> GetMorphoTool:
-    """Load get morpho tool."""
-    tool = GetMorphoTool(
-        metadata={
-            "url": settings.knowledge_graph.url,
-            "token": token,
-            "httpx_client": httpx_client,
-            "search_size": settings.tools.morpho.search_size,
-            "brainregion_path": settings.knowledge_graph.br_saving_path,
-            "celltypes_path": settings.knowledge_graph.ct_saving_path,
-        }
-    )
-    return tool
-
-
-def get_kg_morpho_feature_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> KGMorphoFeatureTool:
-    """Load knowledge graph tool."""
-    tool = KGMorphoFeatureTool(
-        metadata={
-            "url": settings.knowledge_graph.url,
-            "token": token,
-            "httpx_client": httpx_client,
-            "search_size": settings.tools.kg_morpho_features.search_size,
-            "brainregion_path": settings.knowledge_graph.br_saving_path,
-        }
-    )
-    return tool
-
-
-def get_traces_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> GetTracesTool:
-    """Load knowledge graph tool."""
-    tool = GetTracesTool(
-        metadata={
-            "url": settings.knowledge_graph.url,
-            "token": token,
-            "httpx_client": httpx_client,
-            "search_size": settings.tools.trace.search_size,
-            "brainregion_path": settings.knowledge_graph.br_saving_path,
-        }
-    )
-    return tool
-
-
-def get_electrophys_feature_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> ElectrophysFeatureTool:
-    """Load morphology features tool."""
-    tool = ElectrophysFeatureTool(
-        metadata={
-            "url": settings.knowledge_graph.url,
-            "token": token,
-            "httpx_client": httpx_client,
-        }
-    )
-    return tool
-
-
-def get_morphology_feature_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> MorphologyFeatureTool:
-    """Load morphology features tool."""
-    tool = MorphologyFeatureTool(
-        metadata={
-            "url": settings.knowledge_graph.url,
-            "token": token,
-            "httpx_client": httpx_client,
-        }
-    )
-    return tool
-
-
-def get_me_model_tool(
-    settings: Annotated[Settings, Depends(get_settings)],
-    token: Annotated[str, Depends(get_kg_token)],
-    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
-) -> GetMEModelTool:
-    """Load get ME model tool."""
-    tool = GetMEModelTool(
-        metadata={
-            "url": settings.knowledge_graph.url,
-            "token": token,
-            "httpx_client": httpx_client,
-            "search_size": settings.tools.me_model.search_size,
-            "brainregion_path": settings.knowledge_graph.br_saving_path,
-            "celltypes_path": settings.knowledge_graph.ct_saving_path,
-        }
-    )
-    return tool
-
-
-def get_language_model(
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> ChatOpenAI:
-    """Get the language model."""
-    logger.info(f"OpenAI selected. Loading model {settings.openai.model}.")
-    return ChatOpenAI(
-        model_name=settings.openai.model,
-        temperature=settings.openai.temperature,
-        openai_api_key=settings.openai.token.get_secret_value(),  # type: ignore
-        max_tokens=settings.openai.max_tokens,
-        seed=78,
-        streaming=True,
-    )
-
-
-async def get_agent_memory(
-    connection_string: Annotated[str | None, Depends(get_connection_string)],
-) -> AsyncIterator[BaseCheckpointSaver[Any] | None]:
-    """Get the agent checkpointer."""
-    if connection_string:
-        if connection_string.startswith("sqlite"):
-            async with AsyncSqliteSaverWithPrefix.from_conn_string(
-                connection_string
-            ) as memory:
-                await memory.setup()
-                yield memory
-                await memory.conn.close()
-
-        elif connection_string.startswith("postgresql"):
-            async with AsyncPostgresSaverWithPrefix.from_conn_string(
-                connection_string
-            ) as memory:
-                await memory.setup()
-                yield memory
-                await memory.conn.close()
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "details": (
-                        f"Database of type {connection_string.split(':')[0]} is not"
-                        " supported."
-                    )
-                },
-            )
-    else:
-        logger.warning("The SQL db_prefix needs to be set to use the SQL DB.")
-        yield None
-
-
 async def get_vlab_and_project(
     user_id: Annotated[str, Depends(get_user_id)],
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -386,12 +190,22 @@ async def get_vlab_and_project(
         }
     elif not settings.keycloak.validate_token:
         vlab_and_project = {
-            "vlab_id": "430108e9-a81d-4b13-b7b6-afca00195908",
-            "project_id": "eff09ea1-be16-47f0-91b6-52a3ea3ee575",
+            "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",
+            "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",
         }
     else:
         thread_id = request.path_params.get("thread_id")
-        thread = await session.get(Threads, (thread_id, user_id))
+        thread_result = await session.execute(
+            select(Threads).where(
+                Threads.user_id == user_id, Threads.thread_id == thread_id
+            )
+        )
+        thread = thread_result.scalars().one_or_none()
+        if not thread:
+            raise HTTPException(
+                status_code=404,
+                detail="Thread not found.",
+            )
         if thread and thread.vlab_id and thread.project_id:
             vlab_and_project = {
                 "vlab_id": thread.vlab_id,
@@ -413,97 +227,71 @@ async def get_vlab_and_project(
     return vlab_and_project
 
 
-def get_agent(
+def get_starting_agent(
     _: Annotated[None, Depends(get_vlab_and_project)],
-    llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
-    entities_resolver_tool: Annotated[
-        ResolveEntitiesTool, Depends(get_entities_resolver_tool)
-    ],
-    morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
-    morphology_feature_tool: Annotated[
-        MorphologyFeatureTool, Depends(get_morphology_feature_tool)
-    ],
-    kg_morpho_feature_tool: Annotated[
-        KGMorphoFeatureTool, Depends(get_kg_morpho_feature_tool)
-    ],
-    electrophys_feature_tool: Annotated[
-        ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
-    ],
-    traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
-    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
-    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> BaseAgent | BaseMultiAgent:
-    """Get the generative question answering service."""
-    if settings.agent.model == "multi":
-        logger.info("Load multi-agent chat")
-        tools_list = [
-            ("literature", [literature_tool]),
-            (
-                "morphologies",
-                [
-                    entities_resolver_tool,
-                    morpho_tool,
-                    morphology_feature_tool,
-                    kg_morpho_feature_tool,
-                ],
-            ),
-            ("traces", [entities_resolver_tool, electrophys_feature_tool, traces_tool]),
-        ]
-        return SupervisorMultiAgent(llm=llm, agents=tools_list)  # type: ignore
-    else:
-        tools = [
-            literature_tool,
-            entities_resolver_tool,
-            morpho_tool,
-            morphology_feature_tool,
-            kg_morpho_feature_tool,
-            electrophys_feature_tool,
-            traces_tool,
-            me_model_tool,
-            bluenaas_tool,
-        ]
-        logger.info("Load simple agent")
-        return SimpleAgent(llm=llm, tools=tools)  # type: ignore
+) -> Agent:
+    """Get the starting agent."""
+    logger.info(f"Loading model {settings.openai.model}.")
+    agent = Agent(
+        name="Agent",
+        instructions="""You are a helpful assistant helping scientists with neuro-scientific questions.
+                You must always specify in your answers from which brain regions the information is extracted.
+                Do no blindly repeat the brain region requested by the user, use the output of the tools instead.""",
+        tools=[
+            SCSGetAllTool,
+            SCSGetOneTool,
+            SCSPostTool,
+            MEModelGetAllTool,
+            MEModelGetOneTool,
+            LiteratureSearchTool,
+            ElectrophysFeatureTool,
+            GetMorphoTool,
+            KGMorphoFeatureTool,
+            MorphologyFeatureTool,
+            ResolveEntitiesTool,
+            GetTracesTool,
+        ],
+        model=settings.openai.model,
+    )
+    return agent
 
 
-def get_chat_agent(
-    _: Annotated[None, Depends(get_vlab_and_project)],
-    llm: Annotated[ChatOpenAI, Depends(get_language_model)],
-    memory: Annotated[BaseCheckpointSaver[Any], Depends(get_agent_memory)],
-    bluenaas_tool: Annotated[BlueNaaSTool, Depends(get_bluenaas_tool)],
-    literature_tool: Annotated[LiteratureSearchTool, Depends(get_literature_tool)],
-    entities_resolver_tool: Annotated[
-        ResolveEntitiesTool, Depends(get_entities_resolver_tool)
-    ],
-    morpho_tool: Annotated[GetMorphoTool, Depends(get_morpho_tool)],
-    morphology_feature_tool: Annotated[
-        MorphologyFeatureTool, Depends(get_morphology_feature_tool)
-    ],
-    me_model_tool: Annotated[GetMEModelTool, Depends(get_me_model_tool)],
-    kg_morpho_feature_tool: Annotated[
-        KGMorphoFeatureTool, Depends(get_kg_morpho_feature_tool)
-    ],
-    electrophys_feature_tool: Annotated[
-        ElectrophysFeatureTool, Depends(get_electrophys_feature_tool)
-    ],
-    traces_tool: Annotated[GetTracesTool, Depends(get_traces_tool)],
-) -> BaseAgent:
-    """Get the generative question answering service."""
-    logger.info("Load simple chat")
-    tools = [
-        bluenaas_tool,
-        literature_tool,
-        entities_resolver_tool,
-        me_model_tool,
-        morpho_tool,
-        morphology_feature_tool,
-        kg_morpho_feature_tool,
-        electrophys_feature_tool,
-        traces_tool,
-    ]
-    return SimpleChatAgent(llm=llm, tools=tools, memory=memory)  # type: ignore
+def get_context_variables(
+    settings: Annotated[Settings, Depends(get_settings)],
+    starting_agent: Annotated[Agent, Depends(get_starting_agent)],
+    token: Annotated[str, Depends(get_kg_token)],
+    httpx_client: Annotated[AsyncClient, Depends(get_httpx_client)],
+) -> dict[str, Any]:
+    """Get the global context variables to feed the tool's metadata."""
+    return {
+        "starting_agent": starting_agent,
+        "token": token,
+        "vlab_id": "32c83739-f39c-49d1-833f-58c981ebd2a2",  # New god account vlab. Replaced by actual id in endpoint for now. Meant for usage without history
+        "project_id": "123251a1-be18-4146-87b5-5ca2f8bfaf48",  # New god account proj. Replaced by actual id in endpoint for now. Meant for usage without history
+        "retriever_k": settings.tools.literature.retriever_k,
+        "reranker_k": settings.tools.literature.reranker_k,
+        "use_reranker": settings.tools.literature.use_reranker,
+        "literature_search_url": settings.tools.literature.url,
+        "knowledge_graph_url": settings.knowledge_graph.url,
+        "me_model_search_size": settings.tools.me_model.search_size,
+        "brainregion_path": settings.knowledge_graph.br_saving_path,
+        "celltypes_path": settings.knowledge_graph.ct_saving_path,
+        "morpho_search_size": settings.tools.morpho.search_size,
+        "kg_morpho_feature_search_size": settings.tools.kg_morpho_features.search_size,
+        "trace_search_size": settings.tools.trace.search_size,
+        "kg_sparql_url": settings.knowledge_graph.sparql_url,
+        "kg_class_view_url": settings.knowledge_graph.class_view_url,
+        "bluenaas_url": settings.tools.bluenaas.url,
+        "httpx_client": httpx_client,
+    }
+
+
+def get_agents_routine(
+    openai: Annotated[AsyncOpenAI | None, Depends(get_openai_client)],
+) -> AgentsRoutine:
+    """Get the AgentRoutine client."""
+    return AgentsRoutine(openai)
 
 
 async def get_update_kg_hierarchy(

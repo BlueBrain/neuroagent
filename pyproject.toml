@@ -17,13 +17,8 @@ dependencies = [
     "bluepyefe",
     "efel",
     "fastapi",
-    "langchain",
-    "langchain-cohere",
-    "langchain-openai",
-    "langgraph",
-    "langgraph-checkpoint-postgres",
-    "langgraph-checkpoint-sqlite",
     "neurom",
+    "openai",
     "psycopg-binary",
     "pydantic-settings",
     "python-dotenv",
@@ -75,7 +70,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
-"swarm_copy_tests/*" = ["D"]
+"alembic/*" = ["D", "E"]
 
 [tool.mypy]
 mypy_path = "src"

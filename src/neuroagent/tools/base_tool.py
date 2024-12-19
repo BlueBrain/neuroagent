@@ -1,13 +1,14 @@
-"""Base tool (to handle errors)."""
+"""Base tool."""
 
-import json
 import logging
-from typing import Any, Literal
+from abc import ABC, abstractmethod
+from typing import Any, ClassVar, Literal
 
-from langchain_core.tools import BaseTool, ToolException
-from pydantic import BaseModel, ValidationError, model_validator
+from httpx import AsyncClient
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
+
 
 EtypesLiteral = Literal[
     "bSTUT",
@@ -53,75 +54,37 @@ ETYPE_IDS = {
 }
 
 
-def process_validation_error(error: ValidationError) -> str:
-    """Handle validation errors when tool inputs are wrong."""
-    error_list = []
-    name = error.title
-    # We have to iterate, in case there are multiple errors.
-    try:
-        for err in error.errors():
-            if err["type"] == "literal_error":
-                error_list.append(
-                    {
-                        "Validation error": (
-                            f'Wrong value: provided {err["input"]} for input'
-                            f' {err["loc"][0]}. Try again and change this problematic'
-                            " input."
-                        )
-                    }
-                )
-            elif err["type"] == "missing":
-                error_list.append(
-                    {
-                        "Validation error": (
-                            f'Missing input : {err["loc"][0]}. Try again and add this'
-                            " input."
-                        )
-                    }
-                )
-            else:
-                error_list.append(
-                    {"Validation error": f'{err["loc"][0]}. {err["msg"]}'}
-                )
+class BaseMetadata(BaseModel):
+    """Base class for metadata."""
 
-    except (KeyError, IndexError) as e:
-        error_list.append({"Validation error": f"Error in {name} : {str(e)}"})
-        logger.error(
-            "UNTREATED ERROR !! PLEASE CONTACT ML TEAM AND FOWARD THEM THE REQUEST !!"
-        )
-
-    logger.warning(f"VALIDATION ERROR: Wrong input in {name}. {error_list}")
-
-    return json.dumps(error_list)
+    httpx_client: AsyncClient
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
-def process_tool_error(error: ToolException) -> str:
-    """Handle errors inside tools."""
-    logger.warning(
-        f"TOOL ERROR: Error in tool {error.args[1]}. Error: {str(error.args[0])}"
-    )
-    dict_output = {error.args[1]: error.args[0]}
-    return json.dumps(dict_output)
+class BaseTool(BaseModel, ABC):
+    """Base class for the tools."""
 
+    name: ClassVar[str]
+    description: ClassVar[str]
+    metadata: BaseMetadata
+    input_schema: BaseModel
 
-class BasicTool(BaseTool):
-    """Basic class for tools."""
-
-    name: str = "base"
-    description: str = "Base tool from which regular tools should inherit."
-
-    @model_validator(mode="before")
     @classmethod
-    def handle_errors(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Instantiate the clients upon class creation."""
-        data["handle_validation_error"] = process_validation_error
-        data["handle_tool_error"] = process_tool_error
-        return data
+    def pydantic_to_openai_schema(cls) -> dict[str, Any]:
+        """Convert pydantic schema to OpenAI json."""
+        new_retval: dict[str, Any] = {
+            "type": "function",
+            "function": {
+                "name": cls.name,
+                "description": cls.description,
+                "strict": False,
+                "parameters": cls.__annotations__["input_schema"].model_json_schema(),
+            },
+        }
+        new_retval["function"]["parameters"]["additionalProperties"] = False
 
+        return new_retval
 
-class BaseToolOutput(BaseModel):
-    """Base class for tool outputs."""
-
-    def __repr__(self) -> str:
-        """Representation method."""
-        return self.model_dump_json()
+    @abstractmethod
+    async def arun(self) -> Any:
+        """Run the tool."""

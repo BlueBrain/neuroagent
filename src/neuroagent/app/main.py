@@ -1,4 +1,4 @@
-"""FastAPI for the Agent."""
+"""Main."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -10,23 +10,18 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import AsyncClient
-from starlette.middleware.base import BaseHTTPMiddleware
 
-from neuroagent import __version__
 from neuroagent.app.app_utils import setup_engine
 from neuroagent.app.config import Settings
+from neuroagent.app.database.sql_schemas import Base
 from neuroagent.app.dependencies import (
-    get_agent_memory,
     get_cell_types_kg_hierarchy,
     get_connection_string,
     get_kg_token,
     get_settings,
     get_update_kg_hierarchy,
 )
-from neuroagent.app.middleware import strip_path_prefix
-from neuroagent.app.routers import qa
-from neuroagent.app.routers.database import threads, tools
-from neuroagent.app.routers.database.schemas import Base, Threads  # noqa: F401
+from neuroagent.app.routers import qa, threads, tools
 
 LOGGING = {
     "version": 1,
@@ -69,39 +64,16 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager  # type: ignore
 async def lifespan(fastapi_app: FastAPI) -> AsyncContextManager[None]:  # type: ignore
     """Read environment (settings of the application)."""
-    # hacky but works: https://github.com/tiangolo/fastapi/issues/425
     app_settings = fastapi_app.dependency_overrides.get(get_settings, get_settings)()
 
-    # Get the sqlalchemy engine
-    conn_string = get_connection_string(app_settings)
-    engine = setup_engine(app_settings, conn_string)
-
-    # Store it in the state
+    # Get the sqlalchemy engine and store it in app state.
+    engine = setup_engine(app_settings, get_connection_string(app_settings))
     fastapi_app.state.engine = engine
 
-    # Create the checkpoints and writes tables.
-    await anext(
-        fastapi_app.dependency_overrides.get(get_agent_memory, get_agent_memory)(
-            get_connection_string(app_settings)
-        )
-    )
+    # Create the tables for the agent memory.
     if engine:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-
-    prefix = app_settings.misc.application_prefix
-    fastapi_app.openapi_url = f"{prefix}/openapi.json"
-    fastapi_app.servers = [{"url": prefix}]
-    # Do not rely on the middleware order in the list "fastapi_app.user_middleware" since this is subject to changes.
-    try:
-        cors_middleware = filter(
-            lambda x: x.__dict__["cls"] == CORSMiddleware, fastapi_app.user_middleware
-        ).__next__()
-        cors_middleware.kwargs["allow_origins"] = (
-            app_settings.misc.cors_origins.replace(" ", "").split(",")
-        )
-    except StopIteration:
-        pass
 
     logging.getLogger().setLevel(app_settings.logging.external_packages.upper())
     logging.getLogger("neuroagent").setLevel(app_settings.logging.level.upper())
@@ -131,7 +103,7 @@ app = FastAPI(
         "Use an AI agent to answer queries based on the knowledge graph, literature"
         " search and neuroM."
     ),
-    version=__version__,
+    version="0.0.0",
     swagger_ui_parameters={"tryItOutEnabled": True},
     lifespan=lifespan,
 )
@@ -150,7 +122,7 @@ app.add_middleware(
     generator=lambda: uuid4().hex,
     transformer=lambda a: a,
 )
-app.add_middleware(BaseHTTPMiddleware, dispatch=strip_path_prefix)
+
 
 app.include_router(qa.router)
 app.include_router(threads.router)
