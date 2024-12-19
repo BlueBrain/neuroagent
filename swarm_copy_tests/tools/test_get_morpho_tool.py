@@ -69,3 +69,107 @@ class TestGetMorphoTool:
             await tool.arun()
 
         assert tool_exception.value.args[0] == "hits"
+
+
+def test_create_query(brain_region_json_path, tmp_path):
+    url = "http://fake_url"
+
+    tool = GetMorphoTool(
+        input_schema=GetMorphoInput(
+            brain_region_id="not_needed",
+            mtype_id="not_needed",
+        ),
+        metadata=GetMorphoMetadata(
+                knowledge_graph_url=url,
+                morpho_search_size=2,
+                httpx_client=httpx.AsyncClient(),
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                celltypes_path=tmp_path
+            )
+    )
+
+    # This should be a set, but passing a list here ensures that the test doesn;t rely on order.
+    brain_regions_ids = ["brain-region-id/68", "brain-region-id/131"]
+    mtype_id = "mtype-id/1234"
+
+    entire_query = tool.create_query(
+        brain_regions_ids=brain_regions_ids, mtype_ids={mtype_id}
+    )
+    expected_query = {
+        "size": 2,
+        "track_total_hits": True,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "term": {
+                                        "brainRegion.@id.keyword": "brain-region-id/68"
+                                    }
+                                },
+                                {
+                                    "term": {
+                                        "brainRegion.@id.keyword": "brain-region-id/131"
+                                    }
+                                },
+                            ]
+                        }
+                    },
+                    {"bool": {"should": [{"term": {"mType.@id.keyword": mtype_id}}]}},
+                    {
+                        "term": {
+                            "@type.keyword": (
+                                "https://neuroshapes.org/ReconstructedNeuronMorphology"
+                            )
+                        }
+                    },
+                    {"term": {"deprecated": False}},
+                    {"term": {"curated": True}},
+                ]
+            }
+        },
+    }
+    assert isinstance(entire_query, dict)
+    assert entire_query == expected_query
+
+    # Case 2 with no mtype
+    entire_query1 = tool.create_query(brain_regions_ids=brain_regions_ids)
+    expected_query1 = {
+        "size": 2,
+        "track_total_hits": True,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "term": {
+                                        "brainRegion.@id.keyword": "brain-region-id/68"
+                                    }
+                                },
+                                {
+                                    "term": {
+                                        "brainRegion.@id.keyword": "brain-region-id/131"
+                                    }
+                                },
+                            ]
+                        }
+                    },
+                    {
+                        "term": {
+                            "@type.keyword": (
+                                "https://neuroshapes.org/ReconstructedNeuronMorphology"
+                            )
+                        }
+                    },
+                    {"term": {"deprecated": False}},
+                    {"term": {"curated": True}},
+                ]
+            }
+        },
+    }
+    assert entire_query1 == expected_query1
