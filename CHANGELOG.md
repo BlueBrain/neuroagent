@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LLM evaluation logic
 - Integrated Alembic for managing chat history migrations
 - Tool implementations without langchain or langgraph dependencies
+- Unit tests for the migrated tools
 - CRUDs.
 - BlueNaas CRUD tools
 - Cell types, resolving and utils tests
