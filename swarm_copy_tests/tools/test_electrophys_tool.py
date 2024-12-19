@@ -61,9 +61,9 @@ class TestElectrophysTool:
         )
         response = await tool.arun()
         assert isinstance(response, dict)
-        assert len(response.keys()) == 1
+        assert len(response["feature_dict"].keys()) == 1
         assert (
-            len(response["step_0"].keys())
+            len(response["feature_dict"]["step_0"].keys())
             == 2  # mean_frequency + 1 for stimulus current added manually
         )
 
@@ -112,9 +112,9 @@ class TestElectrophysTool:
         )
         response = await tool.arun()
         assert isinstance(response, dict)
-        assert len(response.keys()) == 1
+        assert len(response["feature_dict"].keys()) == 1
         assert (
-            len(response["step_0.25"].keys())
+            len(response["feature_dict"]["step_0.25"].keys())
             == 2  # mean_frequency + 1 for stimulus current added manually
         )
 
@@ -163,9 +163,9 @@ class TestElectrophysTool:
         # Without stimuli types and calculated features
         response = await tool.arun()
         assert isinstance(response, dict)
-        assert len(response.keys()) == 1
+        assert len(response["feature_dict"].keys()) == 1
         assert (
-            len(response["step_0"].keys())
+            len(response["feature_dict"]["step_0"].keys())
             == len(list(CALCULATED_FEATURES.__args__[0].__args__))
             + 1  # 1 for stimulus current added manually
         )

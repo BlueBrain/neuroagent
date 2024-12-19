@@ -50,7 +50,7 @@ class TestMorphologyFeatureTool:
 
         response = await tool.arun()
         assert isinstance(response[0], dict)
-        assert len(response[0]) == 23
+        assert len(response[0]["feature_dict"]) == 23
 
     @pytest.mark.asyncio
     async def test_arun_errors_404(self, httpx_mock):
