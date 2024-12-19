@@ -1,6 +1,7 @@
 """KG Morpho Feature tool."""
 
 import logging
+from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -151,7 +152,7 @@ class KGMorphoFeatureMetadata(BaseMetadata):
     knowledge_graph_url: str
     token: str
     kg_morpho_feature_search_size: int
-    brainregion_path: str
+    brainregion_path: str | Path
 
 
 class KGMorphoFeatureOutput(BaseModel):
