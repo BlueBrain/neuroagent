@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from swarm_copy.tools import GetMorphoTool
-from swarm_copy.tools.get_morpho_tool import KnowledgeGraphOutput, GetMorphoInput, GetMorphoMetadata
+from swarm_copy.tools.get_morpho_tool import GetMorphoInput, GetMorphoMetadata
 
 
 class TestGetMorphoTool:
@@ -27,7 +27,7 @@ class TestGetMorphoTool:
         tool = GetMorphoTool(
             input_schema=GetMorphoInput(
                 brain_region_id="brain_region_id_link/549",
-                mtype_id="brain_region_id_link/549"
+                mtype_id="brain_region_id_link/549",
             ),
             metadata=GetMorphoMetadata(
                 knowledge_graph_url=url,
@@ -35,8 +35,8 @@ class TestGetMorphoTool:
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                celltypes_path=tmp_path
-            )
+                celltypes_path=tmp_path,
+            ),
         )
         response = await tool.arun()
         assert isinstance(response, list)
@@ -62,8 +62,8 @@ class TestGetMorphoTool:
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                celltypes_path=tmp_path
-            )
+                celltypes_path=tmp_path,
+            ),
         )
         with pytest.raises(KeyError) as tool_exception:
             await tool.arun()
@@ -80,13 +80,13 @@ def test_create_query(brain_region_json_path, tmp_path):
             mtype_id="not_needed",
         ),
         metadata=GetMorphoMetadata(
-                knowledge_graph_url=url,
-                morpho_search_size=2,
-                httpx_client=httpx.AsyncClient(),
-                token="fake_token",
-                brainregion_path=brain_region_json_path,
-                celltypes_path=tmp_path
-            )
+            knowledge_graph_url=url,
+            morpho_search_size=2,
+            httpx_client=httpx.AsyncClient(),
+            token="fake_token",
+            brainregion_path=brain_region_json_path,
+            celltypes_path=tmp_path,
+        ),
     )
 
     # This should be a set, but passing a list here ensures that the test doesn;t rely on order.

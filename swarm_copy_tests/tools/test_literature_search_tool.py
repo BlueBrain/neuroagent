@@ -1,12 +1,13 @@
 """Tests Literature Search tool."""
 
-from unittest.mock import AsyncMock, Mock
-
 import httpx
 import pytest
 
 from swarm_copy.tools import LiteratureSearchTool
-from swarm_copy.tools.literature_search_tool import ParagraphMetadata, LiteratureSearchMetadata, LiteratureSearchInput
+from swarm_copy.tools.literature_search_tool import (
+    LiteratureSearchInput,
+    LiteratureSearchMetadata,
+)
 
 
 class TestLiteratureSearchTool:
@@ -41,7 +42,7 @@ class TestLiteratureSearchTool:
                 retriever_k=100,
                 use_reranker=True,
                 reranker_k=reranker_k,
-            )
+            ),
         )
         response = await tool.arun()
         assert isinstance(response, list)

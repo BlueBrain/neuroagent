@@ -7,7 +7,10 @@ import httpx
 import pytest
 
 from swarm_copy.tools import MorphologyFeatureTool
-from swarm_copy.tools.morphology_features_tool import MorphologyFeatureOutput, MorphologyFeatureMetadata, MorphologyFeatureInput
+from swarm_copy.tools.morphology_features_tool import (
+    MorphologyFeatureInput,
+    MorphologyFeatureMetadata,
+)
 
 
 class TestMorphologyFeatureTool:
@@ -45,7 +48,7 @@ class TestMorphologyFeatureTool:
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
             ),
-            input_schema=MorphologyFeatureInput(morphology_id=morphology_id)
+            input_schema=MorphologyFeatureInput(morphology_id=morphology_id),
         )
 
         response = await tool.arun()
@@ -63,7 +66,7 @@ class TestMorphologyFeatureTool:
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
             ),
-            input_schema=MorphologyFeatureInput(morphology_id=morphology_id)
+            input_schema=MorphologyFeatureInput(morphology_id=morphology_id),
         )
 
         # test different failures
@@ -92,7 +95,7 @@ class TestMorphologyFeatureTool:
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
             ),
-            input_schema=MorphologyFeatureInput(morphology_id=morphology_id)
+            input_schema=MorphologyFeatureInput(morphology_id=morphology_id),
         )
 
         # Failure 2

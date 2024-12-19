@@ -9,8 +9,9 @@ import pytest
 from swarm_copy.tools import KGMorphoFeatureTool
 from swarm_copy.tools.kg_morpho_features_tool import (
     KGFeatRangeInput,
-    KGMorphoFeatureOutput,
-    KGMorphoFeatureMetadata, KGFeatureInput, KGMorphoFeatureInput
+    KGFeatureInput,
+    KGMorphoFeatureInput,
+    KGMorphoFeatureMetadata,
 )
 
 
@@ -37,16 +38,15 @@ class TestKGMorphoFeaturesTool:
 
         tool = KGMorphoFeatureTool(
             input_schema=KGMorphoFeatureInput(
-                brain_region_id="brain_region_id_link/549",
-                features=feature_input
+                brain_region_id="brain_region_id_link/549", features=feature_input
             ),
             metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                httpx_client=httpx.AsyncClient()
-            )
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
         response = await tool.arun()
         assert isinstance(response, list)
@@ -68,16 +68,15 @@ class TestKGMorphoFeaturesTool:
         )
         tool = KGMorphoFeatureTool(
             input_schema=KGMorphoFeatureInput(
-                brain_region_id="brain_region_id_link/549",
-                features=feature_input
+                brain_region_id="brain_region_id_link/549", features=feature_input
             ),
             metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                httpx_client=httpx.AsyncClient()
-            )
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
 
         with pytest.raises(KeyError) as tool_exception:
@@ -96,16 +95,15 @@ class TestKGMorphoFeaturesTool:
 
         tool = KGMorphoFeatureTool(
             input_schema=KGMorphoFeatureInput(
-                brain_region_id="",
-                features=feature_input
+                brain_region_id="", features=feature_input
             ),
             metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                httpx_client=httpx.AsyncClient()
-            )
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
 
         entire_query = tool.create_query(
@@ -181,16 +179,15 @@ class TestKGMorphoFeaturesTool:
 
         tool = KGMorphoFeatureTool(
             input_schema=KGMorphoFeatureInput(
-                brain_region_id="",
-                features=feature_input
+                brain_region_id="", features=feature_input
             ),
             metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                httpx_client=httpx.AsyncClient()
-            )
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
 
         entire_query = tool.create_query(
@@ -275,16 +272,15 @@ class TestKGMorphoFeaturesTool:
 
         tool = KGMorphoFeatureTool(
             input_schema=KGMorphoFeatureInput(
-                brain_region_id="",
-                features=feature_input
+                brain_region_id="", features=feature_input
             ),
             metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                httpx_client=httpx.AsyncClient()
-            )
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
 
         brain_regions_ids = {"brain-region-id/68"}
@@ -370,16 +366,15 @@ class TestKGMorphoFeaturesTool:
 
         tool = KGMorphoFeatureTool(
             input_schema=KGMorphoFeatureInput(
-                brain_region_id="",
-                features=feature_input
+                brain_region_id="", features=feature_input
             ),
             metadata=KGMorphoFeatureMetadata(
                 knowledge_graph_url=url,
                 kg_morpho_feature_search_size=2,
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
-                httpx_client=httpx.AsyncClient()
-            )
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
 
         brain_regions_ids = {"brain-region-id/68"}

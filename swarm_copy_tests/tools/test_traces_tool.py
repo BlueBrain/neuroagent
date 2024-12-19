@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from swarm_copy.tools import GetTracesTool
-from swarm_copy.tools.traces_tool import TracesOutput, GetTracesMetadata, GetTracesInput
+from swarm_copy.tools.traces_tool import GetTracesInput, GetTracesMetadata
 
 
 class TestTracesTool:
@@ -32,9 +32,7 @@ class TestTracesTool:
                 token="fake_token",
                 brainregion_path=brain_region_json_path,
             ),
-            input_schema=GetTracesInput(
-                brain_region_id="brain_region_id_link/549"
-            )
+            input_schema=GetTracesInput(brain_region_id="brain_region_id_link/549"),
         )
 
         response = await tool.arun()
@@ -66,7 +64,7 @@ class TestTracesTool:
             ),
             input_schema=GetTracesInput(
                 brain_region_id="brain_region_id_link/549", etype_id="bAC_id/123"
-            )
+            ),
         )
         response = await tool.arun()
         assert isinstance(response, list)
@@ -89,11 +87,9 @@ class TestTracesTool:
                 trace_search_size=2,
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
-                brainregion_path=brain_region_json_path
+                brainregion_path=brain_region_json_path,
             ),
-            input_schema=GetTracesInput(
-                brain_region_id="brain_region_id_link/549"
-            )
+            input_schema=GetTracesInput(brain_region_id="brain_region_id_link/549"),
         )
         with pytest.raises(KeyError) as tool_exception:
             await tool.arun()
@@ -111,11 +107,11 @@ class TestTracesTool:
                 trace_search_size=2,
                 httpx_client=httpx.AsyncClient(),
                 token="fake_token",
-                brainregion_path=brain_region_json_path
+                brainregion_path=brain_region_json_path,
             ),
             input_schema=GetTracesInput(
                 brain_region_id="brain_region_id1", etype_id=etype_id
-            )
+            ),
         )
         entire_query = tool.create_query(
             brain_region_ids=brain_region_ids, etype_id=etype_id

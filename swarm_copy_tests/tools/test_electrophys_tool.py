@@ -7,11 +7,11 @@ import httpx
 import pytest
 
 from swarm_copy.tools import ElectrophysFeatureTool
-from swarm_copy.tools.electrophys_tool import ElectrophysMetadata, ElectrophysInput
 from swarm_copy.tools.electrophys_tool import (
     CALCULATED_FEATURES,
     AmplitudeInput,
-    FeatureOutput,
+    ElectrophysInput,
+    ElectrophysMetadata,
 )
 
 
@@ -51,13 +51,14 @@ class TestElectrophysTool:
                 calculated_feature=[
                     "mean_frequency",
                 ],
-                amplitude=None
+                amplitude=None,
             ),
             metadata=ElectrophysMetadata(
                 knowledge_graph_url=url,
                 search_size=2,
                 httpx_client=httpx.AsyncClient(),
-                token="fake_token")
+                token="fake_token",
+            ),
         )
         response = await tool.arun()
         assert isinstance(response, dict)
@@ -102,13 +103,14 @@ class TestElectrophysTool:
                 calculated_feature=[
                     "mean_frequency",
                 ],
-                amplitude=AmplitudeInput(min_value=-0.5, max_value=1)
+                amplitude=AmplitudeInput(min_value=-0.5, max_value=1),
             ),
             metadata=ElectrophysMetadata(
                 knowledge_graph_url=url,
                 search_size=2,
                 httpx_client=httpx.AsyncClient(),
-                token="fake_token")
+                token="fake_token",
+            ),
         )
         response = await tool.arun()
         assert isinstance(response, dict)
@@ -151,13 +153,14 @@ class TestElectrophysTool:
                     "step",
                 ],
                 calculated_feature=[],
-                amplitude=None
+                amplitude=None,
             ),
             metadata=ElectrophysMetadata(
                 knowledge_graph_url=url,
                 search_size=2,
                 httpx_client=httpx.AsyncClient(),
-                token="fake_token")
+                token="fake_token",
+            ),
         )
 
         # Without stimuli types and calculated features
@@ -184,13 +187,14 @@ class TestElectrophysTool:
                 calculated_feature=[
                     "mean_frequency",
                 ],
-                amplitude=None
+                amplitude=None,
             ),
             metadata=ElectrophysMetadata(
                 knowledge_graph_url=url,
                 search_size=2,
                 httpx_client=httpx.AsyncClient(),
-                token="fake_token")
+                token="fake_token",
+            ),
         )
 
         with pytest.raises(ValueError) as tool_exception:
@@ -200,4 +204,3 @@ class TestElectrophysTool:
             tool_exception.value.args[0]
             == "The provided ID (wrong-trace-id) is not valid."
         )
-
