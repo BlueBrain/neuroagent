@@ -106,6 +106,8 @@ async def test_get_messages(
             "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
         ).json()
         thread_id = create_output["thread_id"]
+        empty_messages = app_client.get(f"/threads/{thread_id}").json()
+        assert empty_messages == []
 
         # Fill the thread
         app_client.post(
@@ -113,13 +115,6 @@ async def test_get_messages(
             json={"query": "This is my query"},
             headers={"x-virtual-lab-id": "test_vlab", "x-project-id": "test_project"},
         )
-
-        create_output = app_client.post(
-            "/threads/?virtual_lab_id=test_vlab&project_id=test_project"
-        ).json()
-        empty_thread_id = create_output["thread_id"]
-        empty_messages = app_client.get(f"/threads/{empty_thread_id}").json()
-        assert empty_messages == []
 
         # Get the messages of the thread
         messages = app_client.get(f"/threads/{thread_id}").json()
