@@ -11,6 +11,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+    "aiohttp",
     "aiosqlite",
     "asgi-correlation-id",
     "asyncpg",
