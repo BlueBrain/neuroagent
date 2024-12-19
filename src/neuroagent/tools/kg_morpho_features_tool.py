@@ -1,13 +1,16 @@
 """KG Morpho Feature tool."""
 
 import logging
-from typing import Any, Literal, Type
+from pathlib import Path
+from typing import Any, ClassVar, Literal
 
-from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field, model_validator
 
-from neuroagent.tools.base_tool import BaseToolOutput, BasicTool
+from neuroagent.tools.base_tool import BaseMetadata, BaseTool
 from neuroagent.utils import get_descendants_id
+
+logger = logging.getLogger(__name__)
+
 
 LABEL = Literal[
     "Neurite Max Radial Distance",
@@ -95,17 +98,15 @@ STATISTICS = {
     "Soma Number Of Points": ["N"],
 }
 
-logger = logging.getLogger(__name__)
 
-
-class FeatRangeInput(BaseModel):
+class KGFeatRangeInput(BaseModel):
     """Features Range input class."""
 
     min_value: float | int | None = None
     max_value: float | int | None = None
 
 
-class FeatureInput(BaseModel):
+class KGFeatureInput(BaseModel):
     """Class defining the scheme of inputs the agent should use for the features."""
 
     label: LABEL
@@ -119,7 +120,7 @@ class FeatureInput(BaseModel):
             " user"
         ),
     )
-    feat_range: FeatRangeInput | None = None
+    feat_range: KGFeatRangeInput | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -132,11 +133,11 @@ class FeatureInput(BaseModel):
         return data_dict
 
 
-class InputKGMorphoFeatures(BaseModel):
-    """Inputs of the knowledge graph API when retrieving features of morphologies."""
+class KGMorphoFeatureInput(BaseModel):
+    """Input definition for MorphoFeatures."""
 
     brain_region_id: str = Field(description="ID of the brain region of interest.")
-    features: FeatureInput = Field(
+    features: KGFeatureInput = Field(
         description="""Definition of the feature and values expected by the user.
         The input consists of a dictionary with three keys. The first one is the label (or name) of the feature specified by the user.
         The second one is the compartment in which the feature is calculated. It MUST be None if not explicitly specified by the user.
@@ -145,7 +146,16 @@ class InputKGMorphoFeatures(BaseModel):
     )
 
 
-class KGMorphoFeatureOutput(BaseToolOutput):
+class KGMorphoFeatureMetadata(BaseMetadata):
+    """Metadata class for the morpho features tool."""
+
+    knowledge_graph_url: str
+    token: str
+    kg_morpho_feature_search_size: int
+    brainregion_path: str | Path
+
+
+class KGMorphoFeatureOutput(BaseModel):
     """Output schema for the knowledge graph API."""
 
     brain_region_id: str
@@ -157,11 +167,13 @@ class KGMorphoFeatureOutput(BaseToolOutput):
     features: dict[str, str]
 
 
-class KGMorphoFeatureTool(BasicTool):
+class KGMorphoFeatureTool(BaseTool):
     """Class defining the Knowledge Graph logic."""
 
-    name: str = "kg-morpho-feature-tool"
-    description: str = """Searches a neuroscience based knowledge graph to retrieve neuron morphology features based on a brain region of interest.
+    name: ClassVar[str] = "kg-morpho-feature-tool"
+    description: ClassVar[
+        str
+    ] = """Searches a neuroscience based knowledge graph to retrieve neuron morphology features based on a brain region of interest.
     Use this tool if and only if the user specifies explicitely certain features of morphology, and potentially the range of values expected.
     Requires a 'brain_region_id' and a dictionary with keys 'label' (and optionally 'compartment' and 'feat_range') describing the feature(s) specified by the user.
     The morphology ID is in the form of an HTTP(S) link such as 'https://bbp.epfl.ch/neurosciencegraph/data/neuronmorphologies...'.
@@ -172,63 +184,43 @@ class KGMorphoFeatureTool(BasicTool):
     - The morphology name.
     - The list of features of the morphology.
     If a given feature has multiple statistics (e.g. mean, min, max, median...), please return only its mean unless specified differently by the user."""
-    metadata: dict[str, Any]
-    args_schema: Type[BaseModel] = InputKGMorphoFeatures
+    input_schema: KGMorphoFeatureInput
+    metadata: KGMorphoFeatureMetadata
 
-    def _run(self) -> None:
-        """Not defined yet."""
-        pass
-
-    async def _arun(
-        self,
-        brain_region_id: str,
-        features: FeatureInput,
-    ) -> list[KGMorphoFeatureOutput] | dict[str, str]:
+    async def arun(self) -> list[dict[str, Any]]:
         """Run the tool async.
-
-        Parameters
-        ----------
-        brain_region_id
-            ID of the brain region of interest (of the form http://api.brain-map.org/api/v2/data/Structure/...)
-        features
-            Pydantic class describing the features one wants to compute
 
         Returns
         -------
             list of KGMorphoFeatureOutput to describe the morphology and its features, or an error dict.
         """
-        try:
-            logger.info(
-                f"Entering KG morpho feature tool. Inputs: {brain_region_id=},"
-                f" {features=}"
-            )
-            # Get the descendants of the brain region specified as input
-            hierarchy_ids = get_descendants_id(
-                brain_region_id, json_path=self.metadata["brainregion_path"]
-            )
-            logger.info(
-                f"Found {len(list(hierarchy_ids))} children of the brain ontology."
-            )
+        logger.info(
+            f"Entering KG morpho feature tool. Inputs: {self.input_schema.brain_region_id=},"
+            f" {self.input_schema.features=}"
+        )
+        # Get the descendants of the brain region specified as input
+        hierarchy_ids = get_descendants_id(
+            self.input_schema.brain_region_id,
+            json_path=self.metadata.brainregion_path,
+        )
+        logger.info(f"Found {len(list(hierarchy_ids))} children of the brain ontology.")
 
-            # Get the associated ES query
-            entire_query = self.create_query(
-                brain_regions_ids=hierarchy_ids, features=features
-            )
+        # Get the associated ES query
+        entire_query = self.create_query(
+            brain_regions_ids=hierarchy_ids, features=self.input_schema.features
+        )
 
-            # Send the ES query to the KG
-            response = await self.metadata["httpx_client"].post(
-                url=self.metadata["url"],
-                headers={"Authorization": f"Bearer {self.metadata['token']}"},
-                json=entire_query,
-            )
+        # Send the ES query to the KG
+        response = await self.metadata.httpx_client.post(
+            url=self.metadata.knowledge_graph_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            json=entire_query,
+        )
 
-            return self._process_output(response.json())
-
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        return self._process_output(response.json())
 
     def create_query(
-        self, brain_regions_ids: set[str], features: FeatureInput
+        self, brain_regions_ids: set[str], features: KGFeatureInput
     ) -> dict[str, Any]:
         """Create ES query to query the KG with.
 
@@ -308,7 +300,7 @@ class KGMorphoFeatureTool(BasicTool):
 
         # Unwrap all of the conditions in the global query
         entire_query = {
-            "size": self.metadata["search_size"],
+            "size": self.metadata.kg_morpho_feature_search_size,
             "track_total_hits": True,
             "query": {
                 "bool": {
@@ -328,7 +320,7 @@ class KGMorphoFeatureTool(BasicTool):
         return entire_query
 
     @staticmethod
-    def _process_output(output: Any) -> list[KGMorphoFeatureOutput]:
+    def _process_output(output: Any) -> list[dict[str, Any]]:
         """Process output.
 
         Parameters
@@ -356,7 +348,7 @@ class KGMorphoFeatureTool(BasicTool):
                     morphology_id=morpho_source["neuronMorphology"]["@id"],
                     morphology_name=morpho_source["neuronMorphology"].get("name"),
                     features=feature_output,
-                )
+                ).model_dump()
             )
 
         return formatted_output

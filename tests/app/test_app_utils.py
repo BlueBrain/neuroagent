@@ -56,7 +56,7 @@ def test_setup_engine(create_engine_mock, monkeypatch, patch_required_env):
 
     settings = Settings()
 
-    connection_string = "https://localhost"
+    connection_string = "postgresql+asyncpg://user:password@localhost/dbname"
     retval = setup_engine(settings=settings, connection_string=connection_string)
     assert retval is not None
 

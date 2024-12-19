@@ -5,13 +5,13 @@ from pathlib import Path
 
 import httpx
 import pytest
-from langchain_core.tools import ToolException
 
 from neuroagent.tools import KGMorphoFeatureTool
 from neuroagent.tools.kg_morpho_features_tool import (
-    FeatRangeInput,
-    FeatureInput,
-    KGMorphoFeatureOutput,
+    KGFeatRangeInput,
+    KGFeatureInput,
+    KGMorphoFeatureInput,
+    KGMorphoFeatureMetadata,
 )
 
 
@@ -32,26 +32,26 @@ class TestKGMorphoFeaturesTool:
             json=kg_morpho_features_response,
         )
 
-        tool = KGMorphoFeatureTool(
-            metadata={
-                "url": url,
-                "search_size": 2,
-                "httpx_client": httpx.AsyncClient(),
-                "token": "fake_token",
-                "brainregion_path": brain_region_json_path,
-            }
-        )
-
-        feature_input = FeatureInput(
+        feature_input = KGFeatureInput(
             label="Section Tortuosity",
         )
 
-        response = await tool._arun(
-            brain_region_id="brain_region_id_link/549", features=feature_input
+        tool = KGMorphoFeatureTool(
+            input_schema=KGMorphoFeatureInput(
+                brain_region_id="brain_region_id_link/549", features=feature_input
+            ),
+            metadata=KGMorphoFeatureMetadata(
+                knowledge_graph_url=url,
+                kg_morpho_feature_search_size=2,
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
+        response = await tool.arun()
         assert isinstance(response, list)
         assert len(response) == 2
-        assert isinstance(response[0], KGMorphoFeatureOutput)
+        assert isinstance(response[0], dict)
 
     @pytest.mark.asyncio
     async def test_arun_errors(self, httpx_mock, brain_region_json_path):
@@ -63,44 +63,48 @@ class TestKGMorphoFeaturesTool:
             json={},
         )
 
-        tool = KGMorphoFeatureTool(
-            metadata={
-                "url": url,
-                "search_size": 2,
-                "httpx_client": httpx.AsyncClient(),
-                "token": "fake_token",
-                "brainregion_path": brain_region_json_path,
-            }
-        )
-
-        feature_input = FeatureInput(
+        feature_input = KGFeatureInput(
             label="Section Tortuosity",
         )
-        with pytest.raises(ToolException) as tool_exception:
-            _ = await tool._arun(
+        tool = KGMorphoFeatureTool(
+            input_schema=KGMorphoFeatureInput(
                 brain_region_id="brain_region_id_link/549", features=feature_input
-            )
-        assert tool_exception.value.args[0] == "'hits'"
+            ),
+            metadata=KGMorphoFeatureMetadata(
+                knowledge_graph_url=url,
+                kg_morpho_feature_search_size=2,
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                httpx_client=httpx.AsyncClient(),
+            ),
+        )
+
+        with pytest.raises(KeyError) as tool_exception:
+            await tool.arun()
+        assert tool_exception.value.args[0] == "hits"
 
     def test_create_query(self, brain_region_json_path):
         url = "http://fake_url"
 
-        tool = KGMorphoFeatureTool(
-            metadata={
-                "url": url,
-                "search_size": 2,
-                "httpx_client": httpx.AsyncClient(),
-                "token": "fake_token",
-                "brainregion_path": brain_region_json_path,
-            }
-        )
-
-        feature_input = FeatureInput(
+        feature_input = KGFeatureInput(
             label="Soma Radius",
             compartment="NeuronMorphology",
         )
 
         brain_regions_ids = {"brain-region-id/68"}
+
+        tool = KGMorphoFeatureTool(
+            input_schema=KGMorphoFeatureInput(
+                brain_region_id="", features=feature_input
+            ),
+            metadata=KGMorphoFeatureMetadata(
+                knowledge_graph_url=url,
+                kg_morpho_feature_search_size=2,
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                httpx_client=httpx.AsyncClient(),
+            ),
+        )
 
         entire_query = tool.create_query(
             brain_regions_ids=brain_regions_ids, features=feature_input
@@ -162,16 +166,34 @@ class TestKGMorphoFeaturesTool:
         assert isinstance(entire_query, dict)
         assert entire_query == expected_query
 
-        # Case 2 with max value
-        feature_input1 = FeatureInput(
+    def test_create_query_with_max_value(self, brain_region_json_path):
+        url = "http://fake_url"
+
+        feature_input = KGFeatureInput(
             label="Soma Radius",
             compartment="NeuronMorphology",
-            feat_range=FeatRangeInput(max_value=5),
+            feat_range=KGFeatRangeInput(max_value=5),
         )
-        entire_query1 = tool.create_query(
-            brain_regions_ids=brain_regions_ids, features=feature_input1
+
+        brain_regions_ids = {"brain-region-id/68"}
+
+        tool = KGMorphoFeatureTool(
+            input_schema=KGMorphoFeatureInput(
+                brain_region_id="", features=feature_input
+            ),
+            metadata=KGMorphoFeatureMetadata(
+                knowledge_graph_url=url,
+                kg_morpho_feature_search_size=2,
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
-        expected_query1 = {
+
+        entire_query = tool.create_query(
+            brain_regions_ids=brain_regions_ids, features=feature_input
+        )
+        expected_query = {
             "size": 2,
             "track_total_hits": True,
             "query": {
@@ -237,18 +259,35 @@ class TestKGMorphoFeaturesTool:
                 }
             },
         }
-        assert entire_query1 == expected_query1
+        assert entire_query == expected_query
 
-        # Case 3 with min value
-        feature_input2 = FeatureInput(
+    def test_create_query_with_min_value(self, brain_region_json_path):
+        url = "http://fake_url"
+
+        feature_input = KGFeatureInput(
             label="Soma Radius",
             compartment="NeuronMorphology",
-            feat_range=FeatRangeInput(min_value=2),
+            feat_range=KGFeatRangeInput(min_value=2),
         )
-        entire_query2 = tool.create_query(
-            brain_regions_ids=brain_regions_ids, features=feature_input2
+
+        tool = KGMorphoFeatureTool(
+            input_schema=KGMorphoFeatureInput(
+                brain_region_id="", features=feature_input
+            ),
+            metadata=KGMorphoFeatureMetadata(
+                knowledge_graph_url=url,
+                kg_morpho_feature_search_size=2,
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
-        expected_query2 = {
+
+        brain_regions_ids = {"brain-region-id/68"}
+        entire_query = tool.create_query(
+            brain_regions_ids=brain_regions_ids, features=feature_input
+        )
+        expected_query = {
             "size": 2,
             "track_total_hits": True,
             "query": {
@@ -314,18 +353,35 @@ class TestKGMorphoFeaturesTool:
                 }
             },
         }
-        assert entire_query2 == expected_query2
+        assert entire_query == expected_query
 
-        # Case 4 with min and max value
-        feature_input3 = FeatureInput(
+    def test_create_query_with_min_max_value(self, brain_region_json_path):
+        url = "http://fake_url"
+
+        feature_input = KGFeatureInput(
             label="Soma Radius",
             compartment="NeuronMorphology",
-            feat_range=FeatRangeInput(min_value=2, max_value=5),
+            feat_range=KGFeatRangeInput(min_value=2, max_value=5),
         )
-        entire_query3 = tool.create_query(
-            brain_regions_ids=brain_regions_ids, features=feature_input3
+
+        tool = KGMorphoFeatureTool(
+            input_schema=KGMorphoFeatureInput(
+                brain_region_id="", features=feature_input
+            ),
+            metadata=KGMorphoFeatureMetadata(
+                knowledge_graph_url=url,
+                kg_morpho_feature_search_size=2,
+                token="fake_token",
+                brainregion_path=brain_region_json_path,
+                httpx_client=httpx.AsyncClient(),
+            ),
         )
-        expected_query3 = {
+
+        brain_regions_ids = {"brain-region-id/68"}
+        entire_query = tool.create_query(
+            brain_regions_ids=brain_regions_ids, features=feature_input
+        )
+        expected_query = {
             "size": 2,
             "track_total_hits": True,
             "query": {
@@ -394,4 +450,4 @@ class TestKGMorphoFeaturesTool:
                 }
             },
         }
-        assert entire_query3 == expected_query3
+        assert entire_query == expected_query

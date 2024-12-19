@@ -11,19 +11,15 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+    "aiohttp",
     "aiosqlite",
     "asgi-correlation-id",
     "asyncpg",
     "bluepyefe",
     "efel",
     "fastapi",
-    "langchain",
-    "langchain-cohere",
-    "langchain-openai",
-    "langgraph",
-    "langgraph-checkpoint-postgres",
-    "langgraph-checkpoint-sqlite",
     "neurom",
+    "openai",
     "psycopg-binary",
     "pydantic-settings",
     "python-dotenv",
@@ -75,7 +71,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
-"swarm_copy_tests/*" = ["D"]
+"alembic/*" = ["D", "E"]
 
 [tool.mypy]
 mypy_path = "src"
@@ -105,7 +101,6 @@ filterwarnings = [
     "ignore:Mean of empty slice:RuntimeWarning",
     "ignore:Degrees of freedom:RuntimeWarning",
     "ignore:Exception ignored in:pytest.PytestUnraisableExceptionWarning",
-    "ignore:This API is in beta:langchain_core._api.beta_decorator.LangChainBetaWarning",
     "ignore:The configuration option 'asyncio_default_fixture_loop_scope' is unset."
 ]
 

@@ -7,8 +7,7 @@ from neuroagent.app.dependencies import get_settings
 from neuroagent.app.main import app
 
 
-def test_settings_endpoint(app_client, dont_look_at_env_file):
-    settings = app.dependency_overrides[get_settings]()
+def test_settings_endpoint(app_client, dont_look_at_env_file, settings):
     response = app_client.get("/settings")
 
     replace_secretstr = settings.model_dump()
@@ -17,7 +16,17 @@ def test_settings_endpoint(app_client, dont_look_at_env_file):
     assert response.json() == replace_secretstr
 
 
-def test_startup(caplog, monkeypatch, tmp_path, patch_required_env, db_connection):
+def test_readyz(app_client):
+    response = app_client.get(
+        "/",
+    )
+
+    body = response.json()
+    assert isinstance(body, dict)
+    assert body["status"] == "ok"
+
+
+def test_lifespan(caplog, monkeypatch, tmp_path, patch_required_env, db_connection):
     get_settings.cache_clear()
     caplog.set_level(logging.INFO)
 
@@ -64,13 +73,3 @@ def test_startup(caplog, monkeypatch, tmp_path, patch_required_env, db_connectio
         logging.getLevelName(logging.getLogger("bluepyefe").getEffectiveLevel())
         == "CRITICAL"
     )
-
-
-def test_readyz(app_client):
-    response = app_client.get(
-        "/",
-    )
-
-    body = response.json()
-    assert isinstance(body, dict)
-    assert body["status"] == "ok"

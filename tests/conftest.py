@@ -2,20 +2,20 @@
 
 import json
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from neuroagent.app.config import Settings
-from neuroagent.app.dependencies import get_kg_token, get_settings
+from neuroagent.app.dependencies import Agent, get_kg_token, get_settings
 from neuroagent.app.main import app
-from neuroagent.tools import GetMorphoTool
+from neuroagent.tools.base_tool import BaseTool
+from tests.mock_client import MockOpenAIClient, create_mock_response
 
 
 @pytest.fixture(name="app_client")
@@ -44,6 +44,70 @@ def client_fixture():
     app.dependency_overrides[get_kg_token] = lambda: "fake_token"
     yield app_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def mock_openai_client():
+    """Fake openai client."""
+    m = MockOpenAIClient()
+    m.set_response(
+        create_mock_response(
+            {"role": "assistant", "content": "sample response content"}
+        )
+    )
+    return m
+
+
+@pytest.fixture(name="get_weather_tool")
+def fake_tool():
+    """Fake get weather tool."""
+
+    class FakeToolInput(BaseModel):
+        location: str
+
+    class FakeToolMetadata(
+        BaseModel
+    ):  # Should be a BaseMetadata but we don't want httpx client here
+        model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
+        planet: str | None = None
+
+    class FakeTool(BaseTool):
+        name: ClassVar[str] = "get_weather"
+        description: ClassVar[str] = "Great description"
+        metadata: FakeToolMetadata
+        input_schema: FakeToolInput
+
+        async def arun(self):
+            if self.metadata.planet:
+                return f"It's sunny today in {self.input_schema.location} from planet {self.metadata.planet}."
+            return "It's sunny today."
+
+    return FakeTool
+
+
+@pytest.fixture
+def agent_handoff_tool():
+    """Fake agent handoff tool."""
+
+    class HandoffToolInput(BaseModel):
+        pass
+
+    class HandoffToolMetadata(
+        BaseModel
+    ):  # Should be a BaseMetadata but we don't want httpx client here
+        to_agent: Agent
+        model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
+
+    class HandoffTool(BaseTool):
+        name: ClassVar[str] = "agent_handoff_tool"
+        description: ClassVar[str] = "Handoff to another agent."
+        metadata: HandoffToolMetadata
+        input_schema: HandoffToolInput
+
+        async def arun(self):
+            return self.metadata.to_agent
+
+    return HandoffTool
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -107,83 +171,22 @@ def brain_region_json_path():
     return br_path
 
 
-@pytest_asyncio.fixture
-async def fake_llm_with_tools(brain_region_json_path):
-    class FakeFuntionChatModel(GenericFakeChatModel):
-        def bind_tools(self, functions: list):
-            return self
-
-        def bind_functions(self, **kwargs):
-            return self
-
-    # If you need another fake response to use different tools,
-    # you can do in your test
-    # ```python
-    # llm, _ = fake_llm_with_tools
-    # llm.responses = my_fake_responses
-    # ```
-    # and simply bind the corresponding tools
-    fake_responses = [
-        AIMessage(
-            content="",
-            additional_kwargs={
-                "tool_calls": [
-                    {
-                        "index": 0,
-                        "id": "call_zHhwfNLSvGGHXMoILdIYtDVI",
-                        "function": {
-                            "arguments": '{"brain_region_id":"http://api.brain-map.org/api/v2/data/Structure/549"}',
-                            "name": "get-morpho-tool",
-                        },
-                        "type": "function",
-                    }
-                ]
+@pytest.fixture(name="settings")
+def settings():
+    return Settings(
+        tools={
+            "literature": {
+                "url": "fake_literature_url",
             },
-            response_metadata={"finish_reason": "tool_calls"},
-            id="run-3828644d-197b-401b-8634-e6ecf01c2e7c-0",
-            tool_calls=[
-                {
-                    "name": "get-morpho-tool",
-                    "args": {
-                        "brain_region_id": (
-                            "http://api.brain-map.org/api/v2/data/Structure/549"
-                        )
-                    },
-                    "id": "call_zHhwfNLSvGGHXMoILdIYtDVI",
-                }
-            ],
-        ),
-        AIMessage(
-            content="Great answer",
-            response_metadata={"finish_reason": "stop"},
-            id="run-42768b30-044a-4263-8c5c-da61429aa9da-0",
-        ),
-    ]
-
-    # If you use this tool in your test, DO NOT FORGET to mock the url response with the following snippet:
-    #
-    # ```python
-    # json_path = Path(__file__).resolve().parent.parent / "data" / "knowledge_graph.json"
-    # with open(json_path) as f:
-    #     knowledge_graph_response = json.load(f)
-
-    # httpx_mock.add_response(
-    #     url="http://fake_url",
-    #     json=knowledge_graph_response,
-    # )
-    # ```
-    # The http call is not mocked here because one might want to change the responses
-    # and the tools used.
-    async_client = AsyncClient()
-    tool = GetMorphoTool(
-        metadata={
-            "url": "http://fake_url",
-            "search_size": 2,
-            "httpx_client": async_client,
+        },
+        knowledge_graph={
+            "base_url": "https://fake_url/api/nexus/v1",
+        },
+        openai={
             "token": "fake_token",
-            "brainregion_path": brain_region_json_path,
-        }
+        },
+        keycloak={
+            "username": "fake_username",
+            "password": "fake_password",
+        },
     )
-
-    yield FakeFuntionChatModel(messages=iter(fake_responses)), [tool], fake_responses
-    await async_client.aclose()

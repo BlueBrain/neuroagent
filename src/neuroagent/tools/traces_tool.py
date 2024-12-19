@@ -1,21 +1,18 @@
 """Traces tool."""
 
 import logging
-from typing import Any, Type
+from pathlib import Path
+from typing import Any, ClassVar
 
-from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
-from neuroagent.tools.base_tool import (
-    BaseToolOutput,
-    BasicTool,
-)
+from neuroagent.tools.base_tool import BaseMetadata, BaseTool
 from neuroagent.utils import get_descendants_id
 
 logger = logging.getLogger(__name__)
 
 
-class InputGetTraces(BaseModel):
+class GetTracesInput(BaseModel):
     """Inputs of the knowledge graph API."""
 
     brain_region_id: str = Field(
@@ -29,7 +26,7 @@ class InputGetTraces(BaseModel):
     )
 
 
-class TracesOutput(BaseToolOutput):
+class TracesOutput(BaseModel):
     """Output schema for the traces."""
 
     trace_id: str
@@ -44,16 +41,24 @@ class TracesOutput(BaseToolOutput):
     subject_age: str | None
 
 
-class GetTracesTool(BasicTool):
+class GetTracesMetadata(BaseMetadata):
+    """Metadata for GetTracesTool."""
+
+    knowledge_graph_url: str
+    token: str
+    trace_search_size: int
+    brainregion_path: str | Path
+
+
+class GetTracesTool(BaseTool):
     """Class defining the logic to obtain traces ids."""
 
-    name: str = "get-traces-tool"
-    description: str = """Searches a neuroscience based knowledge graph to 
-   retrieve experimental traces names, IDs and descriptions.
-   Dont run this tool unless user requests already published traces.
-   Requires a 'brain_region_id' which is the ID of the brain region of interest
-   as registered in the knowledge graph.
-   Optionally accepts an e-type id.
+    name: ClassVar[str] = "get-traces-tool"
+    description: ClassVar[
+        str
+    ] = """Searches a neuroscience based knowledge graph to retrieve traces names, IDs and descriptions.
+    Requires a 'brain_region_id' which is the ID of the brain region of interest as registered in the knowledge graph.
+    Optionally accepts an e-type id.
     The output is a list of traces, containing:
     - The trace id.
     - The brain region ID.
@@ -63,54 +68,33 @@ class GetTracesTool(BasicTool):
     - The subject species name.
     - The subject age.
     The trace ID is in the form of an HTTP(S) link such as 'https://bbp.epfl.ch/neurosciencegraph/data/traces...'."""
-    metadata: dict[str, Any]
-    args_schema: Type[BaseModel] = InputGetTraces
+    input_schema: GetTracesInput
+    metadata: GetTracesMetadata
 
-    def _run(self, query: str) -> list[TracesOutput]:  # type: ignore
-        pass
+    async def arun(self) -> list[dict[str, Any]]:
+        """From a brain region ID, extract traces."""
+        logger.info(
+            f"Entering get trace tool. Inputs: {self.input_schema.brain_region_id=}, {self.input_schema.etype_id=}"
+        )
+        # Get descendants of the brain region specified as input
+        hierarchy_ids = get_descendants_id(
+            self.input_schema.brain_region_id,
+            json_path=self.metadata.brainregion_path,
+        )
+        logger.info(f"Found {len(list(hierarchy_ids))} children of the brain ontology.")
 
-    async def _arun(
-        self,
-        brain_region_id: str,
-        etype_id: str | None = None,
-    ) -> list[TracesOutput] | dict[str, str]:
-        """From a brain region ID, extract traces.
+        # Create the ES query to query the KG with resolved descendants
+        entire_query = self.create_query(
+            brain_region_ids=hierarchy_ids, etype_id=self.input_schema.etype_id
+        )
 
-        Parameters
-        ----------
-        brain_region_id
-            ID of the brain region of interest (of the form http://api.brain-map.org/api/v2/data/Structure/...)
-        etype
-            Name of the etype of interest (in plain english)
-
-        Returns
-        -------
-            list of TracesOutput to describe the trace and its metadata, or an error dict.
-        """
-        logger.info(f"Entering get trace tool. Inputs: {brain_region_id=}, {etype_id=}")
-        try:
-            # Get descendants of the brain region specified as input
-            hierarchy_ids = get_descendants_id(
-                brain_region_id, json_path=self.metadata["brainregion_path"]
-            )
-            logger.info(
-                f"Found {len(list(hierarchy_ids))} children of the brain ontology."
-            )
-
-            # Create the ES query to query the KG with resolved descendants
-            entire_query = self.create_query(
-                brain_region_ids=hierarchy_ids, etype_id=etype_id
-            )
-
-            # Send the query to the KG
-            response = await self.metadata["httpx_client"].post(
-                url=self.metadata["url"],
-                headers={"Authorization": f"Bearer {self.metadata['token']}"},
-                json=entire_query,
-            )
-            return self._process_output(response.json())
-        except Exception as e:
-            raise ToolException(str(e), self.name)
+        # Send the query to the KG
+        response = await self.metadata.httpx_client.post(
+            url=self.metadata.knowledge_graph_url,
+            headers={"Authorization": f"Bearer {self.metadata.token}"},
+            json=entire_query,
+        )
+        return self._process_output(response.json())
 
     def create_query(
         self,
@@ -149,7 +133,7 @@ class GetTracesTool(BasicTool):
 
         # Unwrap everything into the main query
         entire_query = {
-            "size": self.metadata["search_size"],
+            "size": self.metadata.trace_search_size,
             "track_total_hits": True,
             "query": {
                 "bool": {
@@ -169,7 +153,7 @@ class GetTracesTool(BasicTool):
         return entire_query
 
     @staticmethod
-    def _process_output(output: Any) -> list[TracesOutput]:
+    def _process_output(output: Any) -> list[dict[str, Any]]:
         """Process output to fit the TracesOutput pydantic class defined above.
 
         Parameters
@@ -206,7 +190,7 @@ class GetTracesTool(BasicTool):
                     if "subjectAge" in res["_source"]
                     else None
                 ),
-            )
+            ).model_dump()
             for res in output["hits"]["hits"]
         ]
         return results
