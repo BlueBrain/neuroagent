@@ -1,14 +1,14 @@
 import pytest
 
-from swarm_copy.agent_routine import Agent, AgentsRoutine
-from swarm_copy.app.config import Settings
-from swarm_copy.app.dependencies import (
+from neuroagent.agent_routine import Agent, AgentsRoutine
+from neuroagent.app.config import Settings
+from neuroagent.app.dependencies import (
     get_agents_routine,
     get_settings,
     get_starting_agent,
 )
-from swarm_copy.app.main import app
-from swarm_copy_tests.mock_client import create_mock_response
+from neuroagent.app.main import app
+from tests.mock_client import create_mock_response
 
 
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
