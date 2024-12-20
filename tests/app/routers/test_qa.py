@@ -3,14 +3,18 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from neuroagent.app.config import Settings
-from neuroagent.app.dependencies import get_agents_routine, get_settings
+from neuroagent.app.dependencies import (
+    get_agents_routine,
+    get_settings,
+    get_starting_agent,
+)
 from neuroagent.app.main import app
 from neuroagent.app.routers import qa
 from neuroagent.new_types import Agent, Response
 
 
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
-def test_run_agent(app_client, patch_required_env, httpx_mock, db_connection):
+def test_run_agent(app_client, patch_required_env, httpx_mock):
     agent_output = Response(
         messages=[
             {"role": "user", "content": "Hello"},
@@ -24,16 +28,13 @@ def test_run_agent(app_client, patch_required_env, httpx_mock, db_connection):
     )
     agent_routine = AsyncMock()
     agent_routine.arun.return_value = agent_output
+    mock_agent = Agent()
 
-    test_settings = Settings(
-        db={"prefix": db_connection},
-    )
+    test_settings = Settings()
     app.dependency_overrides[get_settings] = lambda: test_settings
     app.dependency_overrides[get_agents_routine] = lambda: agent_routine
-    httpx_mock.add_response(
-        url=f"{test_settings.virtual_lab.get_project_url}/32c83739-f39c-49d1-833f-58c981ebd2a2/projects/123251a1-be18-4146-87b5-5ca2f8bfaf48"
-        # Not great to hardcode the Vlab and Project
-    )
+    app.dependency_overrides[get_starting_agent] = lambda: mock_agent
+
     with app_client as app_client:
         response = app_client.post("/qa/run", json={"query": "This is my query"})
 
