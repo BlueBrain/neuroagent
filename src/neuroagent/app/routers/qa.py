@@ -1,72 +1,96 @@
 """Endpoints for agent's question answering pipeline."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from neuroagent.agents import (
-    AgentOutput,
-    BaseAgent,
-    SimpleChatAgent,
-)
+from neuroagent.agent_routine import AgentsRoutine
+from neuroagent.app.database.db_utils import get_history, get_thread, save_history
+from neuroagent.app.database.sql_schemas import Threads
 from neuroagent.app.dependencies import (
-    get_agent,
-    get_chat_agent,
-    get_connection_string,
+    get_agents_routine,
+    get_context_variables,
+    get_session,
+    get_starting_agent,
     get_user_id,
 )
-from neuroagent.app.routers.database.schemas import Threads
-from neuroagent.app.routers.database.sql import get_object
-from neuroagent.app.schemas import AgentRequest
+from neuroagent.new_types import Agent, AgentRequest, AgentResponse
+from neuroagent.stream import stream_agent_response
 
-router = APIRouter(
-    prefix="/qa", tags=["Run the agent"], dependencies=[Depends(get_user_id)]
-)
+router = APIRouter(prefix="/qa", tags=["Run the agent"])
 
 logger = logging.getLogger(__name__)
 
 
-@router.post("/run", response_model=AgentOutput)
-async def run_agent(
-    request: AgentRequest,
-    agent: Annotated[BaseAgent, Depends(get_agent)],
-) -> AgentOutput:
-    """Run agent."""
-    logger.info("Running agent query.")
-    logger.info(f"User's query: {request.query}")
-    return await agent.arun(request.query)
+@router.post("/run/", response_model=AgentResponse)
+async def run_simple_agent(
+    user_request: AgentRequest,
+    agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
+    agent: Annotated[Agent, Depends(get_starting_agent)],
+    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
+) -> AgentResponse:
+    """Run a single agent query."""
+    response = await agent_routine.arun(
+        agent, [{"role": "user", "content": user_request.query}], context_variables
+    )
+    return AgentResponse(message=response.messages[-1]["content"])
 
 
-@router.post("/chat/{thread_id}", response_model=AgentOutput)
+@router.post("/chat/{thread_id}", response_model=AgentResponse)
 async def run_chat_agent(
-    request: AgentRequest,
-    _: Annotated[Threads, Depends(get_object)],
-    agent: Annotated[SimpleChatAgent, Depends(get_chat_agent)],
-    thread_id: str,
-) -> AgentOutput:
-    """Run chat agent."""
-    logger.info("Running agent query.")
-    logger.info(f"User's query: {request.query}")
-    return await agent.arun(query=request.query, thread_id=thread_id)
+    user_request: AgentRequest,
+    agent_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
+    agent: Annotated[Agent, Depends(get_starting_agent)],
+    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user_id: Annotated[str, Depends(get_user_id)],
+    thread: Annotated[Threads, Depends(get_thread)],
+    messages: Annotated[list[dict[str, Any]], Depends(get_history)],
+) -> AgentResponse:
+    """Run a single agent query."""
+    # Temporary solution
+    context_variables["vlab_id"] = thread.vlab_id
+    context_variables["project_id"] = thread.project_id
+
+    messages.append({"role": "user", "content": user_request.query})
+    response = await agent_routine.arun(agent, messages, context_variables)
+    await save_history(
+        user_id=user_id,
+        history=response.messages,
+        offset=len(messages) - 1,
+        thread_id=thread.thread_id,
+        session=session,
+    )
+    return AgentResponse(message=response.messages[-1]["content"])
 
 
 @router.post("/chat_streamed/{thread_id}")
-async def run_streamed_chat_agent(
-    request: AgentRequest,
-    _: Annotated[Threads, Depends(get_object)],
-    agent: Annotated[BaseAgent, Depends(get_chat_agent)],
-    connection_string: Annotated[str | None, Depends(get_connection_string)],
-    thread_id: str,
+async def stream_chat_agent(
+    user_request: AgentRequest,
+    agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
+    agent: Annotated[Agent, Depends(get_starting_agent)],
+    context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user_id: Annotated[str, Depends(get_user_id)],
+    thread: Annotated[Threads, Depends(get_thread)],
+    messages: Annotated[list[dict[str, Any]], Depends(get_history)],
 ) -> StreamingResponse:
-    """Run agent in streaming mode."""
-    logger.info("Running agent query.")
-    logger.info(f"User's query: {request.query}")
-    return StreamingResponse(
-        agent.astream(
-            query=request.query,
-            thread_id=thread_id,
-            connection_string=connection_string,
-        )
+    """Run a single agent query in a streamed fashion."""
+    # Temporary solution
+    context_variables["vlab_id"] = thread.vlab_id
+    context_variables["project_id"] = thread.project_id
+
+    messages.append({"role": "user", "content": user_request.query})
+    stream_generator = stream_agent_response(
+        agents_routine,
+        agent,
+        messages,
+        context_variables,
+        user_id,
+        thread.thread_id,
+        session,
     )
+    return StreamingResponse(stream_generator, media_type="text/event-stream")

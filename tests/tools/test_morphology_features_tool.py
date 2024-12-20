@@ -5,10 +5,12 @@ from pathlib import Path
 
 import httpx
 import pytest
-from langchain_core.tools import ToolException
 
 from neuroagent.tools import MorphologyFeatureTool
-from neuroagent.tools.morphology_features_tool import MorphologyFeatureOutput
+from neuroagent.tools.morphology_features_tool import (
+    MorphologyFeatureInput,
+    MorphologyFeatureMetadata,
+)
 
 
 class TestMorphologyFeatureTool:
@@ -41,27 +43,30 @@ class TestMorphologyFeatureTool:
         )
 
         tool = MorphologyFeatureTool(
-            metadata={
-                "url": url,
-                "httpx_client": httpx.AsyncClient(),
-                "token": "fake_token",
-            }
+            metadata=MorphologyFeatureMetadata(
+                knowledge_graph_url=url,
+                httpx_client=httpx.AsyncClient(),
+                token="fake_token",
+            ),
+            input_schema=MorphologyFeatureInput(morphology_id=morphology_id),
         )
 
-        response = await tool._arun(morphology_id=morphology_id)
-        assert isinstance(response[0], MorphologyFeatureOutput)
-        assert len(response[0].feature_dict) == 23
+        response = await tool.arun()
+        assert isinstance(response[0], dict)
+        assert len(response[0]["feature_dict"]) == 23
 
     @pytest.mark.asyncio
-    async def test_arun_errors(self, httpx_mock):
+    async def test_arun_errors_404(self, httpx_mock):
         url = "http://fake_url"
         morphology_id = "https://bbp.epfl.ch/neurosciencegraph/data/neuronmorphologies/046fb11c-8de8-42e8-9303-9d5a65ac04b9"
+
         tool = MorphologyFeatureTool(
-            metadata={
-                "url": url,
-                "httpx_client": httpx.AsyncClient(),
-                "token": "fake_token",
-            }
+            metadata=MorphologyFeatureMetadata(
+                knowledge_graph_url=url,
+                httpx_client=httpx.AsyncClient(),
+                token="fake_token",
+            ),
+            input_schema=MorphologyFeatureInput(morphology_id=morphology_id),
         )
 
         # test different failures
@@ -70,13 +75,27 @@ class TestMorphologyFeatureTool:
             url=url,
             status_code=404,
         )
-        with pytest.raises(ToolException) as tool_exception:
-            _ = await tool._arun(morphology_id=morphology_id)
+        with pytest.raises(ValueError) as tool_exception:
+            await tool.arun()
 
         assert (
             tool_exception.value.args[0] == "We did not find the object"
             " https://bbp.epfl.ch/neurosciencegraph/data/neuronmorphologies/046fb11c-8de8-42e8-9303-9d5a65ac04b9"
             " you are asking"
+        )
+
+    @pytest.mark.asyncio
+    async def test_arun_wrong_id(self, httpx_mock):
+        url = "http://fake_url"
+        morphology_id = "https://bbp.epfl.ch/neurosciencegraph/data/neuronmorphologies/046fb11c-8de8-42e8-9303-9d5a65ac04b9"
+
+        tool = MorphologyFeatureTool(
+            metadata=MorphologyFeatureMetadata(
+                knowledge_graph_url=url,
+                httpx_client=httpx.AsyncClient(),
+                token="fake_token",
+            ),
+            input_schema=MorphologyFeatureInput(morphology_id=morphology_id),
         )
 
         # Failure 2
@@ -85,8 +104,8 @@ class TestMorphologyFeatureTool:
             url=url,
             json=fake_json,
         )
-        with pytest.raises(ToolException) as tool_exception:
-            _ = await tool._arun(morphology_id=morphology_id)
+        with pytest.raises(ValueError) as tool_exception:
+            await tool.arun()
 
         assert (
             tool_exception.value.args[0] == "We did not find the object"

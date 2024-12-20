@@ -14,25 +14,6 @@ from neuroagent.app.config import Settings
 logger = logging.getLogger(__name__)
 
 
-async def validate_project(
-    httpx_client: AsyncClient,
-    vlab_id: str,
-    project_id: str,
-    token: str,
-    vlab_project_url: str,
-) -> None:
-    """Check user appartenance to vlab and project before running agent."""
-    response = await httpx_client.get(
-        f"{vlab_project_url}/{vlab_id}/projects/{project_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="User does not belong to the project.",
-        )
-
-
 def setup_engine(
     settings: Settings, connection_string: str | None = None
 ) -> AsyncEngine | None:
@@ -59,3 +40,22 @@ def setup_engine(
             f" {connection_string if not settings.db.password else connection_string.replace(settings.db.password.get_secret_value(), '*****')}."
         )
         return None
+
+
+async def validate_project(
+    httpx_client: AsyncClient,
+    vlab_id: str,
+    project_id: str,
+    token: str,
+    vlab_project_url: str,
+) -> None:
+    """Check user appartenance to vlab and project before running agent."""
+    response = await httpx_client.get(
+        f"{vlab_project_url}/{vlab_id}/projects/{project_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="User does not belong to the project.",
+        )
