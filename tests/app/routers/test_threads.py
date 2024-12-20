@@ -11,7 +11,6 @@ from neuroagent.app.main import app
 from tests.mock_client import create_mock_response
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 def test_create_thread(patch_required_env, httpx_mock, app_client, db_connection):
     test_settings = Settings(
         db={"prefix": db_connection},
