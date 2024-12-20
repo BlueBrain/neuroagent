@@ -18,10 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for the migrated tools
 - CRUDs.
 - BlueNaas CRUD tools
+- Tests for threads module
 - Cell types, resolving and utils tests
 - app unit tests
 - Tests of AgentsRoutine.
 - Unit tests for database
+- Tests for tool CRUD endpoints.
 
 ### Fixed
 - Migrate LLM Evaluation logic to scripts and add tests
