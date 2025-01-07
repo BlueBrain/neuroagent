@@ -14,13 +14,14 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 from pydantic import ValidationError
 
+from neuroagent.app.database.sql_schemas import Messages
 from neuroagent.new_types import (
     Agent,
     Response,
     Result,
 )
 from neuroagent.tools.base_tool import BaseTool
-from neuroagent.utils import merge_chunk
+from neuroagent.utils import merge_chunk, messages_to_openai_content
 
 
 class AgentsRoutine:
@@ -171,14 +172,15 @@ class AgentsRoutine:
     async def arun(
         self,
         agent: Agent,
-        messages: list[dict[str, Any]],
+        messages: list[Messages],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
     ) -> Response:
         """Run the agent main loop."""
         active_agent = agent
-        history = copy.deepcopy(messages)
+        content = await messages_to_openai_content(messages)
+        history = copy.deepcopy(content)
         init_len = len(messages)
 
         while len(history) - init_len < max_turns and active_agent:
@@ -207,7 +209,7 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
         return Response(
-            messages=history[init_len - 1 :],
+            messages=history[init_len:],
             agent=active_agent,
             context_variables=context_variables,
         )

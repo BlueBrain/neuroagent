@@ -9,6 +9,7 @@ from typing import Any, Iterator
 
 from httpx import AsyncClient
 
+from neuroagent.app.database.sql_schemas import Entity, Messages
 from neuroagent.schemas import KGMetadata
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,42 @@ def merge_chunk(final_response: dict[str, Any], delta: dict[str, Any]) -> None:
     if tool_calls and len(tool_calls) > 0:
         index = tool_calls[0].pop("index")
         merge_fields(final_response["tool_calls"][index], tool_calls[0])
+
+
+async def messages_to_openai_content(
+    db_messages: list[Messages] | None = None,
+) -> list[dict[str, Any]]:
+    """Exctract content from Messages as dictionary to pass them to OpenAI."""
+    messages = []
+    if db_messages:
+        for msg in db_messages:
+            if msg.content and msg.entity == Entity.AI_TOOL:
+                # Load the base content
+                content = json.loads(msg.content)
+
+                # Get the associated tool calls
+                tool_calls = await msg.awaitable_attrs.tool_calls
+
+                # Format it back into the json OpenAI expects
+                tool_calls_content = [
+                    {
+                        "function": {
+                            "arguments": json.loads(tool_call.arguments),
+                            "name": tool_call.name,
+                        },
+                        "id": tool_call.tool_call_id,
+                        "type": tool_call.type,
+                    }
+                    for tool_call in tool_calls
+                ]
+
+                # Assign it back to the main content
+                content["tool_calls"] = tool_calls_content
+                messages.append(content)
+            else:
+                messages.append(json.loads(msg.content))
+
+    return messages
 
 
 class RegionMeta:

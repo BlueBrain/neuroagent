@@ -7,7 +7,13 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from neuroagent.app.database.sql_schemas import Entity, Messages, Threads, utc_now
+from neuroagent.app.database.sql_schemas import (
+    Entity,
+    Messages,
+    Threads,
+    ToolCalls,
+    utc_now,
+)
 from neuroagent.app.dependencies import get_session, get_user_id
 
 
@@ -35,48 +41,46 @@ async def get_thread(
 
 async def save_history(
     history: list[dict[str, Any]],
-    user_id: str,
-    thread_id: str,
     offset: int,
+    thread: Threads,
     session: AsyncSession,
 ) -> None:
     """Add the new messages in the database."""
-    for i, messages in enumerate(history):
-        if messages["role"] == "user":
+    for i, message in enumerate(history):
+        tool_calls = []
+        if message["role"] == "user":
             entity = Entity.USER
-        elif messages["role"] == "tool":
+        elif message["role"] == "tool":
             entity = Entity.TOOL
-        elif messages["role"] == "assistant" and messages["content"]:
+        elif message["role"] == "assistant" and message["content"]:
             entity = Entity.AI_MESSAGE
-        elif messages["role"] == "assistant" and not messages["content"]:
+        elif message["role"] == "assistant" and not message["content"]:
             entity = Entity.AI_TOOL
+            # If AI_TOOL, create separate ToolCall entries in DB and remove it from content
+            tool_calls = [
+                ToolCalls(
+                    tool_call_id=tool_call["id"],
+                    name=tool_call["function"]["name"],
+                    arguments=json.dumps(tool_call["function"]["arguments"]),
+                )
+                for tool_call in message["tool_calls"]
+            ]
+            message.pop("tool_calls")
         else:
             raise HTTPException(status_code=500, detail="Unknown message entity.")
 
         new_msg = Messages(
             order=i + offset,
-            thread_id=thread_id,
+            thread_id=thread.thread_id,
             entity=entity,
-            content=json.dumps(messages),
+            content=json.dumps(message),
+            tool_calls=tool_calls,
         )
         session.add(new_msg)
 
     # we need to update the thread update time
-    thread = await get_thread(user_id=user_id, thread_id=thread_id, session=session)
     thread.update_date = utc_now()
     await session.commit()
 
 
-async def get_history(
-    thread: Annotated[Threads, Depends(get_thread)],
-) -> list[dict[str, Any]]:
-    """Retreive the message history from the DB."""
-    db_messages: list[Messages] = await thread.awaitable_attrs.messages
-
-    messages = []
-    if db_messages:
-        for msg in db_messages:
-            if msg.content:
-                messages.append(json.loads(msg.content))
-
-    return messages
+# db_messages: list[Messages] = await thread.awaitable_attrs.messages
