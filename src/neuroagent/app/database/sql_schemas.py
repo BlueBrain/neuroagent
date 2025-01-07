@@ -81,7 +81,7 @@ class ToolCalls(Base):
     tool_call_id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     arguments: Mapped[str] = mapped_column(String, nullable=False)
-    validated: Mapped[bool] = mapped_column(Boolean, default=False)
+    validated: Mapped[bool] = mapped_column(Boolean, nullable=True)
     type: Mapped[str] = mapped_column(String, default="function")
 
     message_id: Mapped[str] = mapped_column(String, ForeignKey("messages.message_id"))

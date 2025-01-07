@@ -53,7 +53,7 @@ async def messages_to_openai_content(
                 tool_calls_content = [
                     {
                         "function": {
-                            "arguments": json.loads(tool_call.arguments),
+                            "arguments": tool_call.arguments,
                             "name": tool_call.name,
                         },
                         "id": tool_call.tool_call_id,
@@ -69,6 +69,18 @@ async def messages_to_openai_content(
                 messages.append(json.loads(msg.content))
 
     return messages
+
+
+def get_entity(message: dict[str, Any]) -> Entity:
+    """Define the Enum entity of the message based on its content."""
+    if message["role"] == "user":
+        return Entity.USER
+    elif message["role"] == "tool":
+        return Entity.TOOL
+    elif message["role"] == "assistant" and message["content"]:
+        return Entity.AI_MESSAGE
+    elif message["role"] == "assistant" and not message["content"]:
+        return Entity.AI_TOOL
 
 
 class RegionMeta:

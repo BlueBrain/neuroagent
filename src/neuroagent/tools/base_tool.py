@@ -68,6 +68,7 @@ class BaseTool(BaseModel, ABC):
     description: ClassVar[str]
     metadata: BaseMetadata
     input_schema: BaseModel
+    hil: ClassVar[bool] = False
 
     @classmethod
     def pydantic_to_openai_schema(cls) -> dict[str, Any]:

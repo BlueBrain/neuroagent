@@ -15,6 +15,7 @@ from neuroagent.app.database.sql_schemas import (
     utc_now,
 )
 from neuroagent.app.dependencies import get_session, get_user_id
+from neuroagent.utils import get_entity
 
 
 async def get_thread(
@@ -48,14 +49,8 @@ async def save_history(
     """Add the new messages in the database."""
     for i, message in enumerate(history):
         tool_calls = []
-        if message["role"] == "user":
-            entity = Entity.USER
-        elif message["role"] == "tool":
-            entity = Entity.TOOL
-        elif message["role"] == "assistant" and message["content"]:
-            entity = Entity.AI_MESSAGE
-        elif message["role"] == "assistant" and not message["content"]:
-            entity = Entity.AI_TOOL
+        entity = get_entity(message)
+        if entity == Entity.AI_TOOL:
             # If AI_TOOL, create separate ToolCall entries in DB and remove it from content
             tool_calls = [
                 ToolCalls(

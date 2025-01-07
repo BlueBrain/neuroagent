@@ -14,14 +14,15 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 from pydantic import ValidationError
 
-from neuroagent.app.database.sql_schemas import Messages
+from neuroagent.app.database.sql_schemas import Entity, Messages, ToolCalls
 from neuroagent.new_types import (
     Agent,
+    HILResponse,
     Response,
     Result,
 )
 from neuroagent.tools.base_tool import BaseTool
-from neuroagent.utils import merge_chunk, messages_to_openai_content
+from neuroagent.utils import get_entity, merge_chunk, messages_to_openai_content
 
 
 class AgentsRoutine:
@@ -84,7 +85,7 @@ class AgentsRoutine:
 
     async def execute_tool_calls(
         self,
-        tool_calls: list[ChatCompletionMessageToolCall],
+        tool_calls: list[ToolCalls],
         tools: list[type[BaseTool]],
         context_variables: dict[str, Any],
     ) -> Response:
@@ -105,30 +106,41 @@ class AgentsRoutine:
             agent = next((agent for agent in reversed(agents) if agent is not None))
         except StopIteration:
             agent = None
-        response = Response(
+
+        hil_messages = [msg for msg in messages if isinstance(msg, HILResponse)]
+
+        # If a validation is required, return only this information
+        if hil_messages:
+            return Response(
+                messages=[],
+                agent=None,
+                context_variables=context_variables,
+                hil_messages=hil_messages,
+            )
+
+        return Response(
             messages=messages, agent=agent, context_variables=context_variables
         )
-        return response
 
     async def handle_tool_call(
         self,
-        tool_call: ChatCompletionMessageToolCall,
+        tool_call: ToolCalls,
         tools: list[type[BaseTool]],
         context_variables: dict[str, Any],
     ) -> tuple[dict[str, str], Agent | None]:
         """Run individual tools."""
         tool_map = {tool.name: tool for tool in tools}
 
-        name = tool_call.function.name
+        name = tool_call.name
         # handle missing tool case, skip to next tool
         if name not in tool_map:
             return {
                 "role": "tool",
-                "tool_call_id": tool_call.id,
+                "tool_call_id": tool_call.tool_call_id,
                 "tool_name": name,
                 "content": f"Error: Tool {name} not found.",
             }, None
-        kwargs = json.loads(tool_call.function.arguments)
+        kwargs = json.loads(tool_call.arguments)
 
         tool = tool_map[name]
         try:
@@ -136,11 +148,30 @@ class AgentsRoutine:
         except ValidationError as err:
             response = {
                 "role": "tool",
-                "tool_call_id": tool_call.id,
+                "tool_call_id": tool_call.tool_call_id,
                 "tool_name": name,
                 "content": str(err),
             }
             return response, None
+
+        if tool.hil:
+            # Case where the tool call hasn't been validated yet
+            if tool_call.validated is None:
+                return HILResponse(
+                    message="Please validate the following inputs before proceeding.",
+                    inputs=input_schema.model_dump(),
+                    tool_call_id=tool_call.tool_call_id,
+                ), None
+
+            # Case where the tool call has been refused
+            if not tool_call.validated:
+                return {
+                    "role": "tool",
+                    "tool_call_id": tool_call.tool_call_id,
+                    "tool_name": name,
+                    "content": "The tool call has been invalidated by the user.",
+                }, None
+            # Else the tool call has been validated, we can proceed normally
 
         tool_metadata = tool.__annotations__["metadata"](**context_variables)
         tool_instance = tool(input_schema=input_schema, metadata=tool_metadata)
@@ -150,7 +181,7 @@ class AgentsRoutine:
         except Exception as err:
             response = {
                 "role": "tool",
-                "tool_call_id": tool_call.id,
+                "tool_call_id": tool_call.tool_call_id,
                 "tool_name": name,
                 "content": str(err),
             }
@@ -159,7 +190,7 @@ class AgentsRoutine:
         result: Result = self.handle_function_result(raw_result)
         response = {
             "role": "tool",
-            "tool_call_id": tool_call.id,
+            "tool_call_id": tool_call.tool_call_id,
             "tool_name": name,
             "content": result.value,
         }
@@ -172,7 +203,7 @@ class AgentsRoutine:
     async def arun(
         self,
         agent: Agent,
-        messages: list[Messages],
+        messages: list[Messages],  # What we track in the DB
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
@@ -180,30 +211,83 @@ class AgentsRoutine:
         """Run the agent main loop."""
         active_agent = agent
         content = await messages_to_openai_content(messages)
-        history = copy.deepcopy(content)
+        history = copy.deepcopy(content)  # What we send to OpenAI
         init_len = len(messages)
 
         while len(history) - init_len < max_turns and active_agent:
-            # get completion with current history, agent
-            completion = await self.get_chat_completion(
-                agent=active_agent,
-                history=history,
-                context_variables=context_variables,
-                model_override=model_override,
-                stream=False,
-            )
-            message = completion.choices[0].message  # type: ignore
-            message.sender = active_agent.name
-            history.append(json.loads(message.model_dump_json()))
+            # Run chat completion if the last message isn't a tool call (HIL case)
+            if messages[-1].entity != Entity.AI_TOOL:
+                # get completion with current history, agent
+                completion = await self.get_chat_completion(
+                    agent=active_agent,
+                    history=history,
+                    context_variables=context_variables,
+                    model_override=model_override,
+                    stream=False,
+                )
+                message = completion.choices[0].message  # type: ignore
+                message.sender = active_agent.name
+
+                # If tool calls requested, instantiate them as an SQL compatible class
+                if message.tool_calls:
+                    tool_calls = [
+                        ToolCalls(
+                            tool_call_id=tool_call.id,
+                            name=tool_call.function.name,
+                            arguments=tool_call.function.arguments,
+                        )
+                        for tool_call in message.tool_calls
+                    ]
+                else:
+                    tool_calls = []
+
+                message_json = message.model_dump()
+                # Append the history with the json version
+                history.append(copy.deepcopy(message_json))
+                message_json.pop("tool_calls")
+
+                # Stage the new message for addition to DB
+                messages.append(
+                    Messages(
+                        order=len(messages),
+                        thread_id=messages[-1].thread_id,
+                        entity=get_entity(message_json),
+                        content=json.dumps(message_json),
+                        tool_calls=tool_calls,
+                    )
+                )
+            else:
+                message = messages[-1]
 
             if not message.tool_calls:
                 break
 
-            # handle function calls, updating context_variables, and switching agents
+            # Handle function calls, updating context_variables, and switching agents
             partial_response = await self.execute_tool_calls(
-                message.tool_calls, active_agent.tools, context_variables
+                messages[-1].tool_calls, active_agent.tools, context_variables
             )
+
+            # If the tool call response contains HIL validation, do not update anything and return
+            if partial_response.hil_messages:
+                return Response(
+                    messages=history[init_len:],
+                    agent=active_agent,
+                    context_variables=context_variables,
+                    hil_messages=partial_response.hil_messages,
+                )
+
             history.extend(partial_response.messages)
+            messages.extend(
+                [
+                    Messages(
+                        order=len(messages) + i,
+                        thread_id=messages[-1].thread_id,
+                        entity=Entity.TOOL,
+                        content=json.dumps(tool_response),
+                    )
+                    for i, tool_response in enumerate(partial_response.messages)
+                ]
+            )
             context_variables.update(partial_response.context_variables)
             if partial_response.agent:
                 active_agent = partial_response.agent
