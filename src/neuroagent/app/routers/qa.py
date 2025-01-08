@@ -45,7 +45,16 @@ async def run_simple_agent(
 ) -> AgentResponse:
     """Run a single agent query."""
     response = await agent_routine.arun(
-        agent, [{"role": "user", "content": user_request.query}], context_variables
+        agent,
+        [
+            Messages(
+                order=0,
+                thread_id="Dummy_thread_id",
+                entity=Entity.USER,
+                content=json.dumps({"role": "user", "content": user_request.query}),
+            )
+        ],
+        context_variables,
     )
     return AgentResponse(message=response.messages[-1]["content"])
 
@@ -80,7 +89,7 @@ async def run_chat_agent(
     thread.update_date = utc_now()
     await session.commit()
 
-    if response.hil_messages:
+    if response.hil_messages is not None:
         return response.hil_messages
     return AgentResponse(message=response.messages[-1]["content"])
 

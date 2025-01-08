@@ -41,7 +41,7 @@ class Response(BaseModel):
     messages: list[dict[str, Any]] = []
     agent: Agent | None = None
     context_variables: dict[str, Any] = {}
-    hil_messages: list[HILResponse | None] = []
+    hil_messages: list[HILResponse] | None = None
 
 
 class AgentRequest(BaseModel):

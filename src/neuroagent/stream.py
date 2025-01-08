@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neuroagent.agent_routine import AgentsRoutine
-from neuroagent.app.database.sql_schemas import Messages, utc_now
+from neuroagent.app.database.sql_schemas import Messages, Threads, utc_now
 from neuroagent.new_types import Agent, Response
 
 
@@ -17,7 +17,7 @@ async def stream_agent_response(
     agent: Agent,
     messages: list[Messages],
     context_variables: dict[str, Any],
-    thread: str,
+    thread: Threads,
     request: Request,
 ) -> AsyncIterator[str]:
     """Redefine fastAPI connections to enable streaming."""
