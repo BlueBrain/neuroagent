@@ -61,8 +61,6 @@ async def save_history(
                 for tool_call in message["tool_calls"]
             ]
             message.pop("tool_calls")
-        else:
-            raise HTTPException(status_code=500, detail="Unknown message entity.")
 
         new_msg = Messages(
             order=i + offset,

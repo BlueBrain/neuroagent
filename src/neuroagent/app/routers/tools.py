@@ -58,7 +58,7 @@ async def get_tool_calls(
         return []
 
     # Get all the "AI_TOOL" messsages in between.
-    tool_call_result = await session.execute(
+    ai_tool_messages_query = await session.execute(
         select(Messages)
         .where(
             Messages.thread_id == thread_id,
@@ -68,18 +68,18 @@ async def get_tool_calls(
         )
         .order_by(Messages.order)
     )
-    all_relevant_tool_calls = tool_call_result.scalars().all()
+    ai_tool_messages = ai_tool_messages_query.scalars().all()
 
-    # We should maybe give back the messag_id, for easier search after.
+    # We should maybe give back the message_id, for easier search after.
     tool_calls_response = []
-    for tool_calls in all_relevant_tool_calls:
-        tool_calls_dict = json.loads(tool_calls.content)
-        for tool in tool_calls_dict["tool_calls"]:
+    for ai_tool_message in ai_tool_messages:
+        tool_calls = await ai_tool_message.awaitable_attrs.tool_calls
+        for tool in tool_calls:
             tool_calls_response.append(
                 ToolCallSchema(
-                    tool_call_id=tool["id"],
-                    name=tool["function"]["name"],
-                    arguments=json.loads(tool["function"]["arguments"]),
+                    tool_call_id=tool.tool_call_id,
+                    name=tool.name,
+                    arguments=json.loads(tool.arguments),
                 )
             )
 

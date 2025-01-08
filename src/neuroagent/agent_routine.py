@@ -8,10 +8,6 @@ from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessage
-from openai.types.chat.chat_completion_message_tool_call import (
-    ChatCompletionMessageToolCall,
-    Function,
-)
 from pydantic import ValidationError
 
 from neuroagent.app.database.sql_schemas import Entity, Messages, ToolCalls
@@ -293,7 +289,7 @@ class AgentsRoutine:
                 active_agent = partial_response.agent
 
         return Response(
-            messages=history[init_len:],
+            messages=history[init_len - 1 :],
             agent=active_agent,
             context_variables=context_variables,
         )
@@ -301,15 +297,15 @@ class AgentsRoutine:
     async def astream(
         self,
         agent: Agent,
-        messages: list[dict[str, Any]],
+        messages: list[Messages],
         context_variables: dict[str, Any] = {},
         model_override: str | None = None,
         max_turns: int | float = float("inf"),
     ) -> AsyncIterator[str | Response]:
         """Stream the agent response."""
         active_agent = agent
-
-        history = copy.deepcopy(messages)
+        content = await messages_to_openai_content(messages)
+        history = copy.deepcopy(content)
         init_len = len(messages)
         is_streaming = False
 
@@ -329,59 +325,96 @@ class AgentsRoutine:
             }
 
             # get completion with current history, agent
-            completion = await self.get_chat_completion(
-                agent=active_agent,
-                history=history,
-                context_variables=context_variables,
-                model_override=model_override,
-                stream=True,
-            )
-            async for chunk in completion:  # type: ignore
-                delta = json.loads(chunk.choices[0].delta.model_dump_json())
+            if not messages or messages[-1].entity != Entity.AI_TOOL:
+                completion = await self.get_chat_completion(
+                    agent=active_agent,
+                    history=history,
+                    context_variables=context_variables,
+                    model_override=model_override,
+                    stream=True,
+                )
+                async for chunk in completion:  # type: ignore
+                    delta = json.loads(chunk.choices[0].delta.model_dump_json())
 
-                # Check for tool calls
-                if delta["tool_calls"]:
-                    tool = delta["tool_calls"][0]["function"]
-                    if tool["name"]:
-                        yield f"\nCalling tool : {tool['name']} with arguments : "
-                    if tool["arguments"]:
-                        yield tool["arguments"]
+                    # Check for tool calls
+                    if delta["tool_calls"]:
+                        tool = delta["tool_calls"][0]["function"]
+                        if tool["name"]:
+                            yield f"\nCalling tool : {tool['name']} with arguments : "
+                        if tool["arguments"]:
+                            yield tool["arguments"]
 
-                # Check for content
-                if delta["content"]:
-                    if not is_streaming:
-                        yield "\n<begin_llm_response>\n"
-                        is_streaming = True
-                    yield delta["content"]
+                    # Check for content
+                    if delta["content"]:
+                        if not is_streaming:
+                            yield "\n<begin_llm_response>\n"
+                            is_streaming = True
+                        yield delta["content"]
 
-                delta.pop("role", None)
-                merge_chunk(message, delta)
+                    delta.pop("role", None)
+                    merge_chunk(message, delta)
 
-            message["tool_calls"] = list(message.get("tool_calls", {}).values())
-            if not message["tool_calls"]:
-                message["tool_calls"] = None
-            history.append(message)
+                message["tool_calls"] = list(message.get("tool_calls", {}).values())
+                if not message["tool_calls"]:
+                    message["tool_calls"] = None
 
-            if not message["tool_calls"]:
+                # If tool calls requested, instantiate them as an SQL compatible class
+                if message["tool_calls"]:
+                    tool_calls = [
+                        ToolCalls(
+                            tool_call_id=tool_call["id"],
+                            name=tool_call["function"]["name"],
+                            arguments=tool_call["function"]["arguments"],
+                        )
+                        for tool_call in message["tool_calls"]
+                    ]
+                else:
+                    tool_calls = []
+
+                # Append the history with the json version
+                history.append(copy.deepcopy(message))
+                message.pop("tool_calls")
+
+                # Stage the new message for addition to DB
+                messages.append(
+                    Messages(
+                        order=len(messages),
+                        thread_id=messages[-1].thread_id,
+                        entity=get_entity(message),
+                        content=json.dumps(message),
+                        tool_calls=tool_calls,
+                    )
+                )
+
+            if not messages[-1].tool_calls:
                 break
-
-            # convert tool_calls to objects
-            tool_calls = []
-            for tool_call in message["tool_calls"]:
-                function = Function(
-                    arguments=tool_call["function"]["arguments"],
-                    name=tool_call["function"]["name"],
-                )
-                tool_call_object = ChatCompletionMessageToolCall(
-                    id=tool_call["id"], function=function, type=tool_call["type"]
-                )
-                tool_calls.append(tool_call_object)
 
             # handle function calls, updating context_variables, and switching agents
             partial_response = await self.execute_tool_calls(
-                tool_calls, active_agent.tools, context_variables
+                messages[-1].tool_calls, active_agent.tools, context_variables
             )
+            # If the tool call response contains HIL validation, do not update anything and return
+            if partial_response.hil_messages:
+                yield Response(
+                    messages=history[init_len:],
+                    agent=active_agent,
+                    context_variables=context_variables,
+                    hil_messages=partial_response.hil_messages,
+                )
+                break
+
             history.extend(partial_response.messages)
+            messages.extend(
+                [
+                    Messages(
+                        order=len(messages) + i,
+                        thread_id=messages[-1].thread_id,
+                        entity=Entity.TOOL,
+                        content=json.dumps(tool_response),
+                    )
+                    for i, tool_response in enumerate(partial_response.messages)
+                ]
+            )
             context_variables.update(partial_response.context_variables)
             if partial_response.agent:
                 active_agent = partial_response.agent

@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from typing import Any, Iterator
 
+from fastapi import HTTPException
 from httpx import AsyncClient
 
 from neuroagent.app.database.sql_schemas import Entity, Messages
@@ -81,6 +82,8 @@ def get_entity(message: dict[str, Any]) -> Entity:
         return Entity.AI_MESSAGE
     elif message["role"] == "assistant" and not message["content"]:
         return Entity.AI_TOOL
+    else:
+        raise HTTPException(status_code=500, detail="Unknown message entity.")
 
 
 class RegionMeta:

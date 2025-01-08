@@ -2,23 +2,23 @@
 
 from typing import Any, AsyncIterator
 
+from fastapi import Request
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neuroagent.agent_routine import AgentsRoutine
-from neuroagent.app.database.db_utils import save_history
+from neuroagent.app.database.sql_schemas import Messages, utc_now
 from neuroagent.new_types import Agent, Response
 
 
 async def stream_agent_response(
     agents_routine: AgentsRoutine,
     agent: Agent,
-    messages: list[dict[str, str]],
+    messages: list[Messages],
     context_variables: dict[str, Any],
-    user_id: str,
-    thread_id: str,
-    session: AsyncSession,
+    thread: str,
+    request: Request,
 ) -> AsyncIterator[str]:
     """Redefine fastAPI connections to enable streaming."""
     # Restore the OpenAI client
@@ -38,6 +38,12 @@ async def stream_agent_response(
         },
     )
     context_variables["httpx_client"] = httpx_client
+    # Restore the session
+    engine = request.app.state.engine
+    session = AsyncSession(engine)
+    # Need to rebind every single message
+    for message in messages:
+        session.add(message)
 
     iterator = connected_agents_routine.astream(agent, messages, context_variables)
     async for chunk in iterator:
@@ -45,13 +51,12 @@ async def stream_agent_response(
         if not isinstance(chunk, Response):
             yield chunk
         # Final chunk that contains the whole response
-        else:
-            to_db = chunk
+        elif chunk.hil_messages:
+            yield str(
+                [hil_message.model_dump_json() for hil_message in chunk.hil_messages]
+            )
 
-    await save_history(
-        user_id=user_id,
-        history=to_db.messages,
-        offset=len(messages) - 1,
-        thread_id=thread_id,
-        session=session,
-    )
+    # Save the new messages in DB
+    thread.update_date = utc_now()
+    await session.commit()
+    await session.close()

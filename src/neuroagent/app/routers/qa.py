@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,6 +88,7 @@ async def run_chat_agent(
 @router.post("/chat_streamed/{thread_id}")
 async def stream_chat_agent(
     user_request: AgentRequest,
+    request: Request,
     agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
@@ -100,15 +101,21 @@ async def stream_chat_agent(
     context_variables["vlab_id"] = thread.vlab_id
     context_variables["project_id"] = thread.project_id
     messages: list[Messages] = await thread.awaitable_attrs.messages
-
-    messages.append({"role": "user", "content": user_request.query})
+    if not messages or messages[-1].entity != Entity.AI_TOOL:
+        messages.append(
+            Messages(
+                order=len(messages),
+                thread_id=thread.thread_id,
+                entity=Entity.USER,
+                content=json.dumps({"role": "user", "content": user_request.query}),
+            )
+        )
     stream_generator = stream_agent_response(
         agents_routine,
         agent,
         messages,
         context_variables,
-        user_id,
-        thread.thread_id,
-        session,
+        thread,
+        request,
     )
     return StreamingResponse(stream_generator, media_type="text/event-stream")
