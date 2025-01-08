@@ -27,7 +27,6 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("arguments", sa.String(), nullable=False),
         sa.Column("validated", sa.Boolean(), nullable=True),
-        sa.Column("type", sa.String(), nullable=False),
         sa.Column("message_id", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(
             ["message_id"],

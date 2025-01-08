@@ -82,7 +82,6 @@ class ToolCalls(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     arguments: Mapped[str] = mapped_column(String, nullable=False)
     validated: Mapped[bool] = mapped_column(Boolean, nullable=True)
-    type: Mapped[str] = mapped_column(String, default="function")
 
     message_id: Mapped[str] = mapped_column(String, ForeignKey("messages.message_id"))
     message: Mapped[Messages] = relationship("Messages", back_populates="tool_calls")
