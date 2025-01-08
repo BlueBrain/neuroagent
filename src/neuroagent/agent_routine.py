@@ -216,7 +216,7 @@ class AgentsRoutine:
 
         while len(history) - init_len < max_turns and active_agent:
             # Run chat completion if the last message isn't a tool call (HIL case)
-            if messages[-1].entity != Entity.AI_TOOL:
+            if not messages or messages[-1].entity != Entity.AI_TOOL:
                 # get completion with current history, agent
                 completion = await self.get_chat_completion(
                     agent=active_agent,

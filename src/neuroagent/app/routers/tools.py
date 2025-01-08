@@ -5,13 +5,15 @@ import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neuroagent.app.database.db_utils import get_thread
 from neuroagent.app.database.schemas import ToolCallSchema
-from neuroagent.app.database.sql_schemas import Entity, Messages, Threads
-from neuroagent.app.dependencies import get_session
+from neuroagent.app.database.sql_schemas import Entity, Messages, Threads, ToolCalls
+from neuroagent.app.dependencies import get_session, get_starting_agent
+from neuroagent.new_types import Agent, HILValidation
 
 logger = logging.getLogger(__name__)
 
@@ -109,3 +111,46 @@ async def get_tool_returns(
             tool_output.append(msg_content["content"])
 
     return tool_output
+
+
+@router.patch("/validate/{thread_id}")
+async def validate_input(
+    user_request: HILValidation,
+    _: Annotated[Threads, Depends(get_thread)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    starting_agent: Annotated[Agent, Depends(get_starting_agent)],
+) -> ToolCallSchema:
+    """Validate HIL inputs."""
+    # We first find the AI TOOL message to modify.
+    tool_call = await session.get(ToolCalls, user_request.tool_call_id)
+    if not tool_call:
+        raise HTTPException(status_code=404, detail="Specified tool call not found.")
+    if tool_call.validated is not None:
+        raise HTTPException(
+            status_code=403, detail="The tool call has already been validated."
+        )
+
+    tool_call.validated = user_request.is_validated  # Accepted or rejected
+
+    # If the user specified a json, take it as the new one
+    # We modify only if the user validated
+    if user_request.validated_inputs and user_request.is_validated:
+        # Find the corresponding tool (class) to do input validation
+        tool = next(
+            tool for tool in starting_agent.tools if tool.name == tool_call.name
+        )
+
+        # Validate the input JSON provided by user
+        try:
+            tool.__annotations__["input_schema"](**user_request.validated_inputs)
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+        tool_call.arguments = json.dumps(user_request.validated_inputs)
+
+    await session.commit()
+    await session.refresh(tool_call)
+    return ToolCallSchema(
+        tool_call_id=tool_call.tool_call_id,
+        name=tool_call.name,
+        arguments=json.loads(tool_call.arguments),
+    )
