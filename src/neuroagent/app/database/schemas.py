@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from neuroagent.app.database.db_utils import Entity
+from neuroagent.app.database.sql_schemas import Entity
 
 
 class ThreadsRead(BaseModel):
