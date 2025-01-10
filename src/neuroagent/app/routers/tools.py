@@ -13,7 +13,7 @@ from neuroagent.app.database.db_utils import get_thread
 from neuroagent.app.database.schemas import ToolCallSchema
 from neuroagent.app.database.sql_schemas import Entity, Messages, Threads, ToolCalls
 from neuroagent.app.dependencies import get_session, get_starting_agent
-from neuroagent.new_types import Agent, HILValidation
+from neuroagent.new_types import Agent, HILResponse, HILValidation
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,47 @@ async def get_tool_returns(
     return tool_output
 
 
-@router.patch("/validate/{thread_id}/{tool_call_id}")
+@router.get("/validation/{thread_id}/")
+async def get_required_validation(
+    _: Annotated[Threads, Depends(get_thread)],
+    thread_id: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    starting_agent: Annotated[Agent, Depends(get_starting_agent)],
+) -> list[HILResponse]:
+    """List tool calls currently requiring validation in a thread."""
+    message_query = await session.execute(
+        select(Messages)
+        .where(Messages.thread_id == thread_id)
+        .order_by(desc(Messages.order))
+        .limit(1)
+    )
+    message = message_query.scalar_one_or_none()
+    if not message or message.entity != Entity.AI_TOOL:
+        return []
+
+    else:
+        tool_calls = await message.awaitable_attrs.tool_calls
+        need_validation = []
+        for tool_call in tool_calls:
+            tool = next(
+                tool for tool in starting_agent.tools if tool.name == tool_call.name
+            )
+            if tool.hil and tool_call.validated is None:
+                input_schema = tool.__annotations__["input_schema"](
+                    **json.loads(tool_call.arguments)
+                )
+                need_validation.append(
+                    HILResponse(
+                        message="Please validate the following inputs before proceeding.",
+                        name=tool_call.name,
+                        inputs=input_schema.model_dump(),
+                        tool_call_id=tool_call.tool_call_id,
+                    )
+                )
+        return need_validation
+
+
+@router.patch("/validation/{thread_id}/{tool_call_id}")
 async def validate_input(
     user_request: HILValidation,
     _: Annotated[Threads, Depends(get_thread)],

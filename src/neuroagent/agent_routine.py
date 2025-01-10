@@ -53,9 +53,10 @@ class AgentsRoutine:
             "messages": messages,
             "tools": tools or None,
             "tool_choice": agent.tool_choice,
-            "stream_options": {"include_usage": True},
             "stream": stream,
         }
+        if stream:
+            create_params["stream_options"] = ({"include_usage": True},)
 
         if tools:
             create_params["parallel_tool_calls"] = agent.parallel_tool_calls
@@ -156,6 +157,7 @@ class AgentsRoutine:
             if tool_call.validated is None:
                 return HILResponse(
                     message="Please validate the following inputs before proceeding.",
+                    name=tool_call.name,
                     inputs=input_schema.model_dump(),
                     tool_call_id=tool_call.tool_call_id,
                 ), None

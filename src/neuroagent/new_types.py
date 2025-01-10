@@ -23,6 +23,7 @@ class HILResponse(BaseModel):
     """Response for tools that require HIL validation."""
 
     message: str
+    name: str
     inputs: dict[str, Any]
     tool_call_id: str
 
