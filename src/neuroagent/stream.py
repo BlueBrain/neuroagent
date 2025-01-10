@@ -41,9 +41,8 @@ async def stream_agent_response(
     # Restore the session
     engine = request.app.state.engine
     session = AsyncSession(engine)
-    # Need to rebind every single message
-    for message in messages:
-        session.add(message)
+    # Need to rebind the messages to the session
+    session.add_all(messages)
 
     iterator = connected_agents_routine.astream(agent, messages, context_variables)
     async for chunk in iterator:
@@ -58,5 +57,9 @@ async def stream_agent_response(
 
     # Save the new messages in DB
     thread.update_date = utc_now()
+
+    # For some weird reason need to re-add messages, but only post validation ones
+    session.add_all(messages)
+
     await session.commit()
     await session.close()

@@ -21,7 +21,6 @@ from neuroagent.app.dependencies import (
     get_context_variables,
     get_session,
     get_starting_agent,
-    get_user_id,
 )
 from neuroagent.new_types import (
     Agent,
@@ -101,14 +100,13 @@ async def stream_chat_agent(
     agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
     agent: Annotated[Agent, Depends(get_starting_agent)],
     context_variables: Annotated[dict[str, Any], Depends(get_context_variables)],
-    session: Annotated[AsyncSession, Depends(get_session)],
-    user_id: Annotated[str, Depends(get_user_id)],
     thread: Annotated[Threads, Depends(get_thread)],
 ) -> StreamingResponse:
     """Run a single agent query in a streamed fashion."""
     # Temporary solution
     context_variables["vlab_id"] = thread.vlab_id
     context_variables["project_id"] = thread.project_id
+
     messages: list[Messages] = await thread.awaitable_attrs.messages
     if not messages or messages[-1].entity != Entity.AI_TOOL:
         messages.append(
