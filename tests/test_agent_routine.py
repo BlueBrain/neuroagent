@@ -13,7 +13,7 @@ from openai.types.chat.chat_completion_chunk import (
 
 from neuroagent.agent_routine import AgentsRoutine
 from neuroagent.app.database.sql_schemas import Entity, Messages, ToolCalls
-from neuroagent.new_types import Agent, Response, Result
+from neuroagent.new_types import Agent, HILResponse, Response, Result
 from tests.mock_client import create_mock_response
 
 
@@ -39,7 +39,6 @@ class TestAgentsRoutine:
                 "tools": None,
                 "tool_choice": None,
                 "stream": False,
-                "stream_options": {"include_usage": True},
             }
         )
 
@@ -75,7 +74,6 @@ class TestAgentsRoutine:
                 "tools": None,
                 "tool_choice": None,
                 "stream": False,
-                "stream_options": {"include_usage": True},
             }
         )
 
@@ -124,7 +122,6 @@ class TestAgentsRoutine:
                 "tool_choice": None,
                 "stream": False,
                 "parallel_tool_calls": True,
-                "stream_options": {"include_usage": True},
             }
         )
 
@@ -445,8 +442,11 @@ class TestAgentsRoutine:
         )
 
     @pytest.mark.asyncio
-    async def test_arun(self, mock_openai_client, get_weather_tool, agent_handoff_tool):
-        agent_1 = Agent(name="Test Agent", tools=[agent_handoff_tool])
+    @pytest.mark.parametrize("hil", [True, False])
+    async def test_arun(
+        self, hil, mock_openai_client, get_weather_tool, agent_handoff_tool
+    ):
+        agent_1 = Agent(name="Test Agent", tools=[agent_handoff_tool, get_weather_tool])
         agent_2 = Agent(name="Test Agent", tools=[get_weather_tool])
         messages = [
             Messages(
@@ -466,16 +466,14 @@ class TestAgentsRoutine:
         ]
         context_variables = {"to_agent": agent_2, "planet": "Mars"}
         # set mock to return a response that triggers function call
+        get_weather_tool.hil = hil
         mock_openai_client.set_sequential_responses(
             [
                 create_mock_response(
                     message={"role": "assistant", "content": ""},
-                    function_calls=[{"name": "agent_handoff_tool", "args": {}}],
-                ),
-                create_mock_response(
-                    message={"role": "assistant", "content": ""},
                     function_calls=[
-                        {"name": "get_weather", "args": {"location": "Montreux"}}
+                        {"name": "agent_handoff_tool", "args": {}},
+                        {"name": "get_weather", "args": {"location": "Montreux"}},
                     ],
                 ),
                 create_mock_response(
@@ -484,25 +482,36 @@ class TestAgentsRoutine:
             ]
         )
 
-        # set up client and run
+        # Set up client and run
         client = AgentsRoutine(client=mock_openai_client)
         response = await client.arun(
             agent=agent_1, messages=messages, context_variables=context_variables
         )
+        if hil:
+            assert response.messages == []
+            assert response.hil_messages == [
+                HILResponse(
+                    message="Please validate the following inputs before proceeding.",
+                    name="get_weather",
+                    inputs={"location": "Montreux"},
+                    tool_call_id="mock_tc_id",
+                )
+            ]
 
-        assert response.messages[2]["role"] == "tool"
-        assert response.messages[2]["content"] == json.dumps(
-            {"assistant": agent_1.name}
-        )
-        assert response.messages[-2]["role"] == "tool"
-        assert (
-            response.messages[-2]["content"]
-            == "It's sunny today in Montreux from planet Mars."
-        )
-        assert response.messages[-1]["role"] == "assistant"
-        assert response.messages[-1]["content"] == "sample response content"
-        assert response.agent == agent_2
-        assert response.context_variables == context_variables
+        else:
+            assert response.messages[2]["role"] == "tool"
+            assert response.messages[2]["content"] == json.dumps(
+                {"assistant": agent_1.name}
+            )
+            assert response.messages[-2]["role"] == "tool"
+            assert (
+                response.messages[-2]["content"]
+                == "It's sunny today in Montreux from planet Mars."
+            )
+            assert response.messages[-1]["role"] == "assistant"
+            assert response.messages[-1]["content"] == "sample response content"
+            assert response.agent == agent_2
+            assert response.context_variables == context_variables
 
     @pytest.mark.asyncio
     async def test_astream(

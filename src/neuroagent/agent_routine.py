@@ -56,7 +56,7 @@ class AgentsRoutine:
             "stream": stream,
         }
         if stream:
-            create_params["stream_options"] = ({"include_usage": True},)
+            create_params["stream_options"] = {"include_usage": True}
 
         if tools:
             create_params["parallel_tool_calls"] = agent.parallel_tool_calls
@@ -224,6 +224,7 @@ class AgentsRoutine:
                     model_override=model_override,
                     stream=False,
                 )
+
                 message = completion.choices[0].message  # type: ignore
                 message.sender = active_agent.name
 
@@ -269,7 +270,7 @@ class AgentsRoutine:
             # If the tool call response contains HIL validation, do not update anything and return
             if partial_response.hil_messages:
                 return Response(
-                    messages=history[init_len:],
+                    messages=[],
                     agent=active_agent,
                     context_variables=context_variables,
                     hil_messages=partial_response.hil_messages,
@@ -424,7 +425,7 @@ class AgentsRoutine:
             # If the tool call response contains HIL validation, do not update anything and return
             if partial_response.hil_messages:
                 yield Response(
-                    messages=history[init_len:],
+                    messages=[],
                     agent=active_agent,
                     context_variables=context_variables,
                     hil_messages=partial_response.hil_messages,
