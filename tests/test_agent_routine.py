@@ -39,6 +39,7 @@ class TestAgentsRoutine:
                 "tools": None,
                 "tool_choice": None,
                 "stream": False,
+                "stream_options": {"include_usage": True},
             }
         )
 
@@ -74,6 +75,7 @@ class TestAgentsRoutine:
                 "tools": None,
                 "tool_choice": None,
                 "stream": False,
+                "stream_options": {"include_usage": True},
             }
         )
 
@@ -122,6 +124,7 @@ class TestAgentsRoutine:
                 "tool_choice": None,
                 "stream": False,
                 "parallel_tool_calls": True,
+                "stream_options": {"include_usage": True},
             }
         )
 
@@ -590,6 +593,7 @@ class TestAgentsRoutine:
                                         tool_calls=[
                                             ChoiceDeltaToolCall(
                                                 index=0,
+                                                id="mock_tc_id",
                                                 function=ChoiceDeltaToolCallFunction(
                                                     arguments=json.dumps(
                                                         function_call["args"]
@@ -636,10 +640,16 @@ class TestAgentsRoutine:
                 else:
                     response = token
 
-        assert (
-            "".join(tokens)
-            == '\nCalling tool : agent_handoff_tool with arguments : {}\nCalling tool : get_weather with arguments : {"location": "Montreux"}\n<begin_llm_response>\nsample response content'
-        )
+        expected_tokens = [
+            "b:{'toolCallId':mock_tc_id,'toolName':agent_handoff_tool}\n",
+            "c:{toolCallId:mock_tc_id; argsTextDelta:{}}\n",
+            "b:{'toolCallId':mock_tc_id,'toolName':get_weather}\n",
+            'c:{toolCallId:mock_tc_id; argsTextDelta:{"location": "Montreux"}}\n',
+            '0:"sample res"\n',
+            '0:"ponse cont"\n',
+            '0:"ent"\n',
+        ]
+        assert "".join(tokens) == "".join(expected_tokens)
         assert response.messages[2]["role"] == "tool"
         assert response.messages[2]["content"] == json.dumps(
             {"assistant": agent_1.name}

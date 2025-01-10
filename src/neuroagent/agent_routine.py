@@ -350,7 +350,6 @@ class AgentsRoutine:
                                 id = tool_call.id
                                 name = tool_call.function.name
                                 arguments = tool_call.function.arguments
-
                                 if id is not None:
                                     draft_tool_calls_index += 1
                                     draft_tool_calls.append(
