@@ -333,7 +333,7 @@ class AgentsRoutine:
                     model_override=model_override,
                     stream=True,
                 )
-                draft_tool_calls = []
+                draft_tool_calls = []  # type: ignore
                 draft_tool_calls_index = -1
                 async for chunk in completion:  # type: ignore
                     for choice in chunk.choices:
