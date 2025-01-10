@@ -4,7 +4,7 @@ import datetime
 import enum
 import uuid
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -68,4 +68,20 @@ class Messages(Base):
     thread_id: Mapped[str] = mapped_column(
         String, ForeignKey("threads.thread_id"), nullable=False
     )
-    thread: Mapped["Threads"] = relationship("Threads", back_populates="messages")
+    thread: Mapped[Threads] = relationship("Threads", back_populates="messages")
+    tool_calls: Mapped[list["ToolCalls"]] = relationship(
+        "ToolCalls", back_populates="message", cascade="all, delete-orphan"
+    )
+
+
+class ToolCalls(Base):
+    """SQL table used for tool call parameters."""
+
+    __tablename__ = "tool_calls"
+    tool_call_id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    arguments: Mapped[str] = mapped_column(String, nullable=False)
+    validated: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+    message_id: Mapped[str] = mapped_column(String, ForeignKey("messages.message_id"))
+    message: Mapped[Messages] = relationship("Messages", back_populates="tool_calls")

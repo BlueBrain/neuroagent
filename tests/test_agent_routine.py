@@ -12,6 +12,7 @@ from openai.types.chat.chat_completion_chunk import (
 )
 
 from neuroagent.agent_routine import AgentsRoutine
+from neuroagent.app.database.sql_schemas import Entity, Messages, ToolCalls
 from neuroagent.new_types import Agent, Response, Result
 from tests.mock_client import create_mock_response
 
@@ -171,8 +172,16 @@ class TestAgentsRoutine:
             model_override=None,
         )
         tool_calls = tool_call_message.choices[0].message.tool_calls
+        tool_calls_db = [
+            ToolCalls(
+                tool_call_id=tool_call.id,
+                name=tool_call.function.name,
+                arguments=tool_call.function.arguments,
+            )
+            for tool_call in tool_calls
+        ]
         tool_calls_result = await routine.execute_tool_calls(
-            tool_calls=tool_calls,
+            tool_calls=tool_calls_db,
             tools=agent.tools,
             context_variables=context_variables,
         )
@@ -213,8 +222,16 @@ class TestAgentsRoutine:
             model_override=None,
         )
         tool_calls = tool_call_message.choices[0].message.tool_calls
+        tool_calls_db = [
+            ToolCalls(
+                tool_call_id=tool_call.id,
+                name=tool_call.function.name,
+                arguments=tool_call.function.arguments,
+            )
+            for tool_call in tool_calls
+        ]
         tool_calls_result = await routine.execute_tool_calls(
-            tool_calls=tool_calls,
+            tool_calls=tool_calls_db,
             tools=agent.tools,
             context_variables=context_variables,
         )
@@ -262,8 +279,16 @@ class TestAgentsRoutine:
             model_override=None,
         )
         tool_calls = tool_call_message.choices[0].message.tool_calls
+        tool_calls_db = [
+            ToolCalls(
+                tool_call_id=tool_call.id,
+                name=tool_call.function.name,
+                arguments=tool_call.function.arguments,
+            )
+            for tool_call in tool_calls
+        ]
         tool_calls_result = await routine.execute_tool_calls(
-            tool_calls=tool_calls,
+            tool_calls=tool_calls_db,
             tools=agent_1.tools,
             context_variables=context_variables,
         )
@@ -304,8 +329,15 @@ class TestAgentsRoutine:
             model_override=None,
         )
         tool_call = tool_call_message.choices[0].message.tool_calls[0]
+        tool_call_db = ToolCalls(
+            tool_call_id=tool_call.id,
+            name=tool_call.function.name,
+            arguments=tool_call.function.arguments,
+        )
         tool_call_result = await routine.handle_tool_call(
-            tool_call=tool_call, tools=agent.tools, context_variables=context_variables
+            tool_call=tool_call_db,
+            tools=agent.tools,
+            context_variables=context_variables,
         )
 
         assert tool_call_result == (
@@ -342,8 +374,15 @@ class TestAgentsRoutine:
             model_override=None,
         )
         tool_call = tool_call_message.choices[0].message.tool_calls[0]
+        tool_call_db = ToolCalls(
+            tool_call_id=tool_call.id,
+            name=tool_call.function.name,
+            arguments=tool_call.function.arguments,
+        )
         tool_calls_result = await routine.handle_tool_call(
-            tool_call=tool_call, tools=agent.tools, context_variables=context_variables
+            tool_call=tool_call_db,
+            tools=agent.tools,
+            context_variables=context_variables,
         )
 
         assert tool_calls_result == (
@@ -381,8 +420,13 @@ class TestAgentsRoutine:
             model_override=None,
         )
         tool_call = tool_call_message.choices[0].message.tool_calls[0]
+        tool_call_db = ToolCalls(
+            tool_call_id=tool_call.id,
+            name=tool_call.function.name,
+            arguments=tool_call.function.arguments,
+        )
         tool_calls_result = await routine.handle_tool_call(
-            tool_call=tool_call,
+            tool_call=tool_call_db,
             tools=agent_1.tools,
             context_variables=context_variables,
         )
@@ -402,7 +446,20 @@ class TestAgentsRoutine:
         agent_1 = Agent(name="Test Agent", tools=[agent_handoff_tool])
         agent_2 = Agent(name="Test Agent", tools=[get_weather_tool])
         messages = [
-            {"role": "user", "content": "What's the weather like in San Francisco?"}
+            Messages(
+                order=0,
+                thread_id="fake_id",
+                entity=Entity.USER,
+                content=json.dumps(
+                    {
+                        "role": "user",
+                        "content": {
+                            "role": "user",
+                            "content": "What's the weather like in San Francisco?",
+                        },
+                    }
+                ),
+            )
         ]
         context_variables = {"to_agent": agent_2, "planet": "Mars"}
         # set mock to return a response that triggers function call
@@ -451,7 +508,20 @@ class TestAgentsRoutine:
         agent_1 = Agent(name="Test Agent", tools=[agent_handoff_tool])
         agent_2 = Agent(name="Test Agent", tools=[get_weather_tool])
         messages = [
-            {"role": "user", "content": "What's the weather like in San Francisco?"}
+            Messages(
+                order=0,
+                thread_id="fake_id",
+                entity=Entity.USER,
+                content=json.dumps(
+                    {
+                        "role": "user",
+                        "content": {
+                            "role": "user",
+                            "content": "What's the weather like in San Francisco?",
+                        },
+                    }
+                ),
+            )
         ]
         context_variables = {"to_agent": agent_2, "planet": "Mars"}
         routine = AgentsRoutine(client=mock_openai_client)

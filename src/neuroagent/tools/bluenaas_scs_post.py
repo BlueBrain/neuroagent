@@ -93,6 +93,7 @@ class SCSPostTool(BaseTool):
     """
     metadata: SCSPostMetadata
     input_schema: InputSCSPost
+    hil: ClassVar[bool] = True
 
     async def arun(self) -> dict[str, Any]:
         """Run the SCSPost tool."""

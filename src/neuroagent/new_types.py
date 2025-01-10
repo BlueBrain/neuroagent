@@ -19,12 +19,29 @@ class Agent(BaseModel):
     parallel_tool_calls: bool = True
 
 
+class HILResponse(BaseModel):
+    """Response for tools that require HIL validation."""
+
+    message: str
+    inputs: dict[str, Any]
+    tool_call_id: str
+
+
+class HILValidation(BaseModel):
+    """Class to send the validated json to the api."""
+
+    tool_call_id: str
+    validated_inputs: dict[str, Any] | None = None
+    is_validated: bool = True
+
+
 class Response(BaseModel):
     """Agent response."""
 
     messages: list[dict[str, Any]] = []
     agent: Agent | None = None
     context_variables: dict[str, Any] = {}
+    hil_messages: list[HILResponse] | None = None
 
 
 class AgentRequest(BaseModel):

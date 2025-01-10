@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests of AgentsRoutine.
 - Unit tests for database
 - Tests for tool CRUD endpoints.
+- Human In the Loop.
 
 ### Fixed
 - Migrate LLM Evaluation logic to scripts and add tests
