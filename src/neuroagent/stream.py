@@ -1,5 +1,6 @@
 """Wrapper around streaming methods to reinitiate connections due to the way fastAPI StreamingResponse works."""
 
+import json
 from typing import Any, AsyncIterator
 
 from fastapi import Request
@@ -51,9 +52,7 @@ async def stream_agent_response(
             yield chunk
         # Final chunk that contains the whole response
         elif chunk.hil_messages:
-            yield str(
-                [hil_message.model_dump_json() for hil_message in chunk.hil_messages]
-            )
+            yield f"2:{json.dumps([hil_message.model_dump_json() for hil_message in chunk.hil_messages])}\n"
 
     # Save the new messages in DB
     thread.update_date = utc_now()

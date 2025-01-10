@@ -30,7 +30,6 @@ class HILResponse(BaseModel):
 class HILValidation(BaseModel):
     """Class to send the validated json to the api."""
 
-    tool_call_id: str
     validated_inputs: dict[str, Any] | None = None
     is_validated: bool = True
 

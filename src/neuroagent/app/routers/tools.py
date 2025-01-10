@@ -113,16 +113,17 @@ async def get_tool_returns(
     return tool_output
 
 
-@router.patch("/validate/{thread_id}")
+@router.patch("/validate/{thread_id}/{tool_call_id}")
 async def validate_input(
     user_request: HILValidation,
     _: Annotated[Threads, Depends(get_thread)],
+    tool_call_id: str,
     session: Annotated[AsyncSession, Depends(get_session)],
     starting_agent: Annotated[Agent, Depends(get_starting_agent)],
 ) -> ToolCallSchema:
     """Validate HIL inputs."""
     # We first find the AI TOOL message to modify.
-    tool_call = await session.get(ToolCalls, user_request.tool_call_id)
+    tool_call = await session.get(ToolCalls, tool_call_id)
     if not tool_call:
         raise HTTPException(status_code=404, detail="Specified tool call not found.")
     if tool_call.validated is not None:

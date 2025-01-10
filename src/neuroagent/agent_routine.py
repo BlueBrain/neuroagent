@@ -53,6 +53,7 @@ class AgentsRoutine:
             "messages": messages,
             "tools": tools or None,
             "tool_choice": agent.tool_choice,
+            "stream_options": {"include_usage": True},
             "stream": stream,
         }
 
@@ -307,7 +308,6 @@ class AgentsRoutine:
         content = await messages_to_openai_content(messages)
         history = copy.deepcopy(content)
         init_len = len(messages)
-        is_streaming = False
 
         while len(history) - init_len < max_turns:
             message: dict[str, Any] = {
@@ -333,27 +333,54 @@ class AgentsRoutine:
                     model_override=model_override,
                     stream=True,
                 )
+                draft_tool_calls = []
+                draft_tool_calls_index = -1
                 async for chunk in completion:  # type: ignore
-                    delta = json.loads(chunk.choices[0].delta.model_dump_json())
+                    for choice in chunk.choices:
+                        if choice.finish_reason == "stop":
+                            continue
 
-                    # Check for tool calls
-                    if delta["tool_calls"]:
-                        tool = delta["tool_calls"][0]["function"]
-                        if tool["name"]:
-                            yield f"\nCalling tool : {tool['name']} with arguments : "
-                        if tool["arguments"]:
-                            yield tool["arguments"]
+                        elif choice.finish_reason == "tool_calls":
+                            for tool_call in draft_tool_calls:
+                                yield f"9:{{'toolCallId':'{tool_call['id']}','toolName':'{tool_call['name']}','args':{tool_call['arguments']}}}\n"
 
-                    # Check for content
-                    if delta["content"]:
-                        if not is_streaming:
-                            yield "\n<begin_llm_response>\n"
-                            is_streaming = True
-                        yield delta["content"]
+                        # Check for tool calls
+                        elif choice.delta.tool_calls:
+                            for tool_call in choice.delta.tool_calls:
+                                id = tool_call.id
+                                name = tool_call.function.name
+                                arguments = tool_call.function.arguments
 
-                    delta.pop("role", None)
-                    merge_chunk(message, delta)
+                                if id is not None:
+                                    draft_tool_calls_index += 1
+                                    draft_tool_calls.append(
+                                        {"id": id, "name": name, "arguments": ""}
+                                    )
+                                    yield f"b:{{'toolCallId':{id},'toolName':{name}}}\n"
 
+                                else:
+                                    draft_tool_calls[draft_tool_calls_index][
+                                        "arguments"
+                                    ] += arguments
+                                yield f"c:{{toolCallId:{id}; argsTextDelta:{arguments}}}\n"
+
+                        else:
+                            yield f"0:{json.dumps(choice.delta.content)}\n"
+
+                        delta_json = choice.delta.model_dump()
+                        delta_json.pop("role", None)
+                        merge_chunk(message, delta_json)
+
+                if chunk.choices == []:
+                    usage = chunk.usage
+                    prompt_tokens = usage.prompt_tokens
+                    completion_tokens = usage.completion_tokens
+
+                    yield 'd:{{"finishReason":"{reason}","usage":{{"promptTokens":{prompt},"completionTokens":{completion}}}}}\n'.format(
+                        reason="tool-calls" if len(draft_tool_calls) > 0 else "stop",
+                        prompt=prompt_tokens,
+                        completion=completion_tokens,
+                    )
                 message["tool_calls"] = list(message.get("tool_calls", {}).values())
                 if not message["tool_calls"]:
                     message["tool_calls"] = None
