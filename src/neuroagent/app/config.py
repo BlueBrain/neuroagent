@@ -5,7 +5,7 @@ import pathlib
 from typing import Literal, Optional
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -228,21 +228,21 @@ class Settings(BaseSettings):
         frozen=True,
     )
 
-    @model_validator(mode="after")
-    def check_consistency(self) -> "Settings":
-        """Check if consistent.
+    # @model_validator(mode="after")
+    # def check_consistency(self) -> "Settings":
+    #     """Check if consistent.
 
-        ATTENTION: Do not put model validators into the child settings. The
-        model validator is run during instantiation.
+    #     ATTENTION: Do not put model validators into the child settings. The
+    #     model validator is run during instantiation.
 
-        """
-        # If you don't enforce keycloak auth, you need a way to communicate with the APIs the tools leverage
-        if not self.keycloak.password and not self.keycloak.validate_token:
-            raise ValueError(
-                "Need an auth method for subsequent APIs called by the tools."
-            )
+    #     """
+    #     # If you don't enforce keycloak auth, you need a way to communicate with the APIs the tools leverage
+    #     if not self.keycloak.password and not self.keycloak.validate_token:
+    #         raise ValueError(
+    #             "Need an auth method for subsequent APIs called by the tools."
+    #         )
 
-        return self
+    #     return self
 
 
 # Load the remaining variables into the environment

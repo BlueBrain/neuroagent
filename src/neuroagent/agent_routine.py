@@ -56,7 +56,7 @@ class AgentsRoutine:
             "stream": stream,
         }
         if stream:
-            create_params["stream_options"] = {"include_usage": True}
+            create_params["stream_options"] = {"include_usage": True}  # type: ignore
 
         if tools:
             create_params["parallel_tool_calls"] = agent.parallel_tool_calls

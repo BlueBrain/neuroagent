@@ -27,6 +27,7 @@ from neuroagent.new_types import (
     AgentRequest,
     AgentResponse,
     HILResponse,
+    VercelRequest,
 )
 from neuroagent.stream import stream_agent_response
 
@@ -95,7 +96,7 @@ async def run_chat_agent(
 
 @router.post("/chat_streamed/{thread_id}")
 async def stream_chat_agent(
-    user_request: AgentRequest,
+    user_request: VercelRequest,
     request: Request,
     agents_routine: Annotated[AgentsRoutine, Depends(get_agents_routine)],
     agent: Annotated[Agent, Depends(get_starting_agent)],
@@ -114,7 +115,9 @@ async def stream_chat_agent(
                 order=len(messages),
                 thread_id=thread.thread_id,
                 entity=Entity.USER,
-                content=json.dumps({"role": "user", "content": user_request.query}),
+                content=json.dumps(
+                    {"role": "user", "content": user_request.messages[0].content}
+                ),
             )
         )
     stream_generator = stream_agent_response(
@@ -125,4 +128,8 @@ async def stream_chat_agent(
         thread,
         request,
     )
-    return StreamingResponse(stream_generator, media_type="text/event-stream")
+    return StreamingResponse(
+        stream_generator,
+        media_type="text/event-stream",
+        headers={"x-vercel-ai-data-stream": "v1"},
+    )

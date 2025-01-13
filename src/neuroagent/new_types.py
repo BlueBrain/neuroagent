@@ -56,6 +56,38 @@ class AgentResponse(BaseModel):
     message: str = ""
 
 
+class ClientAttachment(BaseModel):
+    """Vercel class."""
+
+    name: str
+    contentType: str
+    url: str
+
+
+class ToolInvocation(BaseModel):
+    """Vercel class."""
+
+    toolCallId: str
+    toolName: str
+    args: dict[str, Any]
+    result: dict[str, Any]
+
+
+class ClientMessage(BaseModel):
+    """Vercel class."""
+
+    role: str
+    content: str
+    experimental_attachments: list[ClientAttachment] | None = None
+    toolInvocations: list[ToolInvocation] | None = None
+
+
+class VercelRequest(BaseModel):
+    """Vercel class."""
+
+    messages: list[ClientMessage]
+
+
 class Result(BaseModel):
     """
     Encapsulates the possible return values for an agent function.
